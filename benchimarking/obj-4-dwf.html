@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBJ 파일 로더 (Three.js)</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #f0f3f7;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 250px;
+            background: #e1e5ea;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .sidebar h2 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .tree-node {
+            padding-left: 10px;
+            margin: 4px 0;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .main-viewer {
+            flex: 1;
+            position: relative;
+        }
+        #viewer {
+            width: 100%;
+            height: 100%;
+        }
+        #fileInput, #materialSelect {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: #f2f3f4;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        #materialSelect {
+            top: 60px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+<div class="sidebar">
+    <h2>트리 구조</h2>
+    <div id="treeView">
+        <div class="tree-node">(객체 없음)</div>
+    </div>
+</div>
+<div class="main-viewer">
+   <!-- <input type="file" id="fileInput" accept=".obj">-->
+    <select id="changeMaterialBtn">
+        <option value="basic">기본(MaterialBasic)</option>
+        <option value="lambert">램버트(MaterialLambert)</option>
+        <option value="phong">퐁(MaterialPhong)</option>
+        <option value="standard">스탠다드(MaterialStandard)</option>
+    </select>
+    <div id="viewer">
+
+    </div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+<!--APSviewer    -->
+<link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/style.min.css?v=v7.*" type="text/css">
+<script language="JavaScript" src="https://developer.api.autodesk.com/modelderivative/v2/viewers/viewer3D.min.js?v=v7.*"></script>
+
+
+<link rel="stylesheet" href="http://cdn.jsdelivr.net/gh/autodesk-forge/forge-extensions/public/extensions/camerarotation/contents/main.css">
+<script src="http://cdn.jsdelivr.net/gh/autodesk-forge/forge-extensions/public/extensions/camerarotation/contents/main.js"></script>
+
+<script>
+
+    $(document).ready(function () {
+        view3DModel();
+
+        $('#changeMaterialBtn').on('click', function () {
+
+            console.log(this);
+
+            const selectedMaterial = $('#materialSelect').val();
+            const selection = viewer.getSelection();
+            if (selection.length > 0) {
+                const dbId = selection[0];
+                changeMaterial(viewer, dbId, selectedMaterial);
+            } else {
+                alert('먼저 객체를 선택하세요.');
+            }
+        });
+    });
+
+    function view3DModel() {
+        const DWFFileName = "/200C0374.iam.dwf";
+        Autodesk.Viewing.Initializer({ env: 'Local' }, function () {
+            const config = { toolbar: false, navToolbar: false };
+            const viewer = new Autodesk.Viewing.Viewer3D(document.getElementById('viewer'), config);
+            viewer.start();
+            viewer.loadModel(DWFFileName);
+        });
+    }
+
+    function changeMaterial(viewer, dbId, materialType) {
+        const fragList = viewer.model.getFragmentList();
+        const instanceTree = viewer.model.getData().instanceTree;
+        const newMaterial = createThreeMaterial(materialType);
+
+        instanceTree.enumNodeFragments(dbId, function (fragId) {
+            const mesh = fragList.getVizmesh ? fragList.getVizmesh(fragId) : fragList.getRenderProxy(viewer.model, fragId);
+            if (mesh && newMaterial) {
+                mesh.material = newMaterial;
+            }
+        });
+
+        viewer.impl.invalidate(true, true, true);
+    }
+
+    function createThreeMaterial(type) {
+        console.log(type);
+
+        switch (type) {
+            case 'lambert':
+                return new THREE.MeshLambertMaterial({ color: 0x4b9cd3 });
+            case 'phong':
+                return new THREE.MeshPhongMaterial({ color: 0x4b9cd3, shininess: 60 });
+            case 'standard':
+                return new THREE.MeshStandardMaterial({ color: 0x4b9cd3, roughness: 0.4, metalness: 0.2 });
+            default:
+                return new THREE.MeshBasicMaterial({ color: 0x4b9cd3 });
+        }
+    }
+</script>
+</body>
+</html>

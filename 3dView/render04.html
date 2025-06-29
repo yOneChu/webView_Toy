@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Three.js OBJ File Viewer</title>
+  <style>
+    body { margin: 0; text-align: center; }
+    canvas { display: block; }
+    #fileInput { position: absolute; top: 10px; left: 10px; z-index: 10; }
+  </style>
+
+  <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@latest/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@latest/examples/jsm/"
+        }
+    }
+
+  </script>
+
+</head>
+<body>
+
+<!-- 파일 선택 버튼 -->
+<input type="file" id="fileInput" accept=".obj">
+
+<script type="module">
+  /*import * as THREE from 'https://cdn.jsdelivr.net/npm/three/build/three.module.js';*/
+  //import * as THREE from 'three';
+  //import { OBJLoader } from 'https://cdn.jsdelivr.net/npm/three@latest/examples/jsm/loaders/OBJLoader.js';
+  //import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@latest/examples/jsm/controls/OrbitControls.js';
+
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+  //import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+  import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+
+
+  // 1️⃣ Three.js 기본 설정
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf0f0f0);
+
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 2, 5);
+
+
+  // 🎯 렌더러
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.style.margin = '0'; // 여백 제거
+  document.body.appendChild(renderer.domElement);
+
+
+
+  // 🎯 부드러운 조명 구성
+  const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+  scene.add(ambientLight);
+
+  const frontLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  frontLight.position.set(5, 5, 5);
+  scene.add(frontLight);
+
+  const backLight = new THREE.DirectionalLight(0xffffff, 0.4);
+  backLight.position.set(-5, -3, -5);
+  scene.add(backLight);
+
+
+  // 3️⃣ OrbitControls 추가 (마우스로 모델 회전/줌 가능)
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  // 4️⃣ OBJLoader 설정
+  const loader = new OBJLoader();
+
+  function loadOBJFile(file) {
+    const url = URL.createObjectURL(file);
+
+    loader.load(url, function (obj) {
+
+              // 기존 모델 제거
+              scene.children = scene.children.filter(child => !(child instanceof THREE.Group));
+
+              // 재질 설정 (부드러운 재질, 양면 렌더링)
+              obj.traverse(child => {
+                if (child.isMesh) {
+                  child.material = new THREE.MeshStandardMaterial({
+                    color: 0xdddddd,
+                    metalness: 0.3,
+                    roughness: 0.5,
+                    side: THREE.DoubleSide
+                  });
+                }
+              });
+
+              obj.position.set(0, 0, 0);
+              scene.add(obj);
+
+
+
+              scene.add(obj);
+              obj.position.set(0, 0, 0); // 모델 위치 조정
+            },
+            function (xhr) {
+              console.log(`Loading OBJ: ${(xhr.loaded / xhr.total * 100).toFixed(2)}% loaded`);
+            },
+            function (error) {
+              console.error('OBJ 로드 실패', error);
+            });
+
+
+  }
+
+  // 5️⃣ 파일 선택 이벤트
+  document.getElementById('fileInput').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+      loadOBJFile(file);
+    }
+  });
+
+  // 6️⃣ 애니메이션 루프
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  // 7️⃣ 창 크기 변경 대응
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+    }
+
+    #overlay {
+      position: absolute;
+      left: 1em;
+      top: 1em;
+      z-index: 1;
+    }
+  </style>
+
+  <script>
+    import {
+      initViewer,
+      loadModel
+    } from "https://aps-codepen.autodesk.io/utils.js";
+
+  </script>
+</head>
+<body>
+<div id="viewer"></div>
+<div id="overlay">
+  <button id="add-geom">Add Sphere</button>
+
+  <script type="module">
+    import { initViewer, listModels, loadModel } from 'https://aps-codepen.autodesk.io/utils.js';
+
+    const viewer = await initViewer(document.getElementById('viewer'), { extensions: ['Autodesk.DocumentBrowser'] });
+    const models = await listModels();
+    const dropdown = document.getElementById('models');
+    dropdown.innerHTML = models.map(m => `<option value="${m.urn}">${m.name}</option>`).join('');
+    dropdown.onchange = () => dropdown.value && loadModel(viewer, dropdown.value);
+    dropdown.onchange();
+  </script>
+</div>
+</body>
+</html>

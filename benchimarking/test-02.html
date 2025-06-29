@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>3D 도면 뷰어</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/pretendard.css" />
+
+
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Pretendard', sans-serif;
+            background-color: #121212;
+            color: #f0f0f0;
+        }
+
+        /* ===== 상단 메뉴 ===== */
+        .top-nav {
+            height: 56px;
+            background-color: #1e1e1e;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            justify-content: space-between;
+            border-bottom: 1px solid #333;
+        }
+
+        .top-nav .logo {
+            font-weight: bold;
+            font-size: 20px;
+            color: #26d07c;
+        }
+
+        .top-nav .menu {
+            display: flex;
+            gap: 16px;
+        }
+
+        .top-nav .menu a {
+            color: #ccc;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .top-nav .menu a:hover {
+            color: #ffffff;
+        }
+
+        /* ===== 메인 컨텐츠 영역 ===== */
+        .viewer-container {
+            display: flex;
+            height: calc(100vh - 56px);
+        }
+
+        .tree-panel {
+            width: 300px;
+            background-color: #1a1a1a;
+            padding: 16px;
+            border-right: 1px solid #333;
+            overflow-y: auto;
+        }
+
+        .tree-panel h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .tree-panel ul {
+            list-style: none;
+            padding-left: 0;
+            font-size: 14px;
+        }
+
+        .tree-panel li {
+            margin: 8px 0;
+            cursor: pointer;
+            color: #ccc;
+        }
+
+        .tree-panel li:hover {
+            color: #fff;
+        }
+
+        .viewer-panel {
+            flex-grow: 1;
+            background-color: #000;
+            position: relative;
+        }
+
+        .viewer-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #888;
+            font-size: 18px;
+        }
+    </style>
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <!--APSviewer    -->
+    <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/style.min.css?v=v7.*" type="text/css">
+    <script language="JavaScript" src="https://developer.api.autodesk.com/modelderivative/v2/viewers/viewer3D.min.js?v=v7.*"></script>
+
+
+    <link rel="stylesheet" href="http://cdn.jsdelivr.net/gh/autodesk-forge/forge-extensions/public/extensions/camerarotation/contents/main.css">
+    <script src="http://cdn.jsdelivr.net/gh/autodesk-forge/forge-extensions/public/extensions/camerarotation/contents/main.js"></script>
+
+
+    <script>
+
+        $(document).ready(function() {
+
+            console.log("init---");
+            view3DModel();
+
+        });
+
+        function view3DModel(fileName)
+        {
+            //var DWFFileName = '3D_Models/' + fileName;
+            //C:\
+            //let DWFFileName = 'c:/' + '200C0374.iam.dwf';
+            //let DWFFileName = "C:\\200C0374.iam.dwf";
+            let DWFFileName = "/200C0374.iam.dwf";
+            console.log(DWFFileName);
+
+            Autodesk.Viewing.Initializer({ env: 'Local' }, async function () {
+                const viewer = new Autodesk.Viewing.GuiViewer3D(document.getElementById('viewer'));
+
+                viewer.start();
+                viewer.loadModel(DWFFileName);
+            })
+
+        }
+    </script>
+
+</head>
+<body>
+
+<!-- 상단 메뉴 -->
+<div class="top-nav">
+    <div class="logo">Hyundai 3D Viewer</div>
+    <div class="menu">
+        <a href="#">파일 열기</a>
+        <a href="#">저장</a>
+        <a href="#">설정</a>
+    </div>
+</div>
+
+<!-- 본문 영역 -->
+<div class="viewer-container">
+    <!-- 왼쪽 트리 -->
+    <div class="tree-panel">
+        <h3>부품 트리</h3>
+        <ul>
+            <li>엘리베이터</li>
+            <li>├ 승강로</li>
+            <li>├ 카(CAR)</li>
+            <li>├ 도어 시스템</li>
+            <li>└ 제어반</li>
+        </ul>
+    </div>
+
+    <!-- 오른쪽 뷰어 -->
+    <div class="viewer-panel" id="viewer">
+        <!-- Three.js 또는 Autodesk Viewer 삽입 예정 -->
+        <div class="viewer-placeholder">3D 모델이 여기에 표시됩니다.</div>
+    </div>
+</div>
+
+</body>
+</html>

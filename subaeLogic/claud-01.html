@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>엑셀 어시스턴트</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: #198754 !important;
+        }
+
+        .toolbar {
+            background-color: #ffffff;
+            border-bottom: 1px solid #dee2e6;
+            padding: 10px 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn-toolbar-group {
+            margin-right: 15px;
+        }
+
+        .excel-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin: 20px;
+            overflow: hidden;
+        }
+
+        .table-wrapper {
+            overflow: auto;
+            max-height: 600px;
+            border: 2px solid #198754;
+        }
+
+        .excel-table {
+            margin: 0;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .excel-table th {
+            background-color: #e9ecef;
+            border: 1px solid #adb5bd;
+            padding: 8px 12px;
+            font-weight: 600;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .excel-table td {
+            border: 1px solid #dee2e6;
+            padding: 6px 12px;
+            min-width: 100px;
+            height: 35px;
+            position: relative;
+        }
+
+        .excel-table td:hover {
+            background-color: #f8f9fa;
+        }
+
+        .excel-table td.selected {
+            background-color: #cfe2ff;
+            border: 2px solid #0d6efd;
+        }
+
+        .excel-table td input {
+            border: none;
+            background: transparent;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            outline: none;
+        }
+
+        .row-header {
+            background-color: #e9ecef !important;
+            font-weight: 600;
+            text-align: center;
+            min-width: 50px !important;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+        }
+
+        .formula-bar {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 10px 15px;
+        }
+
+        .cell-reference {
+            width: 80px;
+            margin-right: 10px;
+        }
+
+        .formula-input {
+            flex: 1;
+        }
+
+        .status-bar {
+            background-color: #e9ecef;
+            border-top: 1px solid #dee2e6;
+            padding: 5px 15px;
+            font-size: 0.875rem;
+        }
+
+        .assistant-panel {
+            background: linear-gradient(135deg, #198754, #20c997);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .assistant-suggestions {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .suggestion-item {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-item:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .floating-toolbar {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+
+        .ai-btn {
+            background: linear-gradient(45deg, #6f42c1, #e83e8c);
+            border: none;
+            border-radius: 50px;
+            padding: 15px 25px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(111, 66, 193, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .ai-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(111, 66, 193, 0.6);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<!-- Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+            <i class="fas fa-table me-2"></i>엑셀 어시스턴트
+        </a>
+        <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="fas fa-user-circle me-1"></i>개발자님
+                </span>
+            <button class="btn btn-outline-success btn-sm">
+                <i class="fas fa-save me-1"></i>저장
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- Toolbar -->
+<div class="toolbar">
+    <div class="d-flex align-items-center flex-wrap">
+        <div class="btn-toolbar-group">
+            <button class="btn btn-outline-secondary btn-sm me-1">
+                <i class="fas fa-undo"></i>
+            </button>
+            <button class="btn btn-outline-secondary btn-sm me-1">
+                <i class="fas fa-redo"></i>
+            </button>
+        </div>
+
+        <div class="btn-toolbar-group">
+            <button class="btn btn-outline-secondary btn-sm me-1">
+                <i class="fas fa-bold"></i>
+            </button>
+            <button class="btn btn-outline-secondary btn-sm me-1">
+                <i class="fas fa-italic"></i>
+            </button>
+            <button class="btn btn-outline-secondary btn-sm me-1">
+                <i class="fas fa-underline"></i>
+            </button>
+        </div>
+
+        <div class="btn-toolbar-group">
+            <button class="btn btn-outline-secondary btn-sm me-1">
+                <i class="fas fa-plus"></i> 행 추가
+            </button>
+            <button class="btn btn-outline-secondary btn-sm me-1">
+                <i class="fas fa-plus"></i> 열 추가
+            </button>
+            <button class="btn btn-outline-danger btn-sm">
+                <i class="fas fa-trash"></i> 삭제
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Formula Bar -->
+<div class="formula-bar">
+    <div class="d-flex align-items-center">
+        <input type="text" class="form-control cell-reference" value="A1" readonly>
+        <div class="me-2">fx</div>
+        <input type="text" class="form-control formula-input" placeholder="수식을 입력하세요...">
+    </div>
+</div>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Main Table Area -->
+        <div class="col-lg-9">
+            <div class="excel-container">
+                <div class="table-wrapper">
+                    <table class="table excel-table">
+                        <thead>
+                        <tr>
+                            <th class="row-header"></th>
+                            <th>A</th>
+                            <th>B</th>
+                            <th>C</th>
+                            <th>D</th>
+                            <th>E</th>
+                            <th>F</th>
+                            <th>G</th>
+                        </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                        <!-- 테이블 행들이 JavaScript로 생성됩니다 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Status Bar -->
+                <div class="status-bar">
+                    <div class="d-flex justify-content-between">
+                        <span>준비</span>
+                        <span>행: <span id="rowCount">20</span> | 열: 7 | 선택된 셀: <span id="selectedCell">A1</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Assistant Panel -->
+        <div class="col-lg-3">
+            <div class="assistant-panel">
+                <h5><i class="fas fa-robot me-2"></i>AI 어시스턴트</h5>
+                <p class="mb-3">데이터 분석과 편집을 도와드리겠습니다!</p>
+
+                <div class="assistant-suggestions">
+                    <h6 class="mb-3">추천 기능</h6>
+                    <button class="btn suggestion-item">
+                        <i class="fas fa-chart-bar me-1"></i>차트 생성
+                    </button>
+                    <button class="btn suggestion-item">
+                        <i class="fas fa-calculator me-1"></i>합계 계산
+                    </button>
+                    <button class="btn suggestion-item">
+                        <i class="fas fa-filter me-1"></i>데이터 필터
+                    </button>
+                    <button class="btn suggestion-item">
+                        <i class="fas fa-sort me-1"></i>정렬하기
+                    </button>
+                    <button class="btn suggestion-item">
+                        <i class="fas fa-magic me-1"></i>자동 완성
+                    </button>
+                </div>
+
+                <div class="mt-4">
+                        <textarea class="form-control bg-transparent text-white"
+                                  placeholder="AI에게 질문하세요... (예: '이 데이터의 평균을 구해줘')"
+                                  rows="3" style="border: 1px solid rgba(255,255,255,0.3);"></textarea>
+                    <button class="btn btn-light mt-2 w-100">
+                        <i class="fas fa-paper-plane me-1"></i>전송
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating AI Button -->
+<div class="floating-toolbar">
+    <button class="btn ai-btn" data-bs-toggle="tooltip" title="AI 도움말">
+        <i class="fas fa-magic me-2"></i>AI 도우미
+    </button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 테이블 생성
+    function generateTable() {
+        const tbody = document.getElementById('tableBody');
+        const rows = 20;
+
+        for (let i = 1; i <= rows; i++) {
+            const row = document.createElement('tr');
+
+            // 행 헤더
+            const rowHeader = document.createElement('td');
+            rowHeader.className = 'row-header';
+            rowHeader.textContent = i;
+            row.appendChild(rowHeader);
+
+            // 데이터 셀들
+            for (let j = 0; j < 7; j++) {
+                const cell = document.createElement('td');
+                cell.setAttribute('data-row', i);
+                cell.setAttribute('data-col', String.fromCharCode(65 + j));
+
+                // 샘플 데이터 추가
+                if (i === 1) {
+                    const sampleData = ['제품명', '가격', '수량', '총액', '카테고리', '판매일', '상태'];
+                    cell.textContent = sampleData[j];
+                } else if (i <= 5) {
+                    const sampleRows = [
+                        ['노트북', '1200000', '2', '2400000', '전자제품', '2024-01-15', '판매완료'],
+                        ['마우스', '50000', '5', '250000', '전자제품', '2024-01-16', '재고있음'],
+                        ['키보드', '150000', '3', '450000', '전자제품', '2024-01-17', '판매완료'],
+                        ['모니터', '300000', '1', '300000', '전자제품', '2024-01-18', '재고있음']
+                    ];
+                    if (i - 2 < sampleRows.length) {
+                        cell.textContent = sampleRows[i - 2][j];
+                    }
+                }
+
+                cell.addEventListener('click', selectCell);
+                row.appendChild(cell);
+            }
+
+            tbody.appendChild(row);
+        }
+    }
+
+    // 셀 선택 기능
+    let selectedCell = null;
+
+    function selectCell(event) {
+        // 이전 선택 해제
+        if (selectedCell) {
+            selectedCell.classList.remove('selected');
+        }
+
+        // 새로운 셀 선택
+        selectedCell = event.target;
+        selectedCell.classList.add('selected');
+
+        // 셀 참조 업데이트
+        const row = selectedCell.getAttribute('data-row');
+        const col = selectedCell.getAttribute('data-col');
+        const cellRef = col + row;
+
+        document.querySelector('.cell-reference').value = cellRef;
+        document.getElementById('selectedCell').textContent = cellRef;
+        document.querySelector('.formula-input').value = selectedCell.textContent;
+    }
+
+    // 수식 입력
+    document.querySelector('.formula-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && selectedCell) {
+            selectedCell.textContent = this.value;
+        }
+    });
+
+    // 셀 더블클릭으로 편집
+    document.addEventListener('dblclick', function(e) {
+        if (e.target.tagName === 'TD' && !e.target.classList.contains('row-header')) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = e.target.textContent;
+            input.style.width = '100%';
+            input.style.height = '100%';
+            input.style.border = 'none';
+            input.style.padding = '0';
+
+            e.target.innerHTML = '';
+            e.target.appendChild(input);
+            input.focus();
+
+            input.addEventListener('blur', function() {
+                e.target.textContent = this.value;
+            });
+
+            input.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    e.target.textContent = this.value;
+                }
+            });
+        }
+    });
+
+    // 툴팁 초기화
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // 페이지 로드 시 테이블 생성
+    document.addEventListener('DOMContentLoaded', function() {
+        generateTable();
+        // 첫 번째 셀 자동 선택
+        const firstCell = document.querySelector('td[data-row="1"][data-col="A"]');
+        if (firstCell) {
+            firstCell.click();
+        }
+    });
+
+    // AI 어시스턴트 기능들
+    document.querySelectorAll('.suggestion-item').forEach(button => {
+        button.addEventListener('click', function() {
+            const feature = this.textContent.trim();
+            alert(`${feature} 기능이 실행됩니다. (실제 구현 시 해당 기능 로직 추가)`);
+        });
+    });
+</script>
+</body>
+</html>

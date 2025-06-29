@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        /* Custom CSS for Excel-like feel */
+        .table td div[contenteditable="true"] {
+            min-width: 50px; /* Ensure editable cells have a minimum width */
+            outline: none; /* Remove default outline on focus */
+            padding: .375rem .75rem; /* Match Bootstrap form control padding */
+            transition: background-color 0.2s ease;
+        }
+        .table td div[contenteditable="true"]:focus {
+            background-color: #e9ecef; /* Light background on focus */
+            border: 1px solid #86b7fe; /* Blue border on focus */
+            box-shadow: 0 0 0 .25rem rgba(13,110,253,.25);
+        }
+        /* Highlight selected row (example) */
+        .table .selected-row {
+            background-color: #e2f3ff; /* Lighter blue for selected row */
+        }
+        /* Hide default Bootstrap dropdown toggle */
+        .dropdown > .btn.dropdown-toggle {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">Excel Assistant</a>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="#"><i class="bi bi-gear"></i> Settings</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid mt-3">
+    <h2 class="mb-3">Data Editor <small class="text-muted fs-5">(Excel Assistant)</small></h2>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="input-group w-25">
+            <input type="text" class="form-control" placeholder="Search table..." aria-label="Search table">
+            <button class="btn btn-outline-secondary" type="button"><i class="bi bi-search"></i></button>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary me-2"><i class="bi bi-plus-lg"></i> Add Row</button>
+            <button type="button" class="btn btn-success me-2"><i class="bi bi-save"></i> Save Changes</button>
+            <button type="button" class="btn btn-secondary"><i class="bi bi-arrow-clockwise"></i> Reset</button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead>
+            <tr>
+                <th scope="col" style="width: 50px;">#</th>
+                <th scope="col">Product Name</th>
+                <th scope="col">Category</th>
+                <th scope="col">Price</th>
+                <th scope="col">Stock</th>
+                <th scope="col" style="width: 120px;">Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr data-row-id="1">
+                <td>1</td>
+                <td><div contenteditable="true">Laptop Pro</div></td>
+                <td><div contenteditable="true">Electronics</div></td>
+                <td><div contenteditable="true">1200.00</div></td>
+                <td><div contenteditable="true">50</div></td>
+                <td>
+                    <button class="btn btn-sm btn-info me-1"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>
+            <tr data-row-id="2">
+                <td>2</td>
+                <td><div contenteditable="true">Mechanical Keyboard</div></td>
+                <td><div contenteditable="true">Peripherals</div></td>
+                <td><div contenteditable="true">150.00</div></td>
+                <td><div contenteditable="true">120</div></td>
+                <td>
+                    <button class="btn btn-sm btn-info me-1"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <small class="text-muted">Tip: Double-click or click on a cell to edit!</small>
+</div>
+
+<footer class="footer mt-auto py-3 bg-light">
+    <div class="container-fluid">
+        <span class="text-muted">Status: Ready | Showing 2 of 100 entries</span>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Basic JavaScript for demonstration purposes
+    document.querySelectorAll('[contenteditable="true"]').forEach(cell => {
+        cell.addEventListener('focus', function() {
+            // You might want to store the original value here for later comparison
+            this.dataset.originalValue = this.textContent;
+        });
+
+        cell.addEventListener('blur', function() {
+            if (this.textContent !== this.dataset.originalValue) {
+                console.log('Value changed for:', this.textContent);
+                // Here you would typically send an AJAX request to your Spring Boot backend
+                // to update the data for the specific cell/row.
+                // You'll need to identify the row (e.g., using data-row-id on the <tr>)
+                // and the column (e.g., using a data-column-name attribute on the <td> or <div>)
+            }
+        });
+
+        // Optional: Highlight row on cell focus
+        cell.addEventListener('focus', function() {
+            const row = this.closest('tr');
+            if (row) {
+                row.classList.add('selected-row');
+            }
+        });
+
+        cell.addEventListener('blur', function() {
+            const row = this.closest('tr');
+            if (row) {
+                row.classList.remove('selected-row');
+            }
+        });
+
+        // Prevent default right-click context menu to implement custom one
+        cell.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            // Implement your custom context menu here using Bootstrap dropdowns
+            // Position it near the mouse click e.pageX, e.pageY
+            console.log('Right-clicked on cell:', this.textContent);
+            // Example: Show a hidden dropdown at the mouse position
+            const dropdown = document.querySelector('.dropdown .dropdown-menu');
+            if (dropdown) {
+                dropdown.style.display = 'block';
+                dropdown.style.position = 'absolute';
+                dropdown.style.left = `${e.pageX}px`;
+                dropdown.style.top = `${e.pageY}px`;
+            }
+        });
+    });
+
+    // Hide custom context menu when clicking elsewhere
+    document.addEventListener('click', function(e) {
+        const dropdown = document.querySelector('.dropdown .dropdown-menu');
+        if (dropdown && dropdown.style.display === 'block' && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+
+    // Example: Add Row button click (would involve more complex JS for dynamic row addition)
+    document.querySelector('.btn-primary').addEventListener('click', function() {
+        alert('Add Row clicked! (Requires dynamic row generation and backend interaction)');
+    });
+</script>
+</body>
+</html>

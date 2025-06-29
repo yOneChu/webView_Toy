@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Document</title>
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <!--APSviewer    -->
+    <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/style.min.css?v=v7.*" type="text/css">
+    <script language="JavaScript" src="https://developer.api.autodesk.com/modelderivative/v2/viewers/viewer3D.min.js?v=v7.*"></script>
+
+
+    <link rel="stylesheet" href="http://cdn.jsdelivr.net/gh/autodesk-forge/forge-extensions/public/extensions/camerarotation/contents/main.css">
+    <script src="http://cdn.jsdelivr.net/gh/autodesk-forge/forge-extensions/public/extensions/camerarotation/contents/main.js"></script>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <script>
+        //ready
+        $(document).ready(function() {
+
+            console.log("init---");
+            view3DModel();
+
+        });
+
+
+        function view3DModel(fileName)
+        {
+            //var DWFFileName = '3D_Models/' + fileName;
+            //C:\
+            //let DWFFileName = 'c:/' + '200C0374.iam.dwf';
+            //let DWFFileName = "C:\\200C0374.iam.dwf";
+            let DWFFileName = "/200C0374.iam.dwf";
+            console.log(DWFFileName);
+
+            Autodesk.Viewing.Initializer({ env: 'Local' }, async function () {
+                const viewer = new Autodesk.Viewing.GuiViewer3D(document.getElementById('3DViewerDiv'));
+
+                viewer.start();
+                viewer.loadModel(DWFFileName);
+            })
+
+        }
+    </script>
+
+</head>
+<body>
+<!-- <div id="3DViewerDiv"> -->
+<div id="3DViewerDiv">
+
+</div>
+
+<!-- 하단 상태바 -->
+<div class="status-bar">
+    <div class="status-item">좌표: (0, 0, 0)</div>
+    <div class="status-item">선택된 객체: 없음</div>
+    <div class="status-item">줌: 100%</div>
+    <div class="status-item">폴리곤: 0</div>
+</div>
+
+
+</body>
+</html>

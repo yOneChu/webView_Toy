@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<link rel="stylesheet" href="/dist/googleFont.css">
+
+<!-- Font Awesome -->
+<link rel="stylesheet" type="text/css" href="/dist/plugins/fontawesome-free/css/all.min.css">
+
+<!-- DataTables -->
+<link rel="stylesheet" href="/dist/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
+<link rel="stylesheet" href="/dist/plugins/datatables-responsive/css/responsive.bootstrap4.min.css">
+<link rel="stylesheet" href="/dist/plugins/datatables-buttons/css/buttons.bootstrap4.min.css">
+
+<link rel="stylesheet" href="/dist/plugins/select2/css/select2.min.css">
+
+<!-- Theme style -->
+<link rel="stylesheet" href="/dist/css/adminlte.min.css">
+
+<aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <!-- Brand Logo -->
+    <a href="#" class="brand-link">
+        <h4 class="text-center"></h4>
+    </a>
+
+    <!-- Sidebar -->
+    <div class="sidebar" style="zoom:90%;">
+
+        <%--<div class="text-center user-panel mt-3 pb-3 mb-3">
+        <div class="info">
+            <h4><a href="#">Dashboard</a></h4>
+        </div>
+    </div>--%>
+
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+
+
+
+                <!--<li class="nav-item menu-open">-->
+                <li class="nav-item menu-open">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-chart-pie"></i>
+                        <p>
+                            Dashboard
+                            <i class="fas fa-angle-left right"></i>
+                        </p>
+                    </a>
+
+                    <ul class="nav nav-treeview">
+                        <li>
+                            <a href="/public/searchPriceReductionRate" class="nav-link">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>부품공용화 집계(수량)</p>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/public/searchPriceReductionRev" class="nav-link">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>부품공용화 집계(대수)</p>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/public/searchPriceReductionDate" class="nav-link">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>부품공용화 집계 (출하예정일) </p>
+                                <!-- <p>부품공용화 집계 <small> (출하예정일) </small></p> -->
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/public/searchPriceReductionDatePrice" class="nav-link">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>부품공용화 집계 (금액) </p>
+                                <!-- <p>부품공용화 집계 <small> (출하예정일) </small></p> -->
+                            </a>
+                        </li>
+
+                    </ul>
+                </li>
+
+
+                <li class="nav-item menu-open">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-tachometer-alt"></i>
+                        <p>
+                            PLM
+                            <i class="fas fa-angle-left right"></i>
+                        </p>
+                    </a>
+
+                    <ul class="nav nav-treeview">
+                        <li>
+                            <a href="/designReq/dashboard" class="nav-link">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>(신)전산요청 현황</p>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/pid/pidDashboard" class="nav-link">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>PID 작업 현황</p>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="/elvinfoDashboard" class="nav-link">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>영업사양 등록 현황(2024년)</p>
+                            </a>
+                        </li>
+
+
+
+                    </ul>
+                </li>
+
+            </ul>
+        </nav>
+        <!-- /.sidebar-menu -->
+    </div>
+    <!-- /.sidebar -->
+</aside>

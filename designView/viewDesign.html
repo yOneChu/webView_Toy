@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Vault 3D 모델 View</title>
+  <meta charset="utf-8">
+  <meta name="viewport"
+        content="width=device-width,
+                 initial-scale=1,
+                 shrink-to-fit=no">
+  <!--jquery-->
+<link rel="stylesheet" href="//code.jquery.com/ui/1.13.1/themes/base/jquery-ui.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js" />
+
+<!--APSviewer    -->
+<link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/style.min.css?v=v7.*" type="text/css">
+<script language="JavaScript" src="https://developer.api.autodesk.com/modelderivative/v2/viewers/viewer3D.min.js?v=v7.*"></script>
+
+<!--자바 스크립트 파일    -->
+<script type = "text/javascript" src="js/vaultViewer.js"></script>
+
+</head>
+  <style>
+
+
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #f5f5f5;
+    }
+
+    #loadingImage {
+      display: block;
+      width: 300px;
+      height: auto;
+      border-radius: 8px;
+    }
+
+
+  </style>
+
+	<script>
+    var $folderTree
+
+	  $(document).ready(function (){
+
+        setTimeout(() => {
+          const img = document.getElementById('loadingImage');
+          img.style.display = 'none'; // 5초 후 이미지 숨기기
+        }, 5000); // 5000ms = 5초
+
+
+
+
+        function getQueryParam(param) {
+              const urlParams = new URLSearchParams(window.location.search);
+              return urlParams.get(param);
+        }
+
+        // filename 파라미터 값 가져오기
+        const fileName = getQueryParam('filename');
+        sessionStorage.setItem('FileName', fileName);
+
+        if(fileName == null) {
+          alert("도면 번호가 없습니다." );
+        } else {
+          view3D(fileName);
+
+        }
+
+
+
+
+    }); //ready
+
+
+  </script>
+    
+  <script>
+
+    function view3D(fileName) {
+  //debugger;
+        const url = `http://10.225.80.35/vaultview/api/getdwffile?filename=${fileName}`;
+        fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(errorText => {
+                    //throw new Error(`HTTP Error ${response.status}: ${errorText}`);
+                    throw (`${errorText}`);
+                });
+            } else {
+
+            }
+            return response.json(); 
+        }) 
+        .then(returnData => {
+            view3DModel(returnData.Output);
+        })  
+        .catch(error => {
+            alert(error);
+        });
+    }
+
+    function view3DModel(fileName)
+    {
+        var DWFFileName = '3D_Models/' + fileName;
+        Autodesk.Viewing.Initializer({ env: 'Local' }, async function () {
+			const viewer = new Autodesk.Viewing.GuiViewer3D(document.getElementById('3DViewerDiv'));
+
+
+          viewer.start();
+          viewer.loadExtension('Autodesk.DocumentBrowser')
+			viewer.setTheme('light-theme');
+			viewer.loadExtension('Autodesk.DWF').then(() => {
+            viewer.loadModel(DWFFileName);
+			});
+		})
+    }
+  </script>
+
+
+<body>
+
+
+<img src="./js/gummy-canvas.png" alt="Loaded Image" id="loadingImage">
+
+<!--
+<div id="imageContainer">
+  <img src="./js/gummy-canvas.png" alt="Loaded Image">
+</div>
+-->
+
+
+<!-- <div id="3DViewerDiv"></div> -->
+<div id="3DViewerDiv">
+
+
+</div>
+
+</body>
+
+
+</html>
+
+
