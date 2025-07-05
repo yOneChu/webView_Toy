@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>3D View</title>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width,
+                 initial-scale=1,
+                 shrink-to-fit=no">
+    <!-- 20241206추가 -->
+    <!--
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    -->
+
+    <!--bootstrap-->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" ></script>
+
+    <!--jquery-->
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.13.1/themes/base/jquery-ui.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <!--APSviewer    -->
+    <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/style.min.css?v=v7.*" type="text/css">
+    <script language="JavaScript" src="https://developer.api.autodesk.com/modelderivative/v2/viewers/viewer3D.min.js?v=v7.*"></script>
+
+    <link rel="stylesheet" href="http://cdn.jsdelivr.net/gh/autodesk-forge/forge-extensions/public/extensions/camerarotation/contents/main.css">
+    <script src="http://cdn.jsdelivr.net/gh/autodesk-forge/forge-extensions/public/extensions/camerarotation/contents/main.js"></script>
+
+    <link href="./js/viewDesign-02.css" rel="stylesheet">
+
+</head>
+
+<style>
+    .BaseTable__header-row {
+        color: #f5f5f5;
+        background-color: rgba(209, 222, 238, .25);
+        border-bottom: 1px solid rgba(209, 222, 238, .25) !important;
+    }
+
+
+    .forge-spinner {
+        display: none !important;
+    }
+
+
+</style>
+
+<script>
+
+    var $folderTree
+
+    $(document).ready(function (){
+
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        // filename 파라미터 값 가져오기
+        const fileName = getQueryParam('filename');
+        sessionStorage.setItem('FileName', fileName);
+
+        view3DModel();
+
+        if(fileName == null) {
+            //alert("도면 번호가 없습니다." );
+        } else {
+            //view3D(fileName);
+
+        }
+
+
+    }); //ready
+
+
+    function view3D(fileName) {
+        //debugger;
+
+        //fileName = '10101310';
+
+
+        const url = `http://10.225.80.35/vaultview/api/getdwffile?filename=${fileName}`;
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(errorText => {
+                        //throw new Error(`HTTP Error ${response.status}: ${errorText}`);
+                        throw (`${errorText}`);
+                    });
+                } else {
+
+                }
+                return response.json();
+            })
+            .then(returnData => {
+                view3DModel(returnData.Output);
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+    function view3DModel(fileName)
+    {
+        //var DWFFileName = '3D_Models/' + fileName;
+        let DWFFileName = "/200C0374.iam.dwf";
+        console.log("DWFFileName ---> " + DWFFileName);
+
+        Autodesk.Viewing.Initializer({ env: 'Local' }, async function () {
+            const viewer = new Autodesk.Viewing.GuiViewer3D(document.getElementById('3DViewerDiv'));
+
+            viewer.start();
+            //viewer.loadExtension('Autodesk.DocumentBrowser');
+
+            viewer.setBimWalkToolPopup(false)
+            console.log(viewer);
+            //console.log(viewer.toolController.isToolActivated('bimWalk');
+
+
+
+            //ext.extendLocalization(locales);
+            //viewer.extendLocalization(locales);
+            //viewer.setTheme('light-theme');
+            viewer.loadModel(DWFFileName);
+
+
+            //const toolbar = viewer.getToolbar();
+            //console.log('toolbar --', toolbar);
+            //viewer.loadExtension('Autodesk.DWF').then(() => {
+            //  viewer.loadModel(DWFFileName);
+            //});
+        })
+    }
+</script>
+
+
+<body>
+
+<header class="header">
+    <div class="header-container">
+        <div class="logo-section">
+            <div class="hyundai-logo">
+                <div class="logo-symbol">H</div>
+                <div class="brand-text">현대엘리베이터</div>
+            </div>
+            <div class="service-title">3D 뷰어</div>
+        </div>
+
+    </div>
+</header>
+
+<main class="main-wrapper">
+    <div class="content-container">
+
+
+        <div class="content-grid">
+            <div id="3DViewerDiv" class="viewer-section">
+
+
+
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="footer">
+    <div class="footer-container">
+        <div class="footer-left">
+            <!--<div class="developer-tag">수배로직설계팀 - 김영환M</div>
+            <div class="footer-info">Engineering Solution</div>-->
+        </div>
+        <div class="footer-right">
+            <!--<div class="footer-info">현대엘리베이터 내부 도구</div>
+            <div class="copyright">© 2025 Hyundai Elevator Co., Ltd.</div>-->
+            <div class="developer-tag">수배로직설계팀 - 김영환M</div>
+            <div class="copyright">© 2025 Hyundai Elevator Co., Ltd.</div>
+        </div>
+    </div>
+</footer>
+
+
+
+
+
+<!--<div class="wrapper">
+
+
+    <div class="col-md-12">
+        <div class="row">
+
+            <div id="3DViewerDiv">
+            </div>
+
+        </div>
+    </div>
+
+</div>-->
+
+
+
+</body>
+
+
+</html>
+
+
