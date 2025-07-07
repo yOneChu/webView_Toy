@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLM 자재 사용빈도 대시보드</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --hyundai-blue: #003c71;
+            --hyundai-light-blue: #0066cc;
+            --hyundai-gray: #6c757d;
+            --hyundai-light-gray: #f8f9fa;
+            --hyundai-dark-gray: #343a40;
+            --hyundai-accent: #0066cc;
+            --hyundai-success: #28a745;
+            --hyundai-warning: #ffc107;
+            --hyundai-danger: #dc3545;
+            --card-shadow: 0 2px 10px rgba(0, 60, 113, 0.1);
+            --border-color: #e9ecef;
+        }
+
+        * {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        body {
+            background-color: #f5f6f8;
+            color: var(--hyundai-dark-gray);
+            line-height: 1.6;
+        }
+
+        .navbar-custom {
+            background: linear-gradient(135deg, var(--hyundai-blue) 0%, var(--hyundai-light-blue) 100%);
+            padding: 1rem 0;
+            box-shadow: 0 2px 20px rgba(0, 60, 113, 0.15);
+        }
+
+        .main-header {
+            background: linear-gradient(135deg, var(--hyundai-blue) 0%, var(--hyundai-light-blue) 100%);
+            color: white;
+            padding: 3rem 0 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .card-hyundai {
+            background: white;
+            border: none;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-hyundai:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 60, 113, 0.15);
+        }
+
+        .card-header-hyundai {
+            background: white;
+            border-bottom: 2px solid var(--hyundai-light-gray);
+            padding: 1.5rem;
+            border-radius: 8px 8px 0 0 !important;
+        }
+
+        .card-header-hyundai h5 {
+            color: var(--hyundai-blue);
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .stat-card-hyundai {
+            background: white;
+            border: none;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card-hyundai::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--hyundai-accent);
+        }
+
+        .stat-number-hyundai {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--hyundai-blue);
+            margin: 0.5rem 0;
+        }
+
+        .stat-label {
+            color: var(--hyundai-gray);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .trend-indicator {
+            padding: 0.25rem 0.5rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .trend-up {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--hyundai-success);
+        }
+
+        .trend-down {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: var(--hyundai-danger);
+        }
+
+        .trend-stable {
+            background-color: rgba(108, 117, 125, 0.1);
+            color: var(--hyundai-gray);
+        }
+
+        .btn-hyundai {
+            background: var(--hyundai-blue);
+            border: none;
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-hyundai:hover {
+            background: var(--hyundai-light-blue);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-hyundai {
+            border: 1px solid var(--hyundai-blue);
+            color: var(--hyundai-blue);
+            background: transparent;
+            padding: 0.6rem 1.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-hyundai:hover {
+            background: var(--hyundai-blue);
+            color: white;
+        }
+
+        .progress-hyundai {
+            height: 6px;
+            background-color: var(--hyundai-light-gray);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar-hyundai {
+            background: linear-gradient(90deg, var(--hyundai-blue) 0%, var(--hyundai-light-blue) 100%);
+            transition: width 2s ease-in-out;
+        }
+
+        .material-item-hyundai {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .material-item-hyundai:hover {
+            border-color: var(--hyundai-accent);
+            box-shadow: 0 2px 8px rgba(0, 60, 113, 0.1);
+        }
+
+        .material-code-hyundai {
+            background: var(--hyundai-light-gray);
+            color: var(--hyundai-blue);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .chart-container-hyundai {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            height: 350px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .filter-section-hyundai {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .form-control-hyundai {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .form-control-hyundai:focus {
+            border-color: var(--hyundai-accent);
+            box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+        }
+
+        .alert-hyundai {
+            border: none;
+            border-radius: 6px;
+            border-left: 4px solid;
+        }
+
+        .alert-warning-hyundai {
+            background-color: rgba(255, 193, 7, 0.1);
+            border-left-color: var(--hyundai-warning);
+            color: #856404;
+        }
+
+        .alert-info-hyundai {
+            background-color: rgba(0, 102, 204, 0.1);
+            border-left-color: var(--hyundai-accent);
+            color: var(--hyundai-blue);
+        }
+
+        .alert-success-hyundai {
+            background-color: rgba(40, 167, 69, 0.1);
+            border-left-color: var(--hyundai-success);
+            color: #155724;
+        }
+
+        .section-title {
+            color: var(--hyundai-blue);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--hyundai-light-gray);
+        }
+
+        .metric-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin: 0 auto 1rem auto;
+        }
+
+        .metric-circle.blue { background: var(--hyundai-blue); }
+        .metric-circle.light-blue { background: var(--hyundai-light-blue); }
+        .metric-circle.success { background: var(--hyundai-success); }
+        .metric-circle.warning { background: var(--hyundai-warning); }
+
+        .breadcrumb-hyundai {
+            background: transparent;
+            padding: 0;
+            margin-bottom: 1rem;
+        }
+
+        .breadcrumb-hyundai .breadcrumb-item {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .breadcrumb-hyundai .breadcrumb-item.active {
+            color: white;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+
+        .status-active { background-color: var(--hyundai-success); }
+        .status-inactive { background-color: var(--hyundai-gray); }
+        .status-warning { background-color: var(--hyundai-warning); }
+
+        @media (max-width: 768px) {
+            .main-header {
+                padding: 2rem 0 1.5rem 0;
+            }
+
+            .stat-number-hyundai {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container">
+        <div class="navbar-brand text-white fw-bold fs-4">
+            <i class="bi bi-building me-2"></i>PLM Dashboard
+        </div>
+        <div class="navbar-nav ms-auto">
+            <a class="nav-link text-white" href="#"><i class="bi bi-person-circle me-1"></i>관리자</a>
+        </div>
+    </div>
+</nav>
+
+<div class="main-header">
+    <div class="container">
+        <div class="header-content">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb breadcrumb-hyundai">
+                    <li class="breadcrumb-item">홈</li>
+                    <li class="breadcrumb-item">PLM 시스템</li>
+                    <li class="breadcrumb-item active">자재 사용빈도 분석</li>
+                </ol>
+            </nav>
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="display-5 fw-bold mb-2">자재 사용빈도 분석</h1>
+                    <p class="lead mb-0 opacity-90">실시간 자재 사용 현황 및 효율성 분석 대시보드</p>
+                </div>
+                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                    <button class="btn btn-light me-2">
+                        <i class="bi bi-download me-1"></i>데이터 내보내기
+                    </button>
+                    <button class="btn btn-outline-light">
+                        <i class="bi bi-gear me-1"></i>설정
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-4">
+    <div class="filter-section-hyundai">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+                <label class="form-label small text-muted">검색</label>
+                <input type="text" class="form-control form-control-hyundai" placeholder="자재 코드 또는 명칭">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted">카테고리</label>
+                <select class="form-select form-control-hyundai">
+                    <option>전체</option>
+                    <option>전자부품</option>
+                    <option>기계부품</option>
+                    <option>원자재</option>
+                    <option>소모품</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted">기간</label>
+                <select class="form-select form-control-hyundai">
+                    <option>최근 1개월</option>
+                    <option>최근 3개월</option>
+                    <option>최근 6개월</option>
+                    <option>최근 1년</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted">상태</label>
+                <select class="form-select form-control-hyundai">
+                    <option>전체 자재</option>
+                    <option>활성 자재</option>
+                    <option>비활성 자재</option>
+                    <option>재고 부족</option>
+                </select>
+            </div>
+            <div class="col-md-2 text-end">
+                <label class="form-label small text-muted d-block">&nbsp;</label>
+                <button class="btn btn-hyundai w-100">
+                    <i class="bi bi-search me-1"></i>조회
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card-hyundai">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <p class="stat-label mb-1">총 자재 수</p>
+                            <h3 class="stat-number-hyundai">2,847</h3>
+                            <span class="trend-indicator trend-up">
+                                        <i class="bi bi-arrow-up-short"></i>12.5%
+                                    </span>
+                        </div>
+                        <div class="metric-circle blue">
+                            <i class="bi bi-box-seam"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card-hyundai">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <p class="stat-label mb-1">활성 자재</p>
+                            <h3 class="stat-number-hyundai">1,924</h3>
+                            <span class="trend-indicator trend-up">
+                                        <i class="bi bi-arrow-up-short"></i>8.3%
+                                    </span>
+                        </div>
+                        <div class="metric-circle light-blue">
+                            <i class="bi bi-activity"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card-hyundai">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <p class="stat-label mb-1">재고 부족</p>
+                            <h3 class="stat-number-hyundai">47</h3>
+                            <span class="trend-indicator trend-down">
+                                        <i class="bi bi-arrow-down-short"></i>15.3%
+                                    </span>
+                        </div>
+                        <div class="metric-circle warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card-hyundai">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <p class="stat-label mb-1">평균 활용률</p>
+                            <h3 class="stat-number-hyundai">73.2%</h3>
+                            <span class="trend-indicator trend-stable">
+                                        <i class="bi bi-dash"></i>0.8%
+                                    </span>
+                        </div>
+                        <div class="metric-circle success">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card card-hyundai">
+                <div class="card-header-hyundai">
+                    <h5><i class="bi bi-bar-chart-line me-2"></i>월별 자재 사용 추이</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="chart-container-hyundai">
+                        <canvas id="monthlyUsageChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card card-hyundai">
+                <div class="card-header-hyundai">
+                    <h5><i class="bi bi-trophy me-2"></i>TOP 10 사용 자재</h5>
+                </div>
+                <div class="card-body">
+                    <div class="material-item-hyundai">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="material-code-hyundai">MTL-001</span>
+                                <div class="small text-muted mt-1">반도체 IC 칩</div>
+                                <span class="status-indicator status-active"></span>
+                                <small class="text-success">정상</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-primary">1,234회</div>
+                                <div class="progress progress-hyundai mt-2" style="width: 100px;">
+                                    <div class="progress-bar progress-bar-hyundai" style="width: 95%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="material-item-hyundai">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="material-code-hyundai">MTL-045</span>
+                                <div class="small text-muted mt-1">저항 (1KΩ)</div>
+                                <span class="status-indicator status-active"></span>
+                                <small class="text-success">정상</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-primary">987회</div>
+                                <div class="progress progress-hyundai mt-2" style="width: 100px;">
+                                    <div class="progress-bar progress-bar-hyundai" style="width: 80%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="material-item-hyundai">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="material-code-hyundai">MTL-123</span>
+                                <div class="small text-muted mt-1">커패시터 (100μF)</div>
+                                <span class="status-indicator status-warning"></span>
+                                <small class="text-warning">부족</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-primary">756회</div>
+                                <div class="progress progress-hyundai mt-2" style="width: 100px;">
+                                    <div class="progress-bar progress-bar-hyundai" style="width: 61%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="material-item-hyundai">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="material-code-hyundai">MTL-067</span>
+                                <div class="small text-muted mt-1">PCB 기판 (FR-4)</div>
+                                <span class="status-indicator status-active"></span>
+                                <small class="text-success">정상</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-primary">623회</div>
+                                <div class="progress progress-hyundai mt-2" style="width: 100px;">
+                                    <div class="progress-bar progress-bar-hyundai" style="width: 50%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="material-item-hyundai">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="material-code-hyundai">MTL-189</span>
+                                <div class="small text-muted mt-1">연결 케이블</div>
+                                <span class="status-indicator status-inactive"></span>
+                                <small class="text-muted">대기</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-primary">445회</div>
+                                <div class="progress progress-hyundai mt-2" style="width: 100px;">
+                                    <div class="progress-bar progress-bar-hyundai" style="width: 36%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <button class="btn btn-outline-hyundai btn-sm">전체 목록 보기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card card-hyundai">
+                <div class="card-header-hyundai">
+                    <h5><i class="bi bi-pie-chart me-2"></i>카테고리별 사용 현황</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryUsageChart" style="max-height: 300px;"></canvas>
+                    <div class="row text-center mt-4">
+                        <div class="col-6 mb-4">
+                            <div class="metric-circle blue mx-auto mb-2" style="width: 60px; height: 60px; font-size: 1.2rem;">45%</div>
+                            <h6 class="mb-1">전자부품</h6>
+                            <small class="text-muted">1,281개</small>
+                        </div>
+                        <div class="col-6 mb-4">
+                            <div class="metric-circle success mx-auto mb-2" style="width: 60px; height: 60px; font-size: 1.2rem;">28%</div>
+                            <h6 class="mb-1">기계부품</h6>
+                            <small class="text-muted">797개</small>
+                        </div>
+                        <div class="col-6 mb-4">
+                            <div class="metric-circle warning mx-auto mb-2" style="width: 60px; height: 60px; font-size: 1.2rem;">18%</div>
+                            <h6 class="mb-1">원자재</h6>
+                            <small class="text-muted">512개</small>
+                        </div>
+                        <div class="col-6 mb-4">
+                            <div class="metric-circle light-blue mx-auto mb-2" style="width: 60px; height: 60px; font-size: 1.2rem;">9%</div>
+                            <h6 class="mb-1">소모품</h6>
+                            <small class="text-muted">257개</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card card-hyundai">
+                <div class="card-header-hyundai">
+                    <h5><i class="bi bi-speedometer2 me-2"></i>운영 효율성 지표</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-medium">재고 회전율</span>
+                            <span class="fw-bold text-primary">85.3%</span>
+                        </div>
+                        <div class="progress progress-hyundai">
+                            <div class="progress-bar progress-bar-hyundai" role="progressbar" style="width: 85.3%" aria-valuenow="85.3" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-medium">자재 활용도</span>
+                            <span class="fw-bold text-primary">72.8%</span>
+                        </div>
+                        <div class="progress progress-hyundai">
+                            <div class="progress-bar progress-bar-hyundai" role="progressbar" style="width: 72.8%" aria-valuenow="72.8" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-medium">비용 효율성</span>
+                            <span class="fw-bold text-primary">91.2%</span>
+                        </div>
+                        <div class="progress progress-hyundai">
+                            <div class="progress-bar progress-bar-hyundai" role="progressbar" style="width: 91.2%" aria-valuenow="91.2" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-medium">공급망 안정성</span>
+                            <span class="fw-bold text-primary">88.7%</span>
+                        </div>
+                        <div class="progress progress-hyundai">
+                            <div class="progress-bar progress-bar-hyundai" role="progressbar" style="width: 88.7%" aria-valuenow="88.7" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <h4 class="section-title"><i class="bi bi-bell me-2"></i>알림 및 권장사항</h4>
+            <div class="alert alert-warning-hyundai d-flex align-items-center mb-3" role="alert">
+                <i class="bi bi-exclamation-circle-fill me-3 fs-4"></i>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-1">재고 부족 경고: MTL-123 커패시터</h6>
+                    <p class="mb-0">MTL-123 (커패시터 100μF) 자재의 재고가 부족합니다. 즉시 재주문을 고려해주세요.</p>
+                </div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div class="alert alert-info-hyundai d-flex align-items-center mb-3" role="alert">
+                <i class="bi bi-info-circle-fill me-3 fs-4"></i>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-1">비활성 자재 분석 필요</h6>
+                    <p class="mb-0">최근 6개월간 사용 이력이 없는 비활성 자재가 150개 발견되었습니다. 불용 처리 검토가 필요합니다.</p>
+                </div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div class="alert alert-success-hyundai d-flex align-items-center" role="alert">
+                <i class="bi bi-check-circle-fill me-3 fs-4"></i>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-1">성공적인 월간 보고서 생성</h6>
+                    <p class="mb-0">2025년 6월 월간 자재 사용빈도 보고서가 성공적으로 생성되었습니다. <a href="#" class="alert-link">여기서 확인</a></p>
+                </div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="bg-dark text-white-50 py-4 mt-5">
+    <div class="container text-center">
+        <p class="mb-0">&copy; 2025 PLM Dashboard. All Rights Reserved.</p>
+        <p class="mb-0">Powered by Hyundai Motor Group</p>
+    </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    // Monthly Usage Chart
+    const monthlyUsageCtx = document.getElementById('monthlyUsageChart').getContext('2d');
+    new Chart(monthlyUsageCtx, {
+        type: 'line',
+        data: {
+            labels: ['1월', '2월', '3월', '4월', '5월', '6월', '7월'],
+            datasets: [{
+                label: '자재 사용량',
+                data: [1200, 1500, 1300, 1800, 1600, 2000, 2200],
+                borderColor: 'var(--hyundai-light-blue)',
+                backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: 'var(--hyundai-blue)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'var(--hyundai-light-blue)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false,
+                },
+                title: {
+                    display: false,
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: '사용량 (단위: 회)',
+                        color: 'var(--hyundai-gray)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Category Usage Chart (Pie Chart)
+    const categoryUsageCtx = document.getElementById('categoryUsageChart').getContext('2d');
+    new Chart(categoryUsageCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['전자부품', '기계부품', '원자재', '소모품'],
+            datasets: [{
+                data: [45, 28, 18, 9],
+                backgroundColor: [
+                    'var(--hyundai-blue)',
+                    'var(--hyundai-success)',
+                    'var(--hyundai-warning)',
+                    'var(--hyundai-light-blue)'
+                ],
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 8,
+                        padding: 20,
+                        color: 'var(--hyundai-dark-gray)',
+                        font: {
+                            size: 14,
+                            family: 'Noto Sans KR',
+                            weight: '500'
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += context.parsed + '%';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            cutout: '70%', // Make it a doughnut chart
+        }
+    });
+</script>
+</body>
+</html>
