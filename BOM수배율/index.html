@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>엘리베이터 BOM 구성 현황 대시보드</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            text-align: center;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 30px 0;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+
+        .card h3 {
+            color: #667eea;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .card-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .card-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .chart-placeholder {
+            height: 300px;
+            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 1.1rem;
+            border: 2px dashed #ddd;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .table-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            padding: 10px 40px 10px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            width: 250px;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-box::after {
+            content: '🔍';
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 15px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .data-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            min-width: 60px;
+        }
+
+        .status-excellent {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-good {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-normal {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-poor {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .modification-items {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .mod-item {
+            background: #f8f9fa;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            border: 1px solid #dee2e6;
+        }
+
+        .mod-item.modified {
+            background: #ffe4e1;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .search-box input {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <div class="container">
+        <h1>엘리베이터 BOM 구성 현황</h1>
+        <p>실시간 부품 관리 및 수배 현황 모니터링</p>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="container">
+        <div class="dashboard-grid">
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>총 제품 수</h3>
+                    <div class="card-value" id="totalProducts">24</div>
+                    <div class="card-label">호기</div>
+                </div>
+                <div class="card">
+                    <h3>평균 수배율</h3>
+                    <div class="card-value" id="avgRate">87.5%</div>
+                    <div class="card-label">자동수배</div>
+                </div>
+                <div class="card">
+                    <h3>수정 대상 부품</h3>
+                    <div class="card-value" id="modifiedParts">156</div>
+                    <div class="card-label">개</div>
+                </div>
+                <div class="card">
+                    <h3>완료율</h3>
+                    <div class="card-value" id="completionRate">92.3%</div>
+                    <div class="card-label">BOM 구성</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">월별 BOM 구성 현황</div>
+                <div class="chart-placeholder">
+                    📊 차트 영역 (Chart.js 또는 다른 차트 라이브러리 연동)
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">엘리베이터 제품별 BOM 현황</div>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="호기번호 또는 제품명 검색">
+                </div>
+            </div>
+
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">전체</button>
+                <button class="filter-btn" data-filter="excellent">우수</button>
+                <button class="filter-btn" data-filter="good">양호</button>
+                <button class="filter-btn" data-filter="normal">보통</button>
+                <button class="filter-btn" data-filter="poor">개선필요</button>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>호기번호</th>
+                    <th>제품명</th>
+                    <th>최종설계일</th>
+                    <th>총 부품 수</th>
+                    <th>수정 부품</th>
+                    <th>자동수배율</th>
+                    <th>진행률</th>
+                    <th>상태</th>
+                </tr>
+                </thead>
+                <tbody id="tableBody">
+                <!-- 데이터는 JavaScript로 동적 생성 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 샘플 데이터
+    const elevatorData = [
+        {
+            id: 'ELV-001',
+            name: '승용 엘리베이터 A타입',
+            designDate: '2024-06-15',
+            totalParts: 450,
+            modifiedParts: { M: 12, C: 8, A: 5, B: 3, D: 2 },
+            autoRate: 95.2,
+            progress: 98,
+            status: 'excellent'
+        },
+        {
+            id: 'ELV-002',
+            name: '화물 엘리베이터 B타입',
+            designDate: '2024-06-20',
+            totalParts: 680,
+            modifiedParts: { M: 18, C: 12, A: 8, B: 6, D: 4 },
+            autoRate: 87.3,
+            progress: 85,
+            status: 'good'
+        },
+        {
+            id: 'ELV-003',
+            name: '승용 엘리베이터 C타입',
+            designDate: '2024-06-25',
+            totalParts: 520,
+            modifiedParts: { M: 25, C: 15, A: 10, B: 8, D: 5 },
+            autoRate: 78.5,
+            progress: 72,
+            status: 'normal'
+        },
+        {
+            id: 'ELV-004',
+            name: '고속 엘리베이터 D타입',
+            designDate: '2024-07-01',
+            totalParts: 750,
+            modifiedParts: { M: 35, C: 22, A: 15, B: 12, D: 8 },
+            autoRate: 65.8,
+            progress: 58,
+            status: 'poor'
+        },
+        {
+            id: 'ELV-005',
+            name: '승용 엘리베이터 E타입',
+            designDate: '2024-07-05',
+            totalParts: 480,
+            modifiedParts: { M: 10, C: 6, A: 4, B: 2, D: 1 },
+            autoRate: 92.1,
+            progress: 94,
+            status: 'excellent'
+        },
+        {
+            id: 'ELV-006',
+            name: '화물 엘리베이터 F타입',
+            designDate: '2024-07-10',
+            totalParts: 620,
+            modifiedParts: { M: 20, C: 14, A: 9, B: 7, D: 3 },
+            autoRate: 83.7,
+            progress: 79,
+            status: 'good'
+        }
+    ];
+
+    // 상태별 스타일 매핑
+    const statusStyles = {
+        excellent: 'status-excellent',
+        good: 'status-good',
+        normal: 'status-normal',
+        poor: 'status-poor'
+    };
+
+    const statusLabels = {
+        excellent: '우수',
+        good: '양호',
+        normal: '보통',
+        poor: '개선필요'
+    };
+
+    // 테이블 렌더링
+    function renderTable(data = elevatorData) {
+        const tbody = $('#tableBody');
+        tbody.empty();
+
+        data.forEach(item => {
+            const modifiedPartsHtml = Object.entries(item.modifiedParts)
+                .map(([key, value]) => `<span class="mod-item ${value > 10 ? 'modified' : ''}">${key}:${value}</span>`)
+                .join('');
+
+            const row = `
+                    <tr data-status="${item.status}">
+                        <td><strong>${item.id}</strong></td>
+                        <td>${item.name}</td>
+                        <td>${item.designDate}</td>
+                        <td>${item.totalParts.toLocaleString()}</td>
+                        <td>
+                            <div class="modification-items">
+                                ${modifiedPartsHtml}
+                            </div>
+                        </td>
+                        <td>${item.autoRate}%</td>
+                        <td>
+                            <div>${item.progress}%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${item.progress}%"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-badge ${statusStyles[item.status]}">
+                                ${statusLabels[item.status]}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            tbody.append(row);
+        });
+    }
+
+    // 검색 기능
+    $('#searchInput').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        const filteredData = elevatorData.filter(item =>
+            item.id.toLowerCase().includes(searchTerm) ||
+            item.name.toLowerCase().includes(searchTerm)
+        );
+        renderTable(filteredData);
+    });
+
+    // 필터 기능
+    $('.filter-btn').on('click', function() {
+        $('.filter-btn').removeClass('active');
+        $(this).addClass('active');
+
+        const filterType = $(this).data('filter');
+
+        if (filterType === 'all') {
+            renderTable(elevatorData);
+        } else {
+            const filteredData = elevatorData.filter(item => item.status === filterType);
+            renderTable(filteredData);
+        }
+    });
+
+    // 요약 카드 업데이트
+    function updateSummaryCards() {
+        const totalProducts = elevatorData.length;
+        const avgRate = (elevatorData.reduce((sum, item) => sum + item.autoRate, 0) / totalProducts).toFixed(1);
+        const modifiedParts = elevatorData.reduce((sum, item) =>
+            sum + Object.values(item.modifiedParts).reduce((a, b) => a + b, 0), 0);
+        const completionRate = (elevatorData.reduce((sum, item) => sum + item.progress, 0) / totalProducts).toFixed(1);
+
+        $('#totalProducts').text(totalProducts);
+        $('#avgRate').text(`${avgRate}%`);
+        $('#modifiedParts').text(modifiedParts);
+        $('#completionRate').text(`${completionRate}%`);
+    }
+
+    // 초기화
+    $(document).ready(function() {
+        renderTable();
+        updateSummaryCards();
+    });
+</script>
+</body>
+</html>

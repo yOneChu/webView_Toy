@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>엘리베이터 BOM 구성 현황 대시보드</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+        :root {
+            --blue: #007bff;
+            --indigo: #6610f2;
+            --purple: #6f42c1;
+            --pink: #e83e8c;
+            --red: #dc3545;
+            --orange: #fd7e14;
+            --yellow: #ffc107;
+            --green: #28a745;
+            --teal: #20c997;
+            --cyan: #17a2b8;
+            --white: #fff;
+            --gray: #6c757d;
+            --gray-dark: #343a40;
+            --primary: #007bff;
+            --secondary: #6c757d;
+            --success: #28a745;
+            --info: #17a2b8;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+            --dark: #343a40;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f6f9; /* AdminLTE light background */
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background-color: var(--dark); /* AdminLTE dark header */
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2); /* AdminLTE shadow */
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header h1 {
+            font-size: 2.2rem; /* Slightly smaller for AdminLTE feel */
+            font-weight: 400; /* AdminLTE font-weight */
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            text-align: center;
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 20px 0; /* Adjusted padding */
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px; /* Adjusted gap */
+            margin-bottom: 20px; /* Adjusted margin */
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 0.25rem; /* AdminLTE border-radius */
+            padding: 20px; /* Adjusted padding */
+            box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2); /* AdminLTE shadow */
+            transition: all 0.2s ease-in-out; /* AdminLTE transition for hover */
+            border-top: 3px solid var(--primary); /* Simulate AdminLTE card-primary */
+        }
+
+        .card:hover {
+            box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22); /* More pronounced hover shadow */
+            transform: translateY(-3px);
+        }
+
+        .card h3 {
+            color: #1f2d3d; /* AdminLTE default text color */
+            font-size: 1rem; /* Adjusted font size */
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .card-value {
+            font-size: 1.8rem; /* Adjusted font size */
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .card-label {
+            color: #6c757d; /* AdminLTE secondary text color */
+            font-size: 0.8rem;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 0.25rem;
+            padding: 20px;
+            box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+            border-top: 3px solid var(--info); /* Simulate AdminLTE card-info */
+        }
+
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .chart-placeholder {
+            height: 280px; /* Adjusted height */
+            background: #e9ecef;
+            border-radius: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 1rem;
+            border: 1px dashed #d2d6de; /* AdminLTE border */
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 0.25rem;
+            padding: 20px;
+            box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+            overflow-x: auto;
+            border-top: 3px solid var(--success); /* Simulate AdminLTE card-success */
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .table-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .month-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .month-selector label {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .month-selector select {
+            padding: 8px 12px;
+            border: 1px solid #ced4da; /* AdminLTE form control border */
+            border-radius: 0.25rem; /* AdminLTE border-radius */
+            font-size: 0.9rem;
+            background: white;
+            color: #495057; /* AdminLTE form control text color */
+            cursor: pointer;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        .month-selector select:focus {
+            outline: none;
+            border-color: #80bdff; /* Bootstrap focus color */
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); /* Bootstrap focus shadow */
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            padding: 8px 35px 8px 12px; /* Adjusted padding for icon */
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem; /* AdminLTE border-radius */
+            font-size: 0.9rem;
+            width: 200px; /* Adjusted width */
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            color: #495057;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+
+        .search-box::after {
+            content: '\f002'; /* Font Awesome search icon */
+            font-family: 'Font Awesome 5 Free'; /* Placeholder for Font Awesome */
+            font-weight: 900;
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 10px; /* Adjusted padding */
+            text-align: left;
+            border-bottom: 1px solid #dee2e6; /* AdminLTE table border */
+        }
+
+        .data-table th {
+            background-color: var(--secondary); /* AdminLTE table header background */
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            white-space: nowrap; /* Prevent wrapping */
+        }
+
+        .data-table thead tr:first-child th:first-child {
+            border-top-left-radius: 0.25rem;
+        }
+
+        .data-table thead tr:first-child th:last-child {
+            border-top-right-radius: 0.25rem;
+        }
+
+        .data-table tr:hover {
+            background-color: rgba(0, 0, 0, 0.03); /* AdminLTE hover effect */
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.35em 0.6em; /* AdminLTE badge padding */
+            font-size: 75%; /* AdminLTE badge font size */
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 0.25rem; /* AdminLTE badge border-radius */
+        }
+
+        .status-excellent {
+            color: #fff;
+            background-color: var(--success); /* AdminLTE success color */
+        }
+
+        .status-good {
+            color: #fff;
+            background-color: var(--info); /* AdminLTE info color */
+        }
+
+        .status-normal {
+            color: #1f2d3d; /* AdminLTE warning text color */
+            background-color: var(--warning); /* AdminLTE warning color */
+        }
+
+        .status-poor {
+            color: #fff;
+            background-color: var(--danger); /* AdminLTE danger color */
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px; /* Adjusted height */
+            background-color: #e9ecef;
+            border-radius: 0.25rem; /* AdminLTE border-radius */
+            overflow: hidden;
+            margin-top: 3px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary); /* AdminLTE primary color */
+            transition: width 0.3s ease;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 8px; /* Adjusted gap */
+            margin-bottom: 15px;
+        }
+
+        .filter-btn {
+            padding: 6px 12px; /* Adjusted padding */
+            border: 1px solid var(--primary);
+            background: white;
+            color: var(--primary);
+            border-radius: 0.25rem; /* AdminLTE button border-radius */
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            font-size: 0.85rem;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .modification-items {
+            display: flex;
+            gap: 6px; /* Adjusted gap */
+            flex-wrap: wrap;
+        }
+
+        .mod-item {
+            background: #f8f9fa;
+            padding: 2px 7px; /* Adjusted padding */
+            border-radius: 0.2rem; /* Smaller border-radius for tags */
+            font-size: 0.75rem; /* Smaller font size for tags */
+            border: 1px solid #dee2e6;
+            color: #495057;
+        }
+
+        .mod-item.modified {
+            background: #fdf7df; /* Softer warning color */
+            border-color: #ffeeba; /* Softer warning border */
+            color: #856404; /* Softer warning text */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .header-controls {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+
+            .search-box input {
+                width: 100%;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 10px 8px;
+                font-size: 0.85rem;
+            }
+
+            .filter-btn {
+                font-size: 0.8rem;
+                padding: 5px 10px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+<div class="header">
+    <div class="container">
+        <h1>엘리베이터 BOM 구성 현황</h1>
+        <p>실시간 부품 관리 및 수배 현황 모니터링</p>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="container">
+        <div class="dashboard-grid">
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>총 제품 수</h3>
+                    <div class="card-value" id="totalProducts">24</div>
+                    <div class="card-label">호기</div>
+                </div>
+                <div class="card">
+                    <h3>평균 수배율</h3>
+                    <div class="card-value" id="avgRate">87.5%</div>
+                    <div class="card-label">자동수배</div>
+                </div>
+                <div class="card">
+                    <h3>수정 대상 부품</h3>
+                    <div class="card-value" id="modifiedParts">156</div>
+                    <div class="card-label">개</div>
+                </div>
+                <div class="card">
+                    <h3>완료율</h3>
+                    <div class="card-value" id="completionRate">92.3%</div>
+                    <div class="card-label">BOM 구성</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">월별 BOM 구성 현황</div>
+                <div class="chart-placeholder">
+                    📊 차트 영역 (Chart.js 또는 다른 차트 라이브러리 연동)
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">엘리베이터 제품별 BOM 현황</div>
+                <div class="header-controls">
+                    <div class="month-selector">
+                        <label for="monthSelect">분석 기간:</label>
+                        <select id="monthSelect">
+                            <option value="all">전체</option>
+                            <option value="2024-04">2024년 4월</option>
+                            <option value="2024-05">2024년 5월</option>
+                            <option value="2024-06">2024년 6월</option>
+                            <option value="2024-07" selected>2024년 7월</option>
+                        </select>
+                    </div>
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="호기번호 또는 제품명 검색">
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">전체</button>
+                <button class="filter-btn" data-filter="excellent">우수</button>
+                <button class="filter-btn" data-filter="good">양호</button>
+                <button class="filter-btn" data-filter="normal">보통</button>
+                <button class="filter-btn" data-filter="poor">개선필요</button>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>호기번호</th>
+                    <th>제품명</th>
+                    <th>최종설계일</th>
+                    <th>총 부품 수</th>
+                    <th>수정 부품</th>
+                    <th>자동수배율</th>
+                    <th>진행률</th>
+                    <th>상태</th>
+                </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 샘플 데이터 (더 많은 월별 데이터 추가)
+    const elevatorData = [
+        // 2024년 4월 데이터
+        {
+            id: 'ELV-001',
+            name: '승용 엘리베이터 A타입',
+            designDate: '2024-04-15',
+            totalParts: 450,
+            modifiedParts: { M: 12, C: 8, A: 5, B: 3, D: 2 },
+            autoRate: 95.2,
+            progress: 98,
+            status: 'excellent'
+        },
+        {
+            id: 'ELV-002',
+            name: '화물 엘리베이터 B타입',
+            designDate: '2024-04-20',
+            totalParts: 680,
+            modifiedParts: { M: 18, C: 12, A: 8, B: 6, D: 4 },
+            autoRate: 87.3,
+            progress: 85,
+            status: 'good'
+        },
+        {
+            id: 'ELV-003',
+            name: '승용 엘리베이터 C타입',
+            designDate: '2024-04-25',
+            totalParts: 520,
+            modifiedParts: { M: 25, C: 15, A: 10, B: 8, D: 5 },
+            autoRate: 78.5,
+            progress: 72,
+            status: 'normal'
+        },
+        // 2024년 5월 데이터
+        {
+            id: 'ELV-004',
+            name: '고속 엘리베이터 D타입',
+            designDate: '2024-05-01',
+            totalParts: 750,
+            modifiedParts: { M: 35, C: 22, A: 15, B: 12, D: 8 },
+            autoRate: 65.8,
+            progress: 58,
+            status: 'poor'
+        },
+        {
+            id: 'ELV-005',
+            name: '승용 엘리베이터 E타입',
+            designDate: '2024-05-05',
+            totalParts: 480,
+            modifiedParts: { M: 10, C: 6, A: 4, B: 2, D: 1 },
+            autoRate: 92.1,
+            progress: 94,
+            status: 'excellent'
+        },
+        {
+            id: 'ELV-006',
+            name: '화물 엘리베이터 F타입',
+            designDate: '2024-05-10',
+            totalParts: 620,
+            modifiedParts: { M: 20, C: 14, A: 9, B: 7, D: 3 },
+            autoRate: 83.7,
+            progress: 79,
+            status: 'good'
+        },
+        {
+            id: 'ELV-007',
+            name: '승용 엘리베이터 G타입',
+            designDate: '2024-05-15',
+            totalParts: 540,
+            modifiedParts: { M: 15, C: 9, A: 6, B: 4, D: 2 },
+            autoRate: 89.4,
+            progress: 88,
+            status: 'good'
+        },
+        // 2024년 6월 데이터
+        {
+            id: 'ELV-008',
+            name: '화물 엘리베이터 H타입',
+            designDate: '2024-06-01',
+            totalParts: 710,
+            modifiedParts: { M: 28, C: 18, A: 12, B: 9, D: 6 },
+            autoRate: 76.2,
+            progress: 75,
+            status: 'normal'
+        },
+        {
+            id: 'ELV-009',
+            name: '승용 엘리베이터 I타입',
+            designDate: '2024-06-08',
+            totalParts: 465,
+            modifiedParts: { M: 8, C: 5, A: 3, B: 2, D: 1 },
+            autoRate: 96.8,
+            progress: 99,
+            status: 'excellent'
+        },
+        {
+            id: 'ELV-010',
+            name: '고속 엘리베이터 J타입',
+            designDate: '2024-06-15',
+            totalParts: 820,
+            modifiedParts: { M: 42, C: 28, A: 18, B: 14, D: 9 },
+            autoRate: 62.1,
+            progress: 55,
+            status: 'poor'
+        },
+        {
+            id: 'ELV-011',
+            name: '승용 엘리베이터 K타입',
+            designDate: '2024-06-22',
+            totalParts: 495,
+            modifiedParts: { M: 13, C: 8, A: 5, B: 3, D: 2 },
+            autoRate: 91.7,
+            progress: 92,
+            status: 'excellent'
+        },
+        // 2024년 7월 데이터
+        {
+            id: 'ELV-012',
+            name: '화물 엘리베이터 L타입',
+            designDate: '2024-07-05',
+            totalParts: 650,
+            modifiedParts: { M: 22, C: 16, A: 10, B: 8, D: 4 },
+            autoRate: 81.5,
+            progress: 82,
+            status: 'good'
+        },
+        {
+            id: 'ELV-013',
+            name: '승용 엘리베이터 M타입',
+            designDate: '2024-07-12',
+            totalParts: 510,
+            modifiedParts: { M: 17, C: 11, A: 7, B: 5, D: 3 },
+            autoRate: 85.9,
+            progress: 86,
+            status: 'good'
+        }
+    ];
+
+    // 상태별 스타일 매핑
+    const statusStyles = {
+        excellent: 'status-excellent',
+        good: 'status-good',
+        normal: 'status-normal',
+        poor: 'status-poor'
+    };
+
+    const statusLabels = {
+        excellent: '우수',
+        good: '양호',
+        normal: '보통',
+        poor: '개선필요'
+    };
+
+    // 테이블 렌더링
+    function renderTable(data = elevatorData) {
+        const tbody = $('#tableBody');
+        tbody.empty();
+
+        data.forEach(item => {
+            const modifiedPartsHtml = Object.entries(item.modifiedParts)
+                .map(([key, value]) => `<span class="mod-item ${value > 10 ? 'modified' : ''}">${key}:${value}</span>`)
+                .join('');
+
+            const row = `
+                    <tr data-status="${item.status}">
+                        <td><strong>${item.id}</strong></td>
+                        <td>${item.name}</td>
+                        <td>${item.designDate}</td>
+                        <td>${item.totalParts.toLocaleString()}</td>
+                        <td>
+                            <div class="modification-items">
+                                ${modifiedPartsHtml}
+                            </div>
+                        </td>
+                        <td>${item.autoRate}%</td>
+                        <td>
+                            <div>${item.progress}%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${item.progress}%"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-badge ${statusStyles[item.status]}">
+                                ${statusLabels[item.status]}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            tbody.append(row);
+        });
+    }
+
+    // 검색 기능
+    $('#searchInput').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        const filteredData = elevatorData.filter(item =>
+            item.id.toLowerCase().includes(searchTerm) ||
+            item.name.toLowerCase().includes(searchTerm)
+        );
+        renderTable(filteredData);
+    });
+
+    // 필터 기능
+    $('.filter-btn').on('click', function() {
+        $('.filter-btn').removeClass('active');
+        $(this).addClass('active');
+
+        const filterType = $(this).data('filter');
+
+        if (filterType === 'all') {
+            renderTable(elevatorData);
+        } else {
+            const filteredData = elevatorData.filter(item => item.status === filterType);
+            renderTable(filteredData);
+        }
+    });
+
+    // 요약 카드 업데이트
+    function updateSummaryCards() {
+        const totalProducts = elevatorData.length;
+        const avgRate = (elevatorData.reduce((sum, item) => sum + item.autoRate, 0) / totalProducts).toFixed(1);
+        const modifiedParts = elevatorData.reduce((sum, item) =>
+            sum + Object.values(item.modifiedParts).reduce((a, b) => a + b, 0), 0);
+        const completionRate = (elevatorData.reduce((sum, item) => sum + item.progress, 0) / totalProducts).toFixed(1);
+
+        $('#totalProducts').text(totalProducts);
+        $('#avgRate').text(`${avgRate}%`);
+        $('#modifiedParts').text(modifiedParts);
+        $('#completionRate').text(`${completionRate}%`);
+    }
+
+    // 초기화
+    $(document).ready(function() {
+        renderTable();
+        updateSummaryCards();
+    });
+
+
+
+
+</script>
+</body>
+</html>
