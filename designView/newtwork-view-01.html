@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>엘리베이터 부품 네트워크 그래프</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 배경 애니메이션 */
+        .background-animation {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                    radial-gradient(circle at 20% 20%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 40%, rgba(120, 119, 198, 0.2) 0%, transparent 50%);
+            animation: floatBackground 15s ease-in-out infinite;
+        }
+
+        @keyframes floatBackground {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(1deg); }
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+            z-index: 10;
+        }
+
+        .graph-container {
+            flex: 1;
+            position: relative;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 컨트롤 버튼 */
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 범례 */
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            z-index: 1000;
+            animation: fadeInUp 1s ease-out 0.2s both;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 검색 컨테이너 */
+        .search-container {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            animation: fadeInUp 1s ease-out 0.4s both;
+        }
+
+        .search-input {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            width: 250px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        /* SVG 스타일 */
+        #network-graph {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+        }
+
+        .link {
+            stroke: rgba(255, 255, 255, 0.3);
+            stroke-width: 2;
+            transition: all 0.3s ease;
+        }
+
+        .link.highlighted {
+            stroke: rgba(255, 255, 255, 0.8);
+            stroke-width: 3;
+            animation: pulse 2s infinite;
+        }
+
+        .node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        }
+
+        .node:hover {
+            r: 30;
+            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+        }
+
+        .node.selected {
+            stroke: #fff;
+            stroke-width: 3;
+            filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6));
+            animation: selectedPulse 2s infinite;
+        }
+
+        @keyframes selectedPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .node-label {
+            font-size: 12px;
+            fill: white;
+            text-anchor: middle;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* 툴팁 */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+        }
+
+        /* 사이드바 */
+        .sidebar {
+            width: 350px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            overflow-y: auto;
+            animation: slideInRight 1s ease-out;
+        }
+
+        .sidebar h2 {
+            color: white;
+            font-size: 24px;
+            font-weight: 300;
+            margin-bottom: 30px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .part-info {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .part-info:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .part-info h3 {
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        .part-info p {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .part-info strong {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .part-specs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .spec-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 애니메이션 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+
+        /* 반응형 */
+        @media (max-width: 1200px) {
+            .sidebar {
+                width: 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: 40vh;
+            }
+
+            .graph-container {
+                height: 60vh;
+            }
+
+            .controls, .search-container {
+                position: relative;
+                top: 10px;
+                left: 10px;
+                margin-bottom: 10px;
+            }
+
+            .legend {
+                position: relative;
+                top: 10px;
+                right: 10px;
+                margin: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="background-animation"></div>
+
+<div class="container">
+    <div class="graph-container">
+        <div class="controls">
+            <button class="control-btn" onclick="resetZoom()">🔍 리셋</button>
+            <button class="control-btn" onclick="togglePhysics()">⚡ 물리효과</button>
+            <button class="control-btn" onclick="exportGraph()">💾 내보내기</button>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ff6b6b;"></div>
+                <span>제어 시스템</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #4ecdc4;"></div>
+                <span>기계 부품</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #45b7d1;"></div>
+                <span>전기 부품</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #f9ca24;"></div>
+                <span>안전 장치</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #6c5ce7;"></div>
+                <span>구조 부품</span>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="부품 검색...">
+            <button class="control-btn" onclick="searchPart()">🔍 검색</button>
+        </div>
+
+        <svg id="network-graph"></svg>
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <div class="sidebar">
+        <h2>부품 정보</h2>
+        <div id="part-details">
+            <div class="part-info">
+                <h3>부품을 클릭하세요</h3>
+                <p>네트워크 그래프에서 부품을 클릭하면 상세 정보가 여기에 표시됩니다.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 엘리베이터 부품 데이터
+    const elevatorData = {
+        nodes: [
+            // 제어 시스템
+            { id: 'controller', name: '제어반', category: 'control', color: '#ff6b6b', description: '엘리베이터 전체 동작을 제어하는 중앙 시스템', specs: ['CPU', '메모리', '통신 모듈'] },
+            { id: 'selector', name: '층선택기', category: 'control', color: '#ff6b6b', description: '승강장에서 층을 선택하는 버튼 패널', specs: ['버튼', 'LED', '음성안내'] },
+            { id: 'indicator', name: '층표시기', category: 'control', color: '#ff6b6b', description: '현재 층과 운행 방향을 표시', specs: ['LED 디스플레이', '방향 화살표'] },
+
+            // 기계 부품
+            { id: 'motor', name: '권상기', category: 'mechanical', color: '#4ecdc4', description: '엘리베이터를 상하로 움직이게 하는 모터', specs: ['AC 모터', '기어박스', '브레이크'] },
+            { id: 'rope', name: '와이어로프', category: 'mechanical', color: '#4ecdc4', description: '엘리베이터 카를 지지하는 강철 로프', specs: ['강철선', '윤활유', '안전계수'] },
+            { id: 'pulley', name: '도르래', category: 'mechanical', color: '#4ecdc4', description: '와이어로프의 방향을 바꾸는 장치', specs: ['베어링', '홈가공', '균형추'] },
+            { id: 'counterweight', name: '균형추', category: 'mechanical', color: '#4ecdc4', description: '엘리베이터 카의 무게를 상쇄하는 추', specs: ['철판', '가이드', '안전장치'] },
+
+            // 전기 부품
+            { id: 'power', name: '전원공급장치', category: 'electrical', color: '#45b7d1', description: '엘리베이터 전체에 전력을 공급', specs: ['변압기', '정류기', '배전반'] },
+            { id: 'inverter', name: '인버터', category: 'electrical', color: '#45b7d1', description: '모터 속도를 제어하는 장치', specs: ['VVVF', '주파수 제어', '토크 제어'] },
+            { id: 'encoder', name: '엔코더', category: 'electrical', color: '#45b7d1', description: '엘리베이터 위치를 감지하는 센서', specs: ['위치 감지', '속도 감지', '방향 감지'] },
+
+            // 안전 장치
+            { id: 'safety_gear', name: '안전장치', category: 'safety', color: '#f9ca24', description: '비상시 엘리베이터를 정지시키는 장치', specs: ['기계식', '전기식', '비상제동'] },
+            { id: 'door_sensor', name: '도어센서', category: 'safety', color: '#f9ca24', description: '문의 개폐 상태를 감지', specs: ['광센서', '접촉센서', '안전센서'] },
+            { id: 'emergency_brake', name: '비상브레이크', category: 'safety', color: '#f9ca24', description: '비상 상황에서 즉시 정지', specs: ['자동 작동', '수동 해제', '이중 안전'] },
+
+            // 구조 부품
+            { id: 'car', name: '엘리베이터 카', category: 'structure', color: '#6c5ce7', description: '승객이 탑승하는 공간', specs: ['스테인리스', '내장재', '조명'] },
+            { id: 'rail', name: '가이드레일', category: 'structure', color: '#6c5ce7', description: '엘리베이터 카의 움직임을 안내', specs: ['T형 레일', '브래킷', '완충기'] },
+            { id: 'door', name: '출입문', category: 'structure', color: '#6c5ce7', description: '엘리베이터 출입구', specs: ['자동개폐', '안전장치', '방화문'] },
+            { id: 'shaft', name: '승강로', category: 'structure', color: '#6c5ce7', description: '엘리베이터가 움직이는 통로', specs: ['콘크리트', '방수', '환기시설'] }
+        ],
+        links: [
+            // 제어 시스템 연결
+            { source: 'controller', target: 'selector', relation: '제어신호' },
+            { source: 'controller', target: 'indicator', relation: '표시신호' },
+            { source: 'controller', target: 'motor', relation: '구동신호' },
+            { source: 'controller', target: 'inverter', relation: '제어신호' },
+            { source: 'controller', target: 'door_sensor', relation: '상태신호' },
+
+            // 기계 부품 연결
+            { source: 'motor', target: 'rope', relation: '동력전달' },
+            { source: 'rope', target: 'pulley', relation: '방향변환' },
+            { source: 'rope', target: 'car', relation: '지지연결' },
+            { source: 'rope', target: 'counterweight', relation: '균형연결' },
+
+            // 전기 부품 연결
+            { source: 'power', target: 'controller', relation: '전력공급' },
+            { source: 'power', target: 'inverter', relation: '전력공급' },
+            { source: 'inverter', target: 'motor', relation: '전력제어' },
+            { source: 'encoder', target: 'controller', relation: '위치신호' },
+
+            // 안전 장치 연결
+            { source: 'safety_gear', target: 'car', relation: '안전제동' },
+            { source: 'door_sensor', target: 'door', relation: '상태감지' },
+            { source: 'emergency_brake', target: 'motor', relation: '비상제동' },
+
+            // 구조 부품 연결
+            { source: 'car', target: 'rail', relation: '가이드' },
+            { source: 'door', target: 'car', relation: '출입구' },
+            { source: 'rail', target: 'shaft', relation: '고정설치' },
+            { source: 'car', target: 'shaft', relation: '운행공간' }
+        ]
+    };
+
+    // D3.js 설정
+    const width = window.innerWidth * 0.7;
+    const height = window.innerHeight;
+
+    const svg = d3.select('#network-graph')
+        .attr('width', width)
+        .attr('height', height);
+
+    // 줌 기능
+    const zoom = d3.zoom()
+        .scaleExtent([0.1, 4])
+        .on('zoom', (event) => {
+            g.attr('transform', event.transform);
+        });
+
+    svg.call(zoom);
+
+    const g = svg.append('g');
+
+    // 물리 시뮬레이션
+    let simulation = d3.forceSimulation(elevatorData.nodes)
+        .force('link', d3.forceLink(elevatorData.links).id(d => d.id).distance(100))
+        .force('charge', d3.forceManyBody().strength(-300))
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('collision', d3.forceCollide().radius(30));
+
+    // 링크 생성
+    const links = g.append('g')
+        .selectAll('line')
+        .data(elevatorData.links)
+        .enter()
+        .append('line')
+        .attr('class', 'link');
+
+    // 노드 생성
+    const nodes = g.append('g')
+        .selectAll('circle')
+        .data(elevatorData.nodes)
+        .enter()
+        .append('circle')
+        .attr('class', 'node')
+        .attr('r', 25)
+        .attr('fill', d => d.color)
+        .call(d3.drag()
+            .on('start', dragstarted)
+            .on('drag', dragged)
+            .on('end', dragended))
+        .on('click', showPartDetails)
+        .on('mouseover', showTooltip)
+        .on('mouseout', hideTooltip);
+
+    // 노드 라벨
+    const labels = g.append('g')
+        .selectAll('text')
+        .data(elevatorData.nodes)
+        .enter()
+        .append('text')
+        .attr('class', 'node-label')
+        .text(d => d.name);
+
+    // 시뮬레이션 업데이트
+    simulation.on('tick', () => {
+        links
+            .attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y);
+
+        nodes
+            .attr('cx', d => d.x)
+            .attr('cy', d => d.y);
+
+        labels
+            .attr('x', d => d.x)
+            .attr('y', d => d.y + 40);
+    });
+
+    // 드래그 함수들
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+    // 부품 세부 정보 표시
+    function showPartDetails(event, d) {
+        // 선택된 노드 강조
+        nodes.classed('selected', false);
+        d3.select(this).classed('selected', true);
+
+        // 연결된 링크 강조
+        links.classed('highlighted', false);
+        links.filter(l => l.source.id === d.id || l.target.id === d.id)
+            .classed('highlighted', true);
+
+        // 사이드바 업데이트
+        const detailsDiv = document.getElementById('part-details');
+        detailsDiv.innerHTML = `
+                <div class="part-info">
+                    <h3>${d.name}</h3>
+                    <p><strong>카테고리:</strong> ${getCategoryName(d.category)}</p>
+                    <p>${d.description}</p>
+                    <div class="part-specs">
+                        ${d.specs.map(spec => `<span class="spec-tag">${spec}</span>`).join('')}
+                    </div>
+                </div>
+                <div class="part-info">
+                    <h3>연결된 부품</h3>
+                    ${getConnectedParts(d.id)}
+                </div>
+            `;
+    }
+
+    // 카테고리 이름 변환
+    function getCategoryName(category) {
+        const categories = {
+            'control': '제어 시스템',
+            'mechanical': '기계 부품',
+            'electrical': '전기 부품',
+            'safety': '안전 장치',
+            'structure': '구조 부품'
+        };
+        return categories[category] || category;
+    }
+
+    // 연결된 부품 찾기
+    function getConnectedParts(nodeId) {
+        const connections = elevatorData.links.filter(link =>
+            link.source.id === nodeId || link.target.id === nodeId
+        );
+
+        return connections.map(conn => {
+            const connectedId = conn.source.id === nodeId ? conn.target.id : conn.source.id;
+            const connectedNode = elevatorData.nodes.find(n => n.id === connectedId);
+            return `<p><strong>${connectedNode.name}</strong> - ${conn.relation}</p>`;
+        }).join('');
+    }
+
+    // 툴팁 표시
+    function showTooltip(event, d) {
+        const tooltip = document.getElementById('tooltip');
+        tooltip.innerHTML = `<strong>${d.name}</strong><br>${d.description}`;
+        tooltip.style.opacity = '1';
+        tooltip.style.left = (event.pageX + 10) + 'px';
+        tooltip.style.top = (event.pageY - 10) + 'px';
+    }
+
+    // 툴팁 숨기기
+    function hideTooltip() {
+        document.getElementById('tooltip').style.opacity = '0';
+    }
+
+    // 제어 함수들
+    function resetZoom() {
+        svg.transition().duration(750).call(
+            zoom.transform,
+            d3.zoomIdentity
+        );
+    }
+
+    let physicsEnabled = true;
+    function togglePhysics() {
+        physicsEnabled = !physicsEnabled;
+        if (physicsEnabled) {
+            simulation.restart();
+        } else {
+            simulation.stop();
+        }
+    }
+
+    function exportGraph() {
+        const svgData = new XMLSerializer().serializeToString(svg.node());
+        const blob = new Blob([svgData], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'elevator-network-graph.svg';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function searchPart() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        if (!searchTerm) return;
+
+        const foundNode = elevatorData.nodes.find(node =>
+            node.name.toLowerCase().includes(searchTerm) ||
+            node.description.toLowerCase().includes(searchTerm)
+        );
+
+        if (foundNode) {
+            // 검색된 노드로 이동
+            const transform = d3.zoomIdentity
+                .translate(width / 2 - foundNode.x, height / 2 - foundNode.y)
+                .scale(1.5);
+
+            svg.transition().duration(750).call(zoom.transform, transform);
+
+            // 노드 강조
+            showPartDetails(null, foundNode);
+        } else {
+            alert('부품을 찾을 수 없습니다.');
+        }
+    }
+
+    // 검색 입력 엔터 키 처리
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchPart();
+        }
+    });
+
+    // 반응형 처리
+    window.addEventListener('resize', () => {
+        const newWidth = window.innerWidth * 0.7;
+        const newHeight = window.innerHeight;
+
+        svg.attr('width', newWidth).attr('height', newHeight);
+        simulation.force('center', d3.forceCenter(newWidth / 2, newHeight / 2));
+        simulation.restart();
+    });
+</script>
+</body>
+</html>
