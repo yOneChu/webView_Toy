@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>현대엘리베이터 3D 뷰어</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333333;
+        }
+
+        /* Header - 현대엘리베이터 스타일 */
+        .header {
+            background: #ffffff;
+            border-bottom: 1px solid #e5e5e5;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            position: relative;
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 80px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .hyundai-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-symbol {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #0047AB 0%, #003d82 100%);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .brand-text {
+            font-size: 22px;
+            font-weight: 700;
+            color: #0047AB;
+            letter-spacing: -0.5px;
+        }
+
+        .service-title {
+            font-size: 18px;
+            color: #666666;
+            font-weight: 400;
+            padding-left: 30px;
+            border-left: 1px solid #e5e5e5;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            border: 1px solid #e5e5e5;
+            background: #ffffff;
+            color: #333333;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            border-color: #0047AB;
+            color: #0047AB;
+        }
+
+        .nav-btn.primary {
+            background: #0047AB;
+            color: white;
+            border-color: #0047AB;
+        }
+
+        .nav-btn.primary:hover {
+            background: #003d82;
+        }
+
+        /* Main Content */
+        .main-wrapper {
+            flex: 1;
+            background: #fafafa;
+        }
+
+        .content-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Breadcrumb */
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #666666;
+            margin-bottom: 10px;
+        }
+
+        .breadcrumb-item {
+            color: #666666;
+        }
+
+        .breadcrumb-item.current {
+            color: #0047AB;
+            font-weight: 500;
+        }
+
+        /* Page Title */
+        .page-header {
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #333333;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        .page-subtitle {
+            font-size: 16px;
+            color: #666666;
+            line-height: 1.5;
+        }
+
+        /* Content Area */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .viewer-section {
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e5e5e5;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .section-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid #e5e5e5;
+            background: #f8f9fa;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333333;
+            margin-bottom: 5px;
+        }
+
+        .section-desc {
+            font-size: 14px;
+            color: #666666;
+        }
+
+        .viewer-content {
+            padding: 40px 30px;
+            min-height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            position: relative;
+        }
+
+        .viewer-placeholder {
+            text-align: center;
+            color: #999999;
+        }
+
+        .placeholder-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: #0047AB;
+            opacity: 0.7;
+        }
+
+        .placeholder-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333333;
+            margin-bottom: 10px;
+        }
+
+        .placeholder-text {
+            font-size: 14px;
+            color: #666666;
+            line-height: 1.6;
+        }
+
+        .upload-zone {
+            margin-top: 30px;
+            padding: 30px;
+            border: 2px dashed #d6d6d6;
+            border-radius: 8px;
+            background: #ffffff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-zone:hover {
+            border-color: #0047AB;
+            background: #f8f9ff;
+        }
+
+        .upload-zone.dragover {
+            border-color: #0047AB;
+            background: #f0f4ff;
+        }
+
+        /* Controls */
+        .controls-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-item {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            color: #666666;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-item:hover {
+            background: #0047AB;
+            color: white;
+            border-color: #0047AB;
+            transform: translateY(-2px);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: #ffffff;
+            border-top: 1px solid #e5e5e5;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #666666;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-right {
+            color: #999999;
+            font-size: 13px;
+        }
+
+        /* Footer - 현대엘리베이터 스타일 */
+        .footer {
+            background: #333333;
+            color: #cccccc;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .developer-tag {
+            background: #0047AB;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .footer-right {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .footer-info {
+            font-size: 13px;
+            color: #999999;
+        }
+
+        .copyright {
+            font-size: 12px;
+            color: #666666;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                height: auto;
+                padding: 20px;
+                gap: 20px;
+            }
+
+            .logo-section {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .service-title {
+                padding-left: 0;
+                border-left: none;
+                border-top: 1px solid #e5e5e5;
+                padding-top: 15px;
+            }
+
+            .content-container {
+                padding: 20px 15px;
+            }
+
+            .page-title {
+                font-size: 24px;
+            }
+
+            .viewer-content {
+                padding: 30px 20px;
+                min-height: 400px;
+            }
+
+            .footer-container {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .controls-panel {
+                position: static;
+                justify-content: center;
+                margin-top: 20px;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .viewer-section {
+            animation: fadeIn 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+<header class="header">
+    <div class="header-container">
+        <div class="logo-section">
+            <div class="hyundai-logo">
+                <div class="logo-symbol">H</div>
+                <div class="brand-text">현대엘리베이터</div>
+            </div>
+            <div class="service-title">3D 엔지니어링 뷰어</div>
+        </div>
+        <nav class="header-nav">
+            <button class="nav-btn">파일 열기</button>
+            <button class="nav-btn primary">새 프로젝트</button>
+        </nav>
+    </div>
+</header>
+
+<main class="main-wrapper">
+    <div class="content-container">
+        <nav class="breadcrumb">
+            <span class="breadcrumb-item">홈</span>
+            <span>></span>
+            <span class="breadcrumb-item">엔지니어링 도구</span>
+            <span>></span>
+            <span class="breadcrumb-item current">3D 뷰어</span>
+        </nav>
+
+        <div class="page-header">
+            <h1 class="page-title">3D 모델 뷰어</h1>
+            <p class="page-subtitle">엘리베이터 설계 도면 및 3D 모델을 실시간으로 확인하고 분석할 수 있습니다.</p>
+        </div>
+
+        <div class="content-grid">
+            <div class="viewer-section">
+                <div class="section-header">
+                    <div class="section-title">3D 모델 뷰어</div>
+                    <div class="section-desc">CAD 파일을 업로드하여 3차원 모델을 확인하세요</div>
+                </div>
+
+                <div class="viewer-content">
+                    <div class="viewer-placeholder">
+                        <div class="placeholder-icon">🏗️</div>
+                        <div class="placeholder-title">모델을 로드해주세요</div>
+                        <div class="placeholder-text">
+                            지원 파일 형식: .dwg, .step, .iges, .obj<br>
+                            최대 파일 크기: 500MB
+                        </div>
+                        <div class="upload-zone">
+                            <div style="text-align: center; color: #666;">
+                                <strong>파일을 드래그하여 놓거나 클릭하여 선택</strong><br>
+                                <small>또는 상단의 '파일 열기' 버튼을 사용하세요</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="controls-panel">
+                        <div class="control-item" title="전체화면">⛶</div>
+                        <div class="control-item" title="설정">⚙️</div>
+                        <div class="control-item" title="도움말">❓</div>
+                    </div>
+                </div>
+
+                <div class="status-bar">
+                    <div class="status-left">
+                        <div class="status-item">
+                            <div class="status-dot"></div>
+                            시스템 준비됨
+                        </div>
+                        <div class="status-item">
+                            <span>📊</span>
+                            GPU 가속 활성화
+                        </div>
+                    </div>
+                    <div class="status-right">
+                        마지막 업데이트: 2025.06.29
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="footer">
+    <div class="footer-container">
+        <div class="footer-left">
+            <div class="developer-tag">수배로직설계팀 - 김영환M</div>
+            <div class="footer-info">Engineering Solution</div>
+        </div>
+        <div class="footer-right">
+            <div class="footer-info">현대엘리베이터 내부 도구</div>
+            <div class="copyright">© 2025 Hyundai Elevator Co., Ltd.</div>
+        </div>
+    </div>
+</footer>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const uploadZone = document.querySelector('.upload-zone');
+        const navBtns = document.querySelectorAll('.nav-btn');
+        const controlItems = document.querySelectorAll('.control-item');
+
+        // 드래그 앤 드롭 효과
+        uploadZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', function() {
+            this.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+
+            // 파일 드롭 시뮬레이션
+            const placeholder = document.querySelector('.viewer-placeholder');
+            placeholder.innerHTML = `
+                    <div class="placeholder-icon">⏳</div>
+                    <div class="placeholder-title">파일을 처리중입니다...</div>
+                    <div class="placeholder-text">잠시만 기다려주세요</div>
+                `;
+
+            setTimeout(() => {
+                placeholder.innerHTML = `
+                        <div class="placeholder-icon" style="color: #28a745;">✅</div>
+                        <div class="placeholder-title">모델 로드 완료</div>
+                        <div class="placeholder-text">3D 뷰어가 준비되었습니다</div>
+                    `;
+            }, 2000);
+        });
+
+        // 클릭으로 파일 선택
+        uploadZone.addEventListener('click', function() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.dwg,.step,.iges,.obj';
+            input.click();
+        });
+
+        // 네비게이션 버튼 효과
+        navBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+            });
+        });
+
+        // 컨트롤 버튼 효과
+        controlItems.forEach(item => {
+            item.addEventListener('click', function() {
+                this.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+            });
+        });
+
+        // 전체화면 기능
+        const fullscreenBtn = document.querySelector('.control-item[title="전체화면"]');
+        fullscreenBtn.addEventListener('click', function() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                document.documentElement.requestFullscreen();
+            }
+        });
+    });
+</script>
+</body>
+</html>
