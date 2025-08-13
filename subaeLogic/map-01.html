@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Key-Centric MindMap UI — Dynamic Force Motion</title>
+    <!-- Bootstrap -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+    <!-- D3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+
+    <style>
+        :root{
+            --bg0: #0b1020;
+            --bg1: #0f1a3a;
+            --glass: rgba(255,255,255,0.08);
+            --accent: #6ea8fe;
+            --accent2: #b197fc;
+            --text: #e6e9f5;
+        }
+        html, body {
+            height: 100%;
+            background: radial-gradient(1200px 600px at 20% 10%, #1a244a 0%, var(--bg0) 40%),
+            radial-gradient(1200px 800px at 80% 80%, #271745 0%, var(--bg0) 40%),
+            linear-gradient(160deg, var(--bg1), var(--bg0));
+            color: var(--text);
+            font-family: "Noto Sans KR", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+            overflow: hidden;
+        }
+
+        .navbar {
+            background: linear-gradient(90deg, rgba(110,168,254,0.15), rgba(177,151,252,0.15));
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .control-panel{
+            position: absolute;
+            top: 80px;
+            left: 24px;
+            z-index: 10;
+            width: 360px;
+            background: var(--glass);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+            backdrop-filter: blur(10px);
+            animation: floatY 8s ease-in-out infinite;
+        }
+        @keyframes floatY { 0%,100%{ transform: translateY(0px);} 50%{ transform: translateY(-6px);} }
+
+        .control-panel .card-header{
+            background: linear-gradient(120deg, rgba(110,168,254,0.2), rgba(177,151,252,0.2));
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: var(--text);
+        }
+        .badge-soft { background: rgba(110,168,254,0.15); border: 1px solid rgba(110,168,254,0.4); color: #d6e4ff; }
+
+        #graphWrap{ position: absolute; inset: 64px 0 0 0; }
+        svg{ width:100%; height:100%; display:block; }
+
+        .node-label { font-size: 14px; font-weight: 600; fill: #e9edff; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .node-pill { rx: 14; ry: 14; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4)); transition: transform .2s ease; }
+        .node-base { fill: url(#pillGradient); stroke: rgba(255,255,255,0.35); stroke-width: 1; }
+        .node-root { fill: url(#rootGradient); stroke: rgba(255,255,255,0.6); stroke-width: 1.4; }
+        .node-selected { stroke: #ffd166 !important; stroke-width: 2 !important; }
+        .node:hover .node-pill { transform: scale(1.02); }
+
+        .link { stroke: rgba(180, 198, 255, 0.45); stroke-width: 2; }
+        .link.hover { stroke: #a3b8ff; }
+
+        .footer-hint{ position:absolute; bottom: 12px; right: 18px; opacity:.6; font-size: 12px; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark px-3">
+    <a class="navbar-brand fw-bold" href="#"><i class="fa-solid fa-diagram-project me-2"></i>MindMap UI</a>
+    <div class="ms-auto d-flex gap-2">
+        <span class="badge badge-soft rounded-pill px-3 py-2 me-2"><i class="fa-solid fa-bolt me-2"></i>PLM · VAULT · SAP 친화</span>
+    </div>
+</nav>
+
+<div class="control-panel card">
+    <div class="card-header d-flex align-items-center">
+        <i class="fa-solid fa-sitemap me-2"></i>
+        <span class="fw-semibold">키 중심 마인드맵 컨트롤</span>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label">루트(KEY)</label>
+            <div class="input-group">
+                <input id="rootInput" type="text" class="form-control form-control-sm" placeholder="예: 제품 PID: C062P000020"/>
+                <button id="setRootBtn" class="btn btn-sm btn-primary"><i class="fa-solid fa-check"></i></button>
+            </div>
+            <div class="form-text">루트 노드 라벨을 지정하고 생성합니다.</div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">선택 노드에 자식 추가</label>
+            <div class="input-group">
+                <input id="childInput" type="text" class="form-control form-control-sm" placeholder="예: 사양 SPEC: SPEED=1.75"/>
+                <button id="addChildBtn" class="btn btn-sm btn-success"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            <div class="form-text">캔버스에서 노드를 클릭해 선택한 뒤 추가하세요. 더블클릭으로 접고/펼칠 수 있습니다.</div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button id="centerBtn" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-bullseye me-1"></i>센터</button>
+            <button id="expandAllBtn" class="btn btn-outline-light btn-sm"><i class="fa-regular fa-square-plus me-1"></i>전체 펼치기</button>
+            <button id="collapseAllBtn" class="btn btn-outline-light btn-sm"><i class="fa-regular fa-square-minus me-1"></i>전체 접기</button>
+            <button id="resetBtn" class="btn btn-outline-danger btn-sm ms-auto"><i class="fa-solid fa-rotate me-1"></i>리셋</button>
+        </div>
+    </div>
+</div>
+
+<div id="graphWrap">
+    <svg id="graph"></svg>
+</div>
+
+<div class="footer-hint text-white-50">
+    <i class="fa-regular fa-hand-pointer"></i> 드래그로 이동 · 휠로 확대/축소 · 노드 더블클릭 접기/펼치기
+</div>
+
+<script>
+    // ===== Dynamic Force-Motion MindMap =====
+    // Data Model (tree-like)
+    let data = {
+        name: "제품 KEY: PID-ROOT",
+        children: [
+            { name: "SPEC: 속도 1.75 m/s" },
+            { name: "CON: 전원 AC380V" },
+            { name: "BOM: 주요 부품", children: [ { name: "권상기 ASSY" }, { name: "도어장치" }, { name: "안전회로" } ] },
+            { name: "VAL: 인증/검증", children: [ { name: "KS 인증" }, { name: "현장검증 2025-08" } ] }
+        ]
+    };
+
+    // SVG & Layers
+    const svg = d3.select('#graph');
+    const g = svg.append('g');
+    const linkLayer = g.append('g');
+    const nodeLayer = g.append('g');
+
+    // Gradients & Glow
+    const defs = svg.append('defs');
+    const pillGradient = defs.append('linearGradient').attr('id','pillGradient').attr('x1','0%').attr('y1','0%').attr('x2','100%').attr('y2','0%');
+    pillGradient.append('stop').attr('offset','0%').attr('stop-color','#5c7cfa').attr('stop-opacity',0.85);
+    pillGradient.append('stop').attr('offset','100%').attr('stop-color','#9775fa').attr('stop-opacity',0.85);
+    const rootGradient = defs.append('linearGradient').attr('id','rootGradient').attr('x1','0%').attr('y1','0%').attr('x2','100%').attr('y2','0%');
+    rootGradient.append('stop').attr('offset','0%').attr('stop-color','#74c0fc').attr('stop-opacity',0.95);
+    rootGradient.append('stop').attr('offset','100%').attr('stop-color','#b197fc').attr('stop-opacity',0.95);
+
+    const glow = defs.append('filter').attr('id','glow');
+    glow.append('feGaussianBlur').attr('stdDeviation','3.2').attr('result','coloredBlur');
+    const feMerge = glow.append('feMerge');
+    feMerge.append('feMergeNode').attr('in','coloredBlur');
+    feMerge.append('feMergeNode').attr('in','SourceGraphic');
+
+    // Zoom / Pan
+    const zoom = d3.zoom().scaleExtent([0.35, 3])
+        .on('zoom', (event) => g.attr('transform', event.transform));
+    svg.call(zoom);
+
+    // Layout state
+    let selectedNode = null;           // d3 datum
+    let collapsed = new Set();         // collapsed by _uid
+    let simulation = null;
+
+    // Utils
+    function assignUIDs(node){
+        node._uid = node._uid || crypto.randomUUID();
+        node.children?.forEach(assignUIDs);
+    }
+    assignUIDs(data);
+
+    function visibleNodesLinks(root){
+        const nodes = [];
+        const links = [];
+        function walk(n, depth=0, parent=null){
+            nodes.push({ data:n, depth });
+            if(parent) links.push({ source: parent, target: n });
+            const isCollapsed = collapsed.has(n._uid);
+            if(!isCollapsed && n.children){ n.children.forEach(c => walk(c, depth+1, n)); }
+        }
+        walk(root,0,null);
+        return {nodes,links};
+    }
+
+    function sizeSVG(){
+        svg.attr('width', graphWrap.clientWidth).attr('height', graphWrap.clientHeight);
+    }
+
+    function build(){
+        sizeSVG();
+
+        // Compute visible graph from tree
+        const {nodes: nodeItems, links: linkItems} = visibleNodesLinks(data);
+
+        // Map datum to sim nodes
+        const simNodes = nodeItems.map(d => ({
+            id: d.data._uid,
+            label: d.data.name,
+            depth: d.depth,
+            fx: d.depth===0 ? 0 : null, // keep root near center (soft pin)
+            fy: d.depth===0 ? 0 : null
+        }));
+
+        const simLinks = linkItems.map(l => ({
+            source: l.source._uid, target: l.target._uid,
+            depth: 1 + (l.target.children?1:0)
+        }));
+
+        // Force Simulation
+        if(simulation) simulation.stop();
+        simulation = d3.forceSimulation(simNodes)
+            .force('link', d3.forceLink(simLinks).id(d=>d.id).distance(d=> 120 + 30*(d.depth||0)).strength(0.85))
+            .force('charge', d3.forceManyBody().strength(-420))
+            .force('collide', d3.forceCollide().radius(d => 36 + 4*d.label.length/3))
+            .force('center', d3.forceCenter(0,0))
+            .force('radial', d3.forceRadial(d => d.depth*140, 0, 0).strength(0.06))
+            .alphaDecay(0.02);
+
+        // Links
+        const link = linkLayer.selectAll('line.link').data(simLinks, d=> d.source.id+"->"+d.target.id);
+        link.exit().remove();
+        const linkEnter = link.enter().append('line')
+            .attr('class','link')
+            .attr('stroke-width',1.8);
+        const linksMerge = linkEnter.merge(link);
+
+        // Nodes
+        const node = nodeLayer.selectAll('g.node').data(simNodes, d=> d.id);
+        node.exit().remove();
+
+        const nodeEnter = node.enter().append('g')
+            .attr('class','node')
+            .style('cursor','pointer')
+            .on('click', (event, nd)=>{
+                selectedNode = nd;
+                nodeLayer.selectAll('rect').classed('node-selected', d=> d.id===nd.id);
+            })
+            .on('dblclick', (event, nd)=>{ toggleCollapse(nd.id); })
+            .call(d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended));
+
+        // Measure labels
+        nodeEnter.each(function(d){ this._label = d.label; });
+        const measure = nodeEnter.append('text').attr('class','node-label').text(d=>d.label).attr('opacity',0);
+        nodeEnter.each(function(d){
+            const bbox = this.querySelector('text').getBBox();
+            d.w = Math.max(56, bbox.width + 28);
+            d.h = Math.max(26, bbox.height + 12);
+        });
+        measure.remove();
+
+        nodeEnter.append('rect')
+            .attr('class', d => d.depth===0 ? 'node-pill node-root' : 'node-pill node-base')
+            .attr('x', d => -d.w/2)
+            .attr('y', d => -d.h/2)
+            .attr('width', d => d.w)
+            .attr('height', d => d.h)
+            .attr('filter','url(#glow)');
+
+        nodeEnter.append('text')
+            .attr('class','node-label')
+            .attr('text-anchor','middle')
+            .attr('dominant-baseline','middle')
+            .text(d => d.label);
+
+        const nodesMerge = nodeEnter.merge(node);
+
+        // Gentle breathing motion
+        const t0 = Date.now();
+        simulation.on('tick', () => {
+            const t = (Date.now()-t0)/1000;
+            const sway = 6*Math.sin(t*0.8);
+            const lift = 4*Math.cos(t*0.6);
+
+            linksMerge
+                .attr('x1', d=> d.source.x)
+                .attr('y1', d=> d.source.y)
+                .attr('x2', d=> d.target.x + (Math.sin(t + d.target.index)*1.5))
+                .attr('y2', d=> d.target.y + (Math.cos(t*0.9 + d.target.index)*1.5));
+
+            nodesMerge
+                .attr('transform', d=> `translate(${d.x + sway*0.12},${d.y + lift*0.12})`);
+        });
+
+        // center & fit view
+        setTimeout(centerView, 150);
+    }
+
+    function toggleCollapse(uid){
+        // locate node in tree by uid
+        let hit = null;
+        (function walk(n){ if(hit) return; if(n._uid===uid){ hit = n; return; } n.children?.forEach(walk); })(data);
+        if(!hit) return;
+        if(collapsed.has(uid)) collapsed.delete(uid); else collapsed.add(uid);
+        build();
+    }
+
+    // Controls / UI
+    const rootInput = document.getElementById('rootInput');
+    const setRootBtn = document.getElementById('setRootBtn');
+    const childInput = document.getElementById('childInput');
+    const addChildBtn = document.getElementById('addChildBtn');
+    const centerBtn = document.getElementById('centerBtn');
+    const expandAllBtn = document.getElementById('expandAllBtn');
+    const collapseAllBtn = document.getElementById('collapseAllBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    setRootBtn.addEventListener('click', ()=>{
+        const v = rootInput.value.trim();
+        if(!v) return;
+        data = { name: v, children: [] };
+        assignUIDs(data);
+        collapsed.clear();
+        build();
+    });
+
+    addChildBtn.addEventListener('click', ()=>{
+        const txt = childInput.value.trim();
+        if(!txt) return;
+        let targetUid = selectedNode?.id || data._uid;
+        let target = null;
+        (function walk(n){ if(target) return; if(n._uid===targetUid){ target=n; return; } n.children?.forEach(walk); })(data);
+        if(!target) return;
+        target.children = target.children || [];
+        const newNode = { name: txt };
+        target.children.push(newNode);
+        assignUIDs(newNode);
+        if(collapsed.has(target._uid)) collapsed.delete(target._uid);
+        build();
+        childInput.value = '';
+    });
+
+    centerBtn.addEventListener('click', centerView);
+    expandAllBtn.addEventListener('click', ()=>{ collapsed.clear(); build(); });
+    collapseAllBtn.addEventListener('click', ()=>{
+        collapsed.clear();
+        (function collect(n){ if(n!==data) collapsed.add(n._uid); n.children?.forEach(collect); })(data);
+        build();
+    });
+    resetBtn.addEventListener('click', ()=>{
+        data = {
+            name: "제품 KEY: PID-ROOT",
+            children: [
+                { name: "SPEC: 속도 1.75 m/s" },
+                { name: "CON: 전원 AC380V" },
+                { name: "BOM: 주요 부품", children: [ { name: "권상기 ASSY" }, { name: "도어장치" }, { name: "안전회로" } ] },
+                { name: "VAL: 인증/검증", children: [ { name: "KS 인증" }, { name: "현장검증 2025-08" } ] }
+            ]
+        };
+        assignUIDs(data);
+        collapsed.clear();
+        build();
+    });
+
+    function centerView(){
+        const bbox = g.node().getBBox();
+        const width = graphWrap.clientWidth, height = graphWrap.clientHeight;
+        const midx = bbox.x + bbox.width/2, midy = bbox.y + bbox.height/2;
+        const scale = Math.max(0.35, Math.min(1.4, 0.85/Math.max(bbox.width/width, bbox.height/height)));
+        const tx = width/2 - scale*midx;
+        const ty = height/2 - scale*midy;
+        svg.transition().duration(600).call(zoom.transform, d3.zoomIdentity.translate(tx,ty).scale(scale));
+    }
+
+    // Drag Handlers
+    function dragstarted(event, d){ if(!event.active) simulation.alphaTarget(0.2).restart(); d.fx = d.x; d.fy = d.y; }
+    function dragged(event, d){ d.fx = event.x; d.fy = event.y; }
+    function dragended(event, d){ if(!event.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }
+
+    // Init
+    const graphWrap = document.getElementById('graphWrap');
+    window.addEventListener('resize', build);
+    build();
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
