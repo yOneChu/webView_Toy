@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tree 구조 - Single Root</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet"/>
+
+    <!-- 폰트 (선택) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet"/>
+
+    <!-- Highcharts (treegraph 모듈 필수) -->
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/treegraph.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+
+    <style>
+        :root{
+            --brand-dark:#0c2a22;
+            --brand:#00a779; /* 현대엘리베이터 사이트 무드 참조 */
+            --brand-light:#c9f3e7;
+        }
+        body{font-family:"Noto Sans KR",system-ui,Apple SD Gothic Neo,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b1513;color:#e6f7f0;}
+        .app-header{
+            background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand) 85%);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+        }
+        .brand-title{font-weight:700;letter-spacing:0.2px;}
+        .card{
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            backdrop-filter: blur(6px);
+        }
+        #treeContainer{
+            height: 68vh; min-height: 520px; width: 100%;
+        }
+        .form-range::-webkit-slider-thumb{background: var(--brand);}
+        .badge-soft{
+            background: rgba(0,167,121,0.15); color:#b9ffec; border:1px solid rgba(0,167,121,0.35)
+        }
+    </style>
+</head>
+<body>
+<header class="app-header py-3">
+    <div class="container">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h1 class="h4 mb-0 brand-title">Tree 구조 뷰어</h1>
+                <div class="small text-white-50">단일 루트 노드에 여러 하위 노드 연결</div>
+            </div>
+            <span class="badge badge-soft rounded-pill px-3">Highcharts · Treegraph</span>
+        </div>
+    </div>
+</header>
+
+<main class="container my-4">
+    <div class="card">
+        <div class="card-body">
+            <!-- 컨트롤 바 -->
+            <div class="row g-3 align-items-center mb-3">
+                <div class="col-md-6">
+                    <label class="form-label mb-1">노드 간격 (<code id="distanceValue">40</code> px)</label>
+                    <input type="range" class="form-range" min="20" max="120" step="2" value="40" id="distanceRange">
+                </div>
+                <div class="col-md-6 d-flex gap-2 justify-content-md-end">
+                    <button id="btnReset" class="btn btn-outline-light btn-sm">
+                        기본 예시 데이터로 초기화
+                    </button>
+                </div>
+            </div>
+
+            <!-- 차트 영역 -->
+            <div id="treeContainer" class="rounded-3"></div>
+        </div>
+    </div>
+</main>
+
+<script>
+    // 1) 예시 데이터: ["parent","id","name","collapsed"]
+    //   - parent가 ""(빈 문자열)이면 루트입니다.
+    const baseData = [
+        ["", "ROOT", "메인 노드", false],
+        ["ROOT", "A", "하위 노드 A", false],
+        ["ROOT", "B", "하위 노드 B", false],
+        ["ROOT", "C", "하위 노드 C", false],
+        ["ROOT", "D", "하위 노드 D", false],
+        ["ROOT", "E", "하위 노드 E", false],
+        // 필요 시 더 추가:
+        ["A", "A-1", "A-1", false],
+        ["A", "A-2", "A-2", false],
+        ["B", "B-1", "B-1", false],
+        ["C", "C-1", "C-1", false]
+    ];
+
+    let chart;
+    function makeSeriesData(dataArr){
+        return dataArr.map(([parent, id, name, collapsed]) => ({
+            parent, id, name, collapsed: !!collapsed
+        }));
+    }
+
+    function renderTree(nodeDistancePx = 40, dataArr = baseData){
+        const seriesData = makeSeriesData(dataArr);
+
+        chart = Highcharts.chart('treeContainer', {
+            chart: {
+                backgroundColor: 'transparent',
+                inverted: true,          // 좌 -> 우로 흐르는 트리
+                animation: true
+            },
+            title: { text: null },
+            credits: { enabled: false },
+            exporting: { enabled: true },
+            tooltip: {
+                useHTML: true,
+                formatter: function(){
+                    return `<b>${Highcharts.escapeHTML(this.point.name || this.point.id)}</b>`;
+                }
+            },
+            plotOptions: {
+                series: { animation: { duration: 500 } },
+                treegraph: {
+                    dataLabels: {
+                        style: {
+                            color: '#e6f7f0',
+                            textOutline: 'none',
+                            fontSize: '13px',
+                            fontWeight: '600'
+                        }
+                    },
+                    // 핵심: 노드 간격 조절 옵션
+                    nodeDistance: nodeDistancePx, // px 단위 (기본 30)
+                    nodeWidth: 20,
+                    lineWidth: 2,
+                    opacity: 0.35,
+                    allowPointSelect: true,
+                    cursor: 'pointer',
+                    events: {
+                        click: function (e) {
+                            const p = e.point;
+                            if (p) {
+                                // 클릭 시 접고 펴기 토글
+                                p.update({ collapsed: !p.collapsed });
+                            }
+                        }
+                    }
+                }
+            },
+            series: [{
+                type: 'treegraph',
+                keys: ['parent', 'id', 'name', 'collapsed'],
+                data: seriesData,
+                levels: [{
+                    level: 1,
+                    // 루트 레벨 스타일
+                    dataLabels: { style: { fontSize: '14px' } },
+                    marker: { radius: 10, fillColor: '#00a779' }
+                },{
+                    level: 2,
+                    marker: { radius: 7, fillColor: '#1bbd93' }
+                },{
+                    level: 3,
+                    marker: { radius: 6, fillColor: '#58d6b3' }
+                }],
+                // 루트/특정 노드 개별 스타일
+                nodes: [{
+                    id: 'ROOT',
+                    color: '#00a779',
+                    dataLabels: { style: { fontSize: '16px', fontWeight: '700' } }
+                }]
+            }],
+            accessibility: { enabled: true }
+        });
+    }
+
+    // 초기 렌더
+    renderTree(40, baseData);
+
+    // 간격 슬라이더 제어
+    const distanceRange = document.getElementById('distanceRange');
+    const distanceValue = document.getElementById('distanceValue');
+    distanceRange.addEventListener('input', (e) => {
+        const v = Number(e.target.value);
+        distanceValue.textContent = v;
+        if (chart && chart.series && chart.series[0]) {
+            chart.series[0].update({ nodeDistance: v }, false);
+            chart.redraw();
+        }
+    });
+
+    // 리셋 버튼
+    document.getElementById('btnReset').addEventListener('click', () => {
+        distanceRange.value = 40;
+        distanceValue.textContent = 40;
+        renderTree(40, baseData);
+    });
+
+    // === 사용 가이드 ===
+    // 1) 데이터 교체
+    //    baseData 배열에 ["부모ID","현재ID","표시이름",collapsed] 형식으로 추가/수정하세요.
+    // 2) 간격/배치
+    //    nodeDistance, inverted(true/false)로 간격과 방향을 바꿀 수 있습니다.
+    // 3) 인터랙션
+    //    노드 클릭 시 하위 가지를 접고/펴도록 구성되어 있습니다.
+</script>
+</body>
+</html>
