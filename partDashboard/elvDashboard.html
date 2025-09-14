@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>엘리베이터 설치현황 대시보드</title>
+    <!-- 참고 CSS: index.css (동일 경로에 두거나, 아래 링크를 바꿔 연결하세요) -->
+    <link rel="stylesheet" href="index.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { font-family: var(--font-sans); }
+
+        /* 레이아웃 */
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--foreground);
+            min-height: 100dvh;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            grid-template-columns: 280px 1fr;
+            grid-template-areas:
+        "sidebar header"
+        "sidebar main";
+        }
+        header {
+            grid-area: header;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: saturate(1.2) blur(8px);
+            background: color-mix(in oklch, var(--background) 80%, transparent);
+            border-bottom: 1px solid var(--border);
+        }
+        .header-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            gap: 12px;
+        }
+        .brand {
+            display: flex; align-items: center; gap: 12px;
+        }
+        .logo {
+            width: 42px; height: 42px; border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            box-shadow: var(--shadow-xl);
+        }
+        .title {
+            font-weight: 800; letter-spacing: -0.02em; font-size: 1.25rem;
+        }
+
+        aside {
+            grid-area: sidebar;
+            border-right: 1px solid var(--sidebar-border);
+            background: var(--sidebar);
+            color: var(--sidebar-foreground);
+            display: grid; grid-template-rows: auto 1fr auto; height: 100%;
+        }
+        .sidebar-section { padding: 18px; }
+        .sidebar-title { font-weight: 700; font-size: 0.9rem; opacity: .9; margin-bottom: 10px; }
+        .chip {
+            display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px;
+            border: 1px solid var(--border); border-radius: var(--radius-md);
+            background: var(--card); color: var(--card-foreground);
+            cursor: pointer; user-select: none;
+        }
+        .chip input { accent-color: var(--primary); }
+        .control {
+            display: grid; gap: 8px; margin-bottom: 14px;
+        }
+        .control label { font-size: .85rem; opacity: .9; }
+        .control input, .control select {
+            padding: 10px 12px; border-radius: var(--radius-md);
+            border: 1px solid var(--border); background: var(--input);
+            color: var(--foreground);
+        }
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 14px; border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: var(--primary); color: var(--primary-foreground);
+            font-weight: 700; cursor: pointer; text-decoration: none;
+        }
+        .btn.secondary { background: var(--secondary); color: var(--secondary-foreground); }
+        .btn.ghost { background: transparent; color: var(--foreground); }
+
+        main { grid-area: main; padding: 18px 20px 28px; }
+
+        /* KPI */
+        .kpi-grid {
+            display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 8px 0 18px;
+        }
+        .kpi {
+            background: var(--card); color: var(--card-foreground); border: 1px solid var(--border);
+            border-radius: var(--radius-xl); padding: 16px; position: relative; overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+        .kpi h3 { margin: 0; font-size: .85rem; opacity: .75; font-weight: 700; }
+        .kpi .num { font-size: 1.8rem; font-weight: 800; letter-spacing: -.02em; margin-top: 8px; }
+        .kpi .sub { font-size: .8rem; opacity: .8; margin-top: 4px; }
+        .kpi .beam { position: absolute; inset: -60% -20% auto auto; width: 70%; height: 200%;
+            background: radial-gradient(60% 60% at 50% 50%, color-mix(in oklch, var(--primary) 60%, transparent) 0%, transparent 60%);
+            transform: rotate(35deg); opacity: .35; pointer-events: none; }
+
+        /* 카드 & 차트 */
+        .card {
+            background: var(--card); color: var(--card-foreground);
+            border: 1px solid var(--border); border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+        }
+        .card .card-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .card .card-body { padding: 14px 16px; }
+        .grid-2 { display: grid; grid-template-columns: 1.25fr .75fr; gap: 14px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+        canvas { width: 100% !important; height: 320px !important; }
+
+        /* 테이블 */
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: .9rem; }
+        th { text-align: left; opacity: .8; font-weight: 700; }
+        tr:hover td { background: color-mix(in oklch, var(--accent) 18%, transparent); }
+
+        /* 푸터 */
+        .footer { padding: 14px 18px; border-top: 1px solid var(--border); opacity: .7; font-size: .85rem; }
+
+        /* 반응형 */
+        @media (max-width: 1200px) {
+            body { grid-template-columns: 240px 1fr; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            canvas { height: 280px !important; }
+        }
+        @media (max-width: 720px) {
+            body { grid-template-columns: 1fr; grid-template-areas: "header" "main"; }
+            aside { display: none; }
+        }
+    </style>
+</head>
+<body>
+<!-- 사이드바 -->
+<aside>
+    <div class="sidebar-section" style="border-bottom:1px solid var(--sidebar-border)">
+        <div class="brand">
+            <div class="logo" aria-hidden="true"></div>
+            <div>
+                <div class="title">설치현황 대시보드</div>
+                <div style="opacity:.7; font-size:.85rem">Yearly Elevator Installations</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar-section" style="display:grid; gap:16px;">
+        <div>
+            <div class="sidebar-title">기간</div>
+            <div class="control">
+                <label for="yearStart">시작년도</label>
+                <input type="number" id="yearStart" min="2000" max="2100" value="2018" />
+            </div>
+            <div class="control">
+                <label for="yearEnd">종료년도</label>
+                <input type="number" id="yearEnd" min="2000" max="2100" value="2025" />
+            </div>
+            <div class="control">
+                <label for="region">지역(사업장)</label>
+                <select id="region">
+                    <option value="ALL">전체</option>
+                    <option>국내</option>
+                    <option>중국</option>
+                    <option>중동</option>
+                    <option>동남아</option>
+                    <option>유럽</option>
+                    <option>미주</option>
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <div class="sidebar-title">제품군</div>
+            <div class="chip"><input type="checkbox" class="pf" value="LUX" checked/> LUX</div>
+            <div class="chip"><input type="checkbox" class="pf" value="DL" checked/> DL</div>
+            <div class="chip"><input type="checkbox" class="pf" value="VVVF" checked/> VVVF</div>
+            <div class="chip"><input type="checkbox" class="pf" value="HOME" checked/> 홈엘리베이터</div>
+        </div>
+
+        <div>
+            <div class="sidebar-title">설치유형</div>
+            <div class="chip"><input type="checkbox" class="itype" value="신규" checked/> 신규</div>
+            <div class="chip"><input type="checkbox" class="itype" value="교체" checked/> 교체</div>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn" id="btnApply">적용</button>
+            <button class="btn secondary" id="btnReset">초기화</button>
+            <button class="btn ghost" id="btnExport">CSV 내보내기</button>
+        </div>
+    </div>
+
+    <div class="footer">ⓘ 샘플 데이터가 표시됩니다. 사내 API 연동 시 실데이터로 자동 갱신됩니다.</div>
+</aside>
+
+<!-- 헤더 -->
+<header>
+    <div class="header-wrap">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-weight:800; letter-spacing:-.01em">년도별 엘리베이터 설치현황</span>
+            <span style="opacity:.6; font-size:.9rem" id="lastUpdated">업데이트: -</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn ghost" id="btnTheme" title="다크모드 전환">🌓 다크모드</button>
+            <button class="chip" id="btnScreenshot" title="대시보드 이미지 저장">📸 스크린샷</button>
+        </div>
+    </div>
+</header>
+
+<!-- 메인 -->
+<main>
+    <!-- KPI -->
+    <section class="kpi-grid">
+        <div class="kpi">
+            <div class="beam"></div>
+            <h3>총 설치 대수</h3>
+            <div class="num" id="kpiTotal">0</div>
+            <div class="sub" id="kpiTotalSub">기간 내 전체</div>
+        </div>
+        <div class="kpi">
+            <div class="beam"></div>
+            <h3>YoY 증감</h3>
+            <div class="num" id="kpiYoY">+0%</div>
+            <div class="sub">전년 대비</div>
+        </div>
+        <div class="kpi">
+            <div class="beam"></div>
+            <h3>제품군 Top</h3>
+            <div class="num" id="kpiTopPF">-</div>
+            <div class="sub">가장 많이 설치</div>
+        </div>
+        <div class="kpi">
+            <div class="beam"></div>
+            <h3>평균 리드타임</h3>
+            <div class="num" id="kpiLead">0일</div>
+            <div class="sub">수주→설치 완료</div>
+        </div>
+    </section>
+
+    <!-- 차트 영역 1 -->
+    <section class="grid-2">
+        <div class="card">
+            <div class="card-head"><strong>연도별 설치 추이</strong><div style="display:flex; gap:8px"><button class="chip" data-dl="yearly">PNG 저장</button></div></div>
+            <div class="card-body"><canvas id="chartYearly"></canvas></div>
+        </div>
+        <div class="card">
+            <div class="card-head"><strong>지역별 설치 비중</strong><div><button class="chip" data-dl="region">PNG 저장</button></div></div>
+            <div class="card-body"><canvas id="chartRegion"></canvas></div>
+        </div>
+    </section>
+
+    <!-- 차트 영역 2 -->
+    <section class="grid-3" style="margin-top:14px;">
+        <div class="card">
+            <div class="card-head"><strong>제품군별 연도 누적(스택)</strong><div><button class="chip" data-dl="stacked">PNG 저장</button></div></div>
+            <div class="card-body"><canvas id="chartStacked"></canvas></div>
+        </div>
+        <div class="card">
+            <div class="card-head"><strong>월별 설치(선택년도)</strong><div><button class="chip" data-dl="monthly">PNG 저장</button></div></div>
+            <div class="card-body"><canvas id="chartMonthly"></canvas></div>
+        </div>
+        <div class="card">
+            <div class="card-head"><strong>설치 유형 비중</strong><div><button class="chip" data-dl="itype">PNG 저장</button></div></div>
+            <div class="card-body"><canvas id="chartIType"></canvas></div>
+        </div>
+    </section>
+
+    <!-- 테이블 -->
+    <section style="margin-top:14px;" class="card">
+        <div class="card-head"><strong>프로젝트 상위 20</strong><div><button class="chip" id="btnTableCsv">CSV 저장</button></div></div>
+        <div class="card-body">
+            <div style="overflow:auto;">
+                <table id="tblTop">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>현장명</th>
+                        <th>지역</th>
+                        <th>제품군</th>
+                        <th>설치유형</th>
+                        <th>설치년도</th>
+                        <th>대수</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- 스크립트: Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+    // ===== 유틸 =====
+    const $ = (s, p=document) => p.querySelector(s);
+    const $$ = (s, p=document) => [...p.querySelectorAll(s)];
+
+    function fmt(n){ return n.toLocaleString('ko-KR'); }
+    function downloadCSV(filename, rows){
+        const csv = rows.map(r => r.map(v => typeof v === 'string' && v.includes(',') ? `"${v.replaceAll('"','\"')}"` : v).join(',')).join('\n');
+        const blob = new Blob(["\ufeff" + csv], {type: 'text/csv;charset=utf-8;'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
+    }
+    function downloadPNG(canvas, name){ const a=document.createElement('a'); a.href=canvas.toDataURL('image/png',1); a.download=name+'.png'; a.click(); }
+
+    // ===== 샘플 데이터 생성 (API 연동부 대체) =====
+    function mockData({y1=2018, y2=2025, region='ALL', pfs=['LUX','DL','VVVF','HOME'], itypes=['신규','교체']}){
+        const years = Array.from({length: (y2-y1+1)}, (_,i)=>y1+i);
+        const regions = ['국내','중국','중동','동남아','유럽','미주'];
+        const projects = [];
+        const yearly = years.map(y => {
+            // 임원용 보기 좋게 완만한 우상향 + 변동
+            const base = 800 + (y-years[0])*70 + Math.floor(Math.random()*120 - 40);
+            return Math.max(300, base);
+        });
+        // 제품군 스택 데이터
+        const stacked = {
+            LUX: years.map((_,i)=> Math.round(yearly[i]*0.38 + (Math.random()*40-20))),
+            DL: years.map((_,i)=> Math.round(yearly[i]*0.27 + (Math.random()*30-15))),
+            VVVF: years.map((_,i)=> Math.round(yearly[i]*0.23 + (Math.random()*25-12))),
+            HOME: years.map((_,i)=> Math.round(yearly[i]*0.12 + (Math.random()*18-9))),
+        };
+        // 지역 비중
+        const regionShare = regions.map(()=> Math.round(10 + Math.random()*25));
+        // 설치 유형
+        const itypeShare = ['신규','교체'].map(()=> Math.round(40 + Math.random()*60));
+        // 월별 (선택년도: 마지막 년도)
+        const monthly = Array.from({length:12},()=> Math.round(40 + Math.random()*120));
+        // 프로젝트 Top 20
+        for(let i=0;i<20;i++){
+            const r = regions[Math.floor(Math.random()*regions.length)];
+            const pf = ['LUX','DL','VVVF','HOME'][Math.floor(Math.random()*4)];
+            const it = ['신규','교체'][Math.floor(Math.random()*2)];
+            const y = years[Math.floor(Math.random()*years.length)];
+            const cnt = 4 + Math.floor(Math.random()*18);
+            projects.push([i+1, `프로젝트-${String.fromCharCode(65+i)} 타워`, r, pf, it, y, cnt]);
+        }
+        return { years, yearly, stacked, regions, regionShare, itypeShare, monthly, projects };
+    }
+
+    // ===== 상태 =====
+    const state = { y1: 2018, y2: 2025, region: 'ALL', pfs: ['LUX','DL','VVVF','HOME'], itypes: ['신규','교체'] };
+    let data = mockData(state);
+
+    // ===== 차트 =====
+    let chartYearly, chartRegion, chartStacked, chartMonthly, chartIType;
+    const theme = {
+        grid: '#e8e8ef',
+        primary: getComputedStyle(document.documentElement).getPropertyValue('--chart-1').trim(),
+        c2: getComputedStyle(document.documentElement).getPropertyValue('--chart-2').trim(),
+        c3: getComputedStyle(document.documentElement).getPropertyValue('--chart-3').trim(),
+        c4: getComputedStyle(document.documentElement).getPropertyValue('--chart-4').trim(),
+        c5: getComputedStyle(document.documentElement).getPropertyValue('--chart-5').trim(),
+    };
+
+    function buildCharts(){
+        // 연도별 추이 (면적 + 선)
+        const ctxY = $('#chartYearly');
+        chartYearly?.destroy();
+        chartYearly = new Chart(ctxY, {
+            type: 'line',
+            data: {
+                labels: data.years,
+                datasets: [{
+                    label: '설치 대수',
+                    data: data.yearly,
+                    fill: true,
+                    tension: .35,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    borderColor: theme.primary,
+                    backgroundColor: (ctx)=>{
+                        const {chart} = ctx;
+                        const {ctx: c, chartArea} = chart;
+                        if(!chartArea) return theme.primary;
+                        const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                        g.addColorStop(0, theme.primary);
+                        g.addColorStop(1, 'transparent');
+                        return g;
+                    }
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { grid: { color: theme.grid } },
+                    y: { grid: { color: theme.grid }, ticks: { callback: v=> fmt(v) } }
+                }
+            }
+        });
+
+        // 지역 비중 (도넛)
+        const ctxR = $('#chartRegion');
+        chartRegion?.destroy();
+        chartRegion = new Chart(ctxR, {
+            type: 'doughnut',
+            data: { labels: data.regions, datasets: [{ data: data.regionShare, backgroundColor: [theme.primary, theme.c2, theme.c3, theme.c4, theme.c5, '#aaa'] }] },
+            options: { plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
+        });
+
+        // 제품군 스택 바
+        const ctxS = $('#chartStacked');
+        chartStacked?.destroy();
+        chartStacked = new Chart(ctxS, {
+            type: 'bar',
+            data: {
+                labels: data.years,
+                datasets: [
+                    {label:'LUX', data: data.stacked.LUX, backgroundColor: theme.primary},
+                    {label:'DL', data: data.stacked.DL, backgroundColor: theme.c2},
+                    {label:'VVVF', data: data.stacked.VVVF, backgroundColor: theme.c3},
+                    {label:'HOME', data: data.stacked.HOME, backgroundColor: theme.c4}
+                ]
+            },
+            options: {
+                plugins: { legend: { position: 'bottom' } },
+                responsive: true,
+                scales: {
+                    x: { stacked: true, grid: { color: theme.grid } },
+                    y: { stacked: true, grid: { color: theme.grid }, ticks: { callback: v=> fmt(v) } }
+                }
+            }
+        });
+
+        // 월별 (선택년도: 마지막)
+        const ctxM = $('#chartMonthly');
+        chartMonthly?.destroy();
+        chartMonthly = new Chart(ctxM, {
+            type: 'bar', data: { labels: Array.from({length:12},(_,i)=> `${i+1}월`), datasets: [{label:'설치', data: data.monthly, backgroundColor: theme.primary}] },
+            options: { plugins: { legend: { display: false } }, scales: { x:{ grid:{ color: theme.grid } }, y:{ grid:{ color: theme.grid } } } }
+        });
+
+        // 설치 유형 (파이)
+        const ctxI = $('#chartIType');
+        chartIType?.destroy();
+        chartIType = new Chart(ctxI, {
+            type: 'pie', data: { labels: ['신규','교체'], datasets: [{ data: data.itypeShare, backgroundColor: [theme.primary, theme.c2] }] },
+            options: { plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    // ===== KPI 반영 =====
+    function updateKPI(){
+        const total = data.yearly.reduce((a,b)=>a+b,0);
+        $('#kpiTotal').textContent = fmt(total);
+        $('#kpiTotalSub').textContent = `${state.y1}~${state.y2}`;
+        const last = data.yearly.at(-1) || 0, prev = data.yearly.at(-2) || last;
+        const yoy = prev ? ((last-prev)/prev*100) : 0;
+        $('#kpiYoY').textContent = `${yoy>=0?'+':''}${yoy.toFixed(1)}%`;
+        const pfTotals = Object.fromEntries(Object.entries(data.stacked).map(([k,v])=>[k,v.reduce((a,b)=>a+b,0)]));
+        const topPF = Object.entries(pfTotals).sort((a,b)=>b[1]-a[1])[0][0];
+        $('#kpiTopPF').textContent = topPF;
+        // 임의 리드타임: 42~76일
+        $('#kpiLead').textContent = `${Math.round(42 + Math.random()*34)}일`;
+        $('#lastUpdated').textContent = `업데이트: ${new Date().toLocaleString('ko-KR')}`;
+    }
+
+    // ===== 테이블 =====
+    function buildTable(){
+        const tbody = $('#tblTop tbody');
+        tbody.innerHTML = '';
+        data.projects.forEach(row => {
+            const tr = document.createElement('tr');
+            row.forEach((v,i)=>{
+                const td = document.createElement('td');
+                td.textContent = v; tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ===== 상호작용 =====
+    function applyFilters(){
+        state.y1 = parseInt($('#yearStart').value,10) || state.y1;
+        state.y2 = parseInt($('#yearEnd').value,10) || state.y2;
+        state.region = $('#region').value;
+        state.pfs = $$('.pf:checked').map(x=>x.value);
+        state.itypes = $$('.itype:checked').map(x=>x.value);
+        data = mockData(state); // 실제 연동 시 API 호출부로 교체
+        buildCharts(); updateKPI(); buildTable();
+    }
+
+    $('#btnApply').addEventListener('click', applyFilters);
+    $('#btnReset').addEventListener('click', ()=>{
+        $('#yearStart').value = 2018; $('#yearEnd').value = 2025; $('#region').value = 'ALL';
+        $$('.pf').forEach(cb=> cb.checked = true);
+        $$('.itype').forEach(cb=> cb.checked = true);
+        applyFilters();
+    });
+
+    // PNG 저장 버튼 처리
+    $$('button[data-dl]').forEach(btn => btn.addEventListener('click', ()=>{
+        const id = btn.getAttribute('data-dl');
+        const map = { yearly: '#chartYearly', region: '#chartRegion', stacked: '#chartStacked', monthly: '#chartMonthly', itype: '#chartIType' };
+        const canvas = $(map[id]); if(canvas) downloadPNG(canvas, `dashboard-${id}`);
+    }));
+
+    // CSV 내보내기 (사이드바 버튼)
+    $('#btnExport').addEventListener('click', ()=>{
+        const rows = [['연도', '설치대수'], ...data.years.map((y,i)=>[y, data.yearly[i]])];
+        downloadCSV('yearly-installations.csv', rows);
+    });
+    // 테이블 CSV
+    $('#btnTableCsv').addEventListener('click', ()=>{
+        const rows = [['#','현장명','지역','제품군','설치유형','설치년도','대수'], ...data.projects];
+        downloadCSV('top-projects.csv', rows);
+    });
+
+    // 다크모드
+    $('#btnTheme').addEventListener('click', ()=>{
+        document.documentElement.classList.toggle('dark');
+        // 재계산된 색으로 차트 리빌드 (색상 변수 재조회)
+        theme.primary = getComputedStyle(document.documentElement).getPropertyValue('--chart-1').trim();
+        theme.c2 = getComputedStyle(document.documentElement).getPropertyValue('--chart-2').trim();
+        theme.c3 = getComputedStyle(document.documentElement).getPropertyValue('--chart-3').trim();
+        theme.c4 = getComputedStyle(document.documentElement).getPropertyValue('--chart-4').trim();
+        theme.c5 = getComputedStyle(document.documentElement).getPropertyValue('--chart-5').trim();
+        buildCharts();
+    });
+
+    // 스크린샷 (페이지 전체 캔버스)
+    $('#btnScreenshot').addEventListener('click', async ()=>{
+        // html2canvas 사용 없이 간단히 각 차트 PNG를 저장하도록 안내
+        alert('각 카드의 "PNG 저장" 버튼으로 개별 그래프를 저장할 수 있습니다. 페이지 전체 저장은 html2canvas를 연결하세요.');
+    });
+
+    // 초기 렌더
+    buildCharts(); updateKPI(); buildTable();
+</script>
+</body>
+</html>

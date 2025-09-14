@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <title>층별 영업사양·자재 조회 (호기번호 기준)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+    <!-- DataTables (Bootstrap 5 style) -->
+    <link href="https://cdn.datatables.net/v/bs5/dt-2.0.5/b-3.0.2/fh-4.0.1/datatables.min.css" rel="stylesheet"/>
+    <style>
+        :root{
+            --brand-primary:#00a66a; /* 현대엘리베이터 느낌의 그린 */
+            --brand-dark:#0b2e25;
+            --brand-muted:#e9f7f1;
+        }
+        body{ background: #f7f9fb; }
+        .brand-gradient {
+            background: linear-gradient(135deg, var(--brand-primary), #2abf91);
+            color:#fff;
+        }
+        .page-header{
+            border-bottom: 1px solid #e6eef0;
+            background:#fff;
+        }
+        .search-card{
+            box-shadow: 0 6px 18px rgba(0,0,0,.06);
+            border:0;
+        }
+        .badge-floor{ background: var(--brand-muted); color: var(--brand-dark); }
+        .datatable-wrap{ overflow: hidden; }
+        .table thead th{ white-space: nowrap; }
+        .kpi-card{
+            border:0; box-shadow:0 6px 18px rgba(0,0,0,.06);
+        }
+        .pill{
+            display:inline-block; padding:.35rem .6rem; border-radius:2rem;
+            background:#eef6f8; font-size:.85rem;
+        }
+        .json-view{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.9rem; }
+        .form-label.required:after{ content:" *"; color:#dc3545; }
+        .btn-brand{ background:var(--brand-primary); border-color:var(--brand-primary); }
+        .btn-brand:hover{ filter:brightness(.95); }
+        .nav-pills .nav-link.active{ background: var(--brand-primary); }
+        .mini-help{ font-size:.9rem; color:#6b7b86; }
+    </style>
+</head>
+<body>
+<!-- Header -->
+<header class="page-header py-3">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center brand-gradient" style="width:40px;height:40px;">
+                <i class="bi bi-list-check fs-5"></i>
+            </div>
+            <div>
+                <h1 class="h5 mb-0">층별 영업사양·자재 조회</h1>
+                <div class="text-muted small">호기번호로 현장 데이터를 조회하고, 각 층의 사양/자재를 확인합니다.</div>
+            </div>
+        </div>
+        <div class="d-none d-md-block">
+            <span class="pill"><i class="bi bi-info-circle me-1"></i> 참고 CSS: 현대엘리베이터 제품 페이지 스타일 톤</span>
+        </div>
+    </div>
+</header>
+
+<main class="container my-4">
+    <!-- Search -->
+    <div class="card search-card">
+        <div class="card-body">
+            <form id="searchForm" class="row gy-3 gy-md-0 gx-md-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label for="inputHoist" class="form-label required">호기번호</label>
+                    <input id="inputHoist" type="text" class="form-control" placeholder="예) HDE-APT-20F-001" required />
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label"> </label>
+                    <button type="submit" class="btn btn-brand w-100">
+                        <i class="bi bi-search"></i> 조회
+                    </button>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label"> </label>
+                    <button id="btnReset" type="button" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-arrow-counterclockwise"></i> 초기화
+                    </button>
+                </div>
+                <div class="col-12 col-md-4 text-md-end">
+                    <div class="mini-help">
+                        <i class="bi bi-lightbulb me-1"></i> 가이드: 호기번호 입력 → 조회 클릭 → 결과 탭에서 층별 상세 확인 및 Excel 내보내기
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div id="summaryRow" class="row g-3 mt-3 d-none">
+        <div class="col-12 col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="text-muted small">현장명</div>
+                    <div id="siteName" class="h5 mb-0">-</div>
+                    <div class="small text-muted">호기번호: <span id="siteHoist">-</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="text-muted small">층수</div>
+                    <div id="floorCount" class="h5 mb-0">-</div>
+                    <div class="small text-muted">운행층 수 / 최상층</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="text-muted small">기본 사양</div>
+                    <div id="baseSpec" class="h5 mb-0">-</div>
+                    <div class="small text-muted">속도/문형/문폭 등</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-3">
+            <div class="card kpi-card">
+                <div class="card-body">
+                    <div class="text-muted small">비고</div>
+                    <div id="remarks" class="mb-0">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div id="resultArea" class="mt-4 d-none">
+        <ul class="nav nav-pills" id="resultTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tab-spec" data-bs-toggle="pill" data-bs-target="#pane-spec" type="button" role="tab">
+                    <i class="bi bi-layers-half me-1"></i> 층별 사양
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-mat" data-bs-toggle="pill" data-bs-target="#pane-mat" type="button" role="tab">
+                    <i class="bi bi-box-seam me-1"></i> 층별 자재
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-json" data-bs-toggle="pill" data-bs-target="#pane-json" type="button" role="tab">
+                    <i class="bi bi-braces-asterisk me-1"></i> 원본 JSON
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content mt-3">
+            <!-- 층별 사양 -->
+            <div class="tab-pane fade show active" id="pane-spec" role="tabpanel">
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                    <div class="input-group" style="max-width: 300px;">
+                        <span class="input-group-text"><i class="bi bi-building-up"></i></span>
+                        <select id="filterFloorSpec" class="form-select">
+                            <option value="">전체 층</option>
+                        </select>
+                    </div>
+                    <button id="btnExportSpec" class="btn btn-outline-secondary">
+                        <i class="bi bi-file-earmark-excel"></i> Excel 내보내기
+                    </button>
+                </div>
+                <div class="datatable-wrap">
+                    <table id="tblSpec" class="table table-striped table-hover w-100">
+                        <thead class="table-light">
+                        <tr>
+                            <th>층</th>
+                            <th>정지여부</th>
+                            <th>층표기</th>
+                            <th>문형</th>
+                            <th>문폭(mm)</th>
+                            <th>승강장형식</th>
+                            <th>기타 사양코드</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 층별 자재 -->
+            <div class="tab-pane fade" id="pane-mat" role="tabpanel">
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                    <div class="input-group" style="max-width: 300px;">
+                        <span class="input-group-text"><i class="bi bi-building-up"></i></span>
+                        <select id="filterFloorMat" class="form-select">
+                            <option value="">전체 층</option>
+                        </select>
+                    </div>
+                    <button id="btnExportMat" class="btn btn-outline-secondary">
+                        <i class="bi bi-file-earmark-excel"></i> Excel 내보내기
+                    </button>
+                </div>
+                <div class="datatable-wrap">
+                    <table id="tblMat" class="table table-striped table-hover w-100">
+                        <thead class="table-light">
+                        <tr>
+                            <th>층</th>
+                            <th>품번</th>
+                            <th>품명</th>
+                            <th>규격/설명</th>
+                            <th>수량</th>
+                            <th>단위</th>
+                            <th>비고</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Raw JSON -->
+            <div class="tab-pane fade" id="pane-json" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        <details open>
+                            <summary class="mb-2"><strong>API 응답 원본</strong> <span class="text-muted small">(개발·검증용)</span></summary>
+                            <pre id="jsonRaw" class="json-view bg-light p-3 rounded overflow-auto" style="max-height: 420px;"></pre>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="emptyState" class="text-center text-muted py-5">
+        <div class="mb-2"><i class="bi bi-search fs-1 text-secondary"></i></div>
+        <div class="h5">호기번호로 조회해 주세요</div>
+        <div class="small">예: HDE-APT-20F-001</div>
+    </div>
+</main>
+
+<!-- Dependencies -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/v/bs5/dt-2.0.5/b-3.0.2/fh-4.0.1/datatables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/3.0.2/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script>
+    // 전역 테이블 인스턴스
+    let dtSpec = null, dtMat = null;
+
+    // === 가짜 데이터 (API 붙이기 전 임시) ===
+    function mockFetchByHoist(hoistNo){
+        // TODO: 실제 API 연동 시 이 함수 삭제/교체
+        // 예시: const res = await fetch(`/api/floor-spec-material?hoist=${encodeURIComponent(hoistNo)}`).then(r=>r.json());
+        const totalFloors = 20;
+        const floors = Array.from({length: totalFloors}, (_,i)=>i+1);
+        const base = {
+            siteName: "현대APT 3차",
+            baseSpec: { speed:"2.5 m/s", doorType:"센터오픈", doorWidth:1100 },
+            remarks: "20층, 저층/고층 분리 없음, 표준 사양",
+        };
+        const spec = floors.map(f=>({
+            floor:f,
+            stop: true,
+            label: f===1?"B1":(f===2?"1":String(f-1)), // 예시 치환
+            doorType: (f%2? "센터오픈":"싱글슬라이딩"),
+            doorWidth: f%2? 1100:1000,
+            hallType: (f===1?"피트층":"일반층"),
+            miscCode: (f%5===0? "FS-GLASS":"STD")
+        }));
+        const materials = floors.flatMap(f=>([
+            {floor:f, partNo:"EL_PD162A06", partName:"홀도어프레임", spec:"SS400 도장", qty:1, uom:"EA", note:""},
+            {floor:f, partNo:"EL_HD001100", partName:"도어패널", spec:(f%2?"CO1100":"SS1000"), qty:2, uom:"EA", note:"문폭연동"},
+            {floor:f, partNo:"EL_SILL700", partName:"문턱(SILL)", spec:"알루미늄", qty:1, uom:"EA", note:""}
+        ]));
+        return {
+            hoistNo,
+            siteName: base.siteName,
+            floors: spec.length,
+            topFloor: Math.max(...floors),
+            baseSpec: base.baseSpec,
+            remarks: base.remarks,
+            specByFloor: spec,
+            matsByFloor: materials,
+            raw: { hoistNo, ...base, specByFloor: spec, matsByFloor: materials }
+        };
+    }
+
+    // === UI 헬퍼 ===
+    function fillSummary(data){
+        $("#siteName").text(data.siteName || "-");
+        $("#siteHoist").text(data.hoistNo || "-");
+        $("#floorCount").text(`${data.floors} / ${data.topFloor}F`);
+        const base = data.baseSpec || {};
+        $("#baseSpec").text(`${base.speed || "-"} / ${base.doorType || "-"} / ${base.doorWidth || "-"}mm`);
+        $("#remarks").text(data.remarks || "-");
+        $("#summaryRow").removeClass("d-none");
+    }
+
+    function buildFloorFilters(specList){
+        const floors = [...new Set(specList.map(r=>r.floor))].sort((a,b)=>a-b);
+        const $sel1 = $("#filterFloorSpec").empty().append(`<option value="">전체 층</option>`);
+        const $sel2 = $("#filterFloorMat").empty().append(`<option value="">전체 층</option>`);
+        floors.forEach(f=>{
+            const opt = `<option value="${f}">${f}층</option>`;
+            $sel1.append(opt); $sel2.append(opt);
+        });
+    }
+
+    function renderJsonRaw(obj){
+        $("#jsonRaw").text(JSON.stringify(obj, null, 2));
+    }
+
+    function initOrReloadTable($table, options, instanceRefName){
+        // 기존 인스턴스 파괴 → 재생성
+        if(window[instanceRefName]){
+            window[instanceRefName].destroy();
+            $table.find("tbody").empty();
+        }
+        window[instanceRefName] = new DataTable($table[0], options);
+    }
+
+    // === 메인 로직 ===
+    async function handleSearch(hoistNo){
+        // 1) 데이터 호출
+        const data = await mockFetchByHoist(hoistNo);
+
+        // 2) 요약
+        fillSummary(data);
+
+        // 3) 층 필터 구성
+        buildFloorFilters(data.specByFloor);
+
+        // 4) 테이블 바인딩
+        const specRows = data.specByFloor.map(r=>[
+            r.floor, r.stop?"Y":"N", r.label, r.doorType, r.doorWidth, r.hallType, r.miscCode
+        ]);
+        const matRows = data.matsByFloor.map(m=>[
+            m.floor, m.partNo, m.partName, m.spec, m.qty, m.uom, m.note || ""
+        ]);
+
+        const dtCommonOpts = {
+            paging: false,          // 페이징 끔 (요청사항)
+            searching: true,
+            ordering: true,
+            fixedHeader: true,
+            destroy: true,
+            language: { url: "https://cdn.datatables.net/plug-ins/2.0.5/i18n/ko.json" },
+            // 테이블 높이 많을 때 스크롤 사용
+            scrollY: 420,
+            scrollCollapse: true,
+            // 버튼 (엑셀은 외부 버튼으로 처리하므로 여기서는 생략 가능)
+        };
+
+        initOrReloadTable($("#tblSpec"), {
+            ...dtCommonOpts,
+            data: specRows,
+            columns: [
+                { title:"층" }, { title:"정지여부" }, { title:"층표기" },
+                { title:"문형" }, { title:"문폭(mm)" }, { title:"승강장형식" }, { title:"기타 사양코드" }
+            ]
+        }, "dtSpec");
+
+        initOrReloadTable($("#tblMat"), {
+            ...dtCommonOpts,
+            data: matRows,
+            columns: [
+                { title:"층" }, { title:"품번" }, { title:"품명" },
+                { title:"규격/설명" }, { title:"수량" }, { title:"단위" }, { title:"비고" }
+            ]
+        }, "dtMat");
+
+        // 5) 층 드롭다운 필터 동작
+        $("#filterFloorSpec").off("change").on("change", function(){
+            const v = $(this).val();
+            if(v) dtSpec.column(0).search(`^${v}$`, true, false).draw();
+            else dtSpec.column(0).search("").draw();
+        });
+        $("#filterFloorMat").off("change").on("change", function(){
+            const v = $(this).val();
+            if(v) dtMat.column(0).search(`^${v}$`, true, false).draw();
+            else dtMat.column(0).search("").draw();
+        });
+
+        // 6) JSON 원본
+        renderJsonRaw(data.raw);
+
+        // 7) 화면 상태 전환
+        $("#emptyState").addClass("d-none");
+        $("#resultArea").removeClass("d-none");
+    }
+
+    // 엑셀 내보내기 (간단: CSV)
+    function exportTableToCsv(tableId, filename){
+        const dt = (tableId==="tblSpec") ? dtSpec : dtMat;
+        const rows = dt.rows({search:'applied'}).data().toArray();
+        const header = dt.columns().header().toArray().map(th=>th.textContent);
+        const csv = [header].concat(rows).map(r=>r.map(x=>{
+            const s = String(x ?? "");
+            return `"${s.replaceAll('"','""')}"`;
+        }).join(",")).join("\n");
+        const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // 이벤트 바인딩
+    $(function(){
+        $("#searchForm").on("submit", function(e){
+            e.preventDefault();
+            const hoist = $("#inputHoist").val().trim();
+            if(!hoist){ $("#inputHoist").focus(); return; }
+            handleSearch(hoist);
+        });
+        $("#btnReset").on("click", function(){
+            $("#inputHoist").val("");
+            $("#resultArea").addClass("d-none");
+            $("#summaryRow").addClass("d-none");
+            $("#emptyState").removeClass("d-none");
+        });
+        $("#btnExportSpec").on("click", ()=>exportTableToCsv("tblSpec", "층별_사양.csv"));
+        $("#btnExportMat").on("click", ()=>exportTableToCsv("tblMat", "층별_자재.csv"));
+    });
+
+    // ===== 실제 API 연동 가이드 =====
+    // 1) mockFetchByHoist() 삭제 후 아래처럼 교체:
+    // async function fetchByHoist(hoistNo) {
+    //   const res = await fetch(`/api/bom-by-floor?hoist=${encodeURIComponent(hoistNo)}`);
+    //   if(!res.ok) throw new Error("API 오류");
+    //   return res.json();
+    // }
+    // 2) handleSearch() 내부에서 mockFetchByHoist -> fetchByHoist 로 변경
+    // 3) API 응답 스키마를 아래 데이터 구조에 매핑:
+    // {
+    //   hoistNo, siteName, floors, topFloor,
+    //   baseSpec:{speed,doorType,doorWidth}, remarks,
+    //   specByFloor:[{floor,stop,label,doorType,doorWidth,hallType,miscCode}],
+    //   matsByFloor:[{floor,partNo,partName,spec,qty,uom,note}],
+    //   raw: <원본>
+    // }
+</script>
+</body>
+</html>
