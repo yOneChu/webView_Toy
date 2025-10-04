@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SAP 자재 변경이력 대시보드 (HTML + jQuery)</title>
+    <!-- Tailwind (CDN) -->
+    <script>
+        // Tailwind CDN 설정: 다크모드 class 전략
+        window.tailwind = { config: { darkMode: 'class' } };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* 스크롤바 미세 튜닝 */
+        .thin-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+        .thin-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 8px; }
+        .thin-scroll::-webkit-scrollbar-track { background: transparent; }
+    </style>
+</head>
+<body class="min-h-full bg-gradient-to-b from-gray-50 to-white text-gray-900 dark:bg-gradient-to-b dark:from-zinc-950 dark:to-zinc-900 dark:text-zinc-50">
+<div id="app" class="mx-auto max-w-7xl p-6 space-y-6">
+    <!-- Header Bar -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-xl font-semibold tracking-tight">SAP 자재 변경이력 대시보드</h2>
+            <p class="text-sm text-gray-500">이번달 SAP 전송 호기 • 특정 자재 기준</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="btnRefresh" class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 active:scale-[.98] dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-800">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> 새로고침
+            </button>
+            <button id="btnExport" class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 active:scale-[.98] dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-800">
+                <i data-lucide="download" class="w-4 h-4"></i> Export
+            </button>
+            <div class="ml-1 flex items-center gap-2 rounded-full border border-gray-200 px-2 py-1 dark:border-zinc-800">
+                <i data-lucide="sun" class="w-4 h-4 opacity-60"></i>
+                <button id="darkToggle" aria-label="toggle" class="relative h-6 w-10 rounded-full bg-gray-300 dark:bg-zinc-700 transition-colors">
+                    <span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-all" id="toggleKnob"></span>
+                </button>
+                <i data-lucide="moon" class="w-4 h-4 opacity-60"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="grid grid-cols-1 gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-200 sm:grid-cols-2 lg:grid-cols-4 dark:bg-zinc-900 dark:ring-zinc-800">
+        <div>
+            <label class="text-xs text-gray-500">기준월</label>
+            <input type="month" id="fMonth" class="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:bg-zinc-900 dark:border-zinc-800" />
+        </div>
+        <div>
+            <label class="text-xs text-gray-500">자재코드</label>
+            <input id="fMaterial" placeholder="예: MAT-112233" class="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:bg-zinc-900 dark:border-zinc-800" />
+        </div>
+        <div>
+            <label class="text-xs text-gray-500">공장</label>
+            <select id="fPlant" class="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:bg-zinc-900 dark:border-zinc-800">
+                <option value="">전체</option>
+                <option value="KR-CHG">KR-CHG</option>
+                <option value="KR-ASN">KR-ASN</option>
+                <option value="CN-SHZ">CN-SHZ</option>
+            </select>
+        </div>
+        <div class="flex items-end justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-zinc-300">
+                    <input type="checkbox" class="accent-blue-600" id="tCreate" checked /> CREATE
+                </label>
+                <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-zinc-300">
+                    <input type="checkbox" class="accent-blue-600" id="tUpdate" checked /> UPDATE
+                </label>
+                <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-zinc-300">
+                    <input type="checkbox" class="accent-blue-600" id="tDelete" checked /> DELETE
+                </label>
+            </div>
+            <button id="btnSearch" class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 active:scale-[.98] dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-800">
+                <i data-lucide="search" class="w-4 h-4"></i> 조회
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 p-4 dark:bg-zinc-900 dark:ring-zinc-800">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-500 dark:text-zinc-400">SAP 전송 호기</p>
+                <i data-lucide="factory" class="w-5 h-5 opacity-70"></i>
+            </div>
+            <p id="kpiTotal" class="mt-3 text-2xl font-semibold tracking-tight"></p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-zinc-400">이번달 기준</p>
+        </div>
+        <div class="rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 p-4 dark:bg-zinc-900 dark:ring-zinc-800">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-500 dark:text-zinc-400">변경 영향 호기</p>
+                <i data-lucide="history" class="w-5 h-5 opacity-70"></i>
+            </div>
+            <p id="kpiAffected" class="mt-3 text-2xl font-semibold tracking-tight"></p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-zinc-400">1회 이상 변경</p>
+        </div>
+        <div class="rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 p-4 dark:bg-zinc-900 dark:ring-zinc-800">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-500 dark:text-zinc-400">총 변경건수</p>
+                <i data-lucide="refresh-cw" class="w-5 h-5 opacity-70"></i>
+            </div>
+            <p id="kpiChanges" class="mt-3 text-2xl font-semibold tracking-tight"></p>
+        </div>
+        <div class="rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 p-4 dark:bg-zinc-900 dark:ring-zinc-800">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-500 dark:text-zinc-400">호기당 평균</p>
+                <i data-lucide="filter" class="w-5 h-5 opacity-70"></i>
+            </div>
+            <p id="kpiAvg" class="mt-3 text-2xl font-semibold tracking-tight"></p>
+        </div>
+    </div>
+
+    <!-- Trend (MiniBar) -->
+    <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200 dark:bg-zinc-900 dark:ring-zinc-800">
+        <div class="flex items-center justify-between">
+            <p class="text-sm font-medium text-gray-700 dark:text-zinc-200">일자별 변경 추이</p>
+            <div class="text-xs text-gray-500">최근 20일 표시</div>
+        </div>
+        <div class="mt-3" id="trendContainer"></div>
+    </div>
+
+    <!-- Table -->
+    <div id="tableWrap" class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 dark:bg-zinc-900 dark:ring-zinc-800">
+        <div class="max-h-[520px] overflow-auto thin-scroll">
+            <table class="min-w-full text-left">
+                <thead class="sticky top-0 bg-gray-50 text-sm text-gray-600 dark:bg-zinc-800 dark:text-zinc-200">
+                <tr class="border-b dark:border-zinc-700">
+                    <th class="px-3 py-2 font-medium">호기</th>
+                    <th class="px-3 py-2 font-medium">공장 / 자재</th>
+                    <th class="px-3 py-2 font-medium">상태</th>
+                    <th class="px-3 py-2 font-medium">변경횟수</th>
+                    <th class="px-3 py-2 font-medium text-right">상세</th>
+                </tr>
+                </thead>
+                <tbody id="tbody" class="divide-y dark:divide-zinc-800"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Empty State (동적 표시) -->
+    <div id="emptyState" class="hidden flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-gray-300 p-12 text-center dark:border-zinc-700">
+        <i data-lucide="filter" class="h-6 w-6 opacity-50"></i>
+        <p class="text-sm text-gray-600 dark:text-zinc-300">조건을 입력하고 조회를 눌러주세요.</p>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div id="detailModal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/40" data-close-modal></div>
+    <div class="absolute inset-x-0 top-10 mx-auto w-[960px] max-w-[95vw] rounded-2xl bg-white p-6 shadow-xl ring-1 ring-gray-200 dark:bg-zinc-900 dark:ring-zinc-800">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold">상세 변경이력</h3>
+                <p id="modalMeta" class="mt-1 text-sm text-gray-500"></p>
+            </div>
+            <button class="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-zinc-800" data-close-modal>
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="mt-6 max-h-[60vh] overflow-auto pr-2 thin-scroll">
+            <ol id="logList" class="relative ml-4 border-l border-gray-200 dark:border-zinc-800"></ol>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===== Utilities =====
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+
+    function daysInMonth(year, monthIndex0){
+        return new Date(year, monthIndex0 + 1, 0).getDate();
+    }
+    function rand(min, max){ return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+    // Badge 생성 (tone: gray|blue|orange|red|green)
+    function badge(label, tone){
+        const map = {
+            gray: 'bg-gray-100 text-gray-700',
+            blue: 'bg-blue-100 text-blue-700',
+            orange: 'bg-orange-100 text-orange-700',
+            red: 'bg-rose-100 text-rose-700',
+            green: 'bg-emerald-100 text-emerald-700'
+        };
+        return `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${map[tone||'gray']}">${label}</span>`;
+    }
+
+    // MiniBar SVG (최근 20개)
+    function renderMiniBar(series){
+        const max = Math.max(1, ...series);
+        const padded = series.slice(-20);
+        const w = 120, h = 30; const barW = w / padded.length;
+        let rects = '';
+        padded.forEach((v, i) => {
+            const barH = (v / max) * (h - 4);
+            rects += `<rect x="${i*barW}" y="${h-barH}" width="${Math.max(1, barW-2)}" height="${barH}" rx="2" class="fill-blue-500/70"></rect>`;
+        });
+        return `<svg width="${w}" height="${h}" class="overflow-visible">${rects}</svg>`;
+    }
+
+    // 데이터 타입 (주석 참고용)
+    // ChangeType: 'CREATE'|'UPDATE'|'DELETE'
+    // ChangeLog: { id, date(YYYY-MM-DD), type, field, before, after, user, reason }
+    // UnitRow: { hoNo, plant, material, sentAt, changeCount, lastChangedAt, status, logs: ChangeLog[] }
+
+    function makeMockData(year = yyyy, monthIndex0 = (new Date()).getMonth()){
+        const plants = ['KR-CHG', 'KR-ASN', 'CN-SHZ'];
+        const mats = ['MAT-112233', 'MAT-445566', 'MAT-778899'];
+        const units = [];
+        const count = 28;
+        const dim = daysInMonth(year, monthIndex0);
+        for (let i=0;i<count;i++){
+            const hoNo = `H${year}${String(monthIndex0+1).padStart(2,'0')}-${String(1000+i)}`;
+            const plant = plants[rand(0, plants.length-1)];
+            const material = mats[rand(0, mats.length-1)];
+            const sentDay = rand(1, Math.min(dim, 27));
+            const sentAt = `${year}-${String(monthIndex0+1).padStart(2,'0')}-${String(sentDay).padStart(2,'0')}`;
+            const logLen = rand(0, 6);
+            const logs = Array.from({length: logLen}).map((_, idx) => {
+                const d = rand(sentDay, dim);
+                const types = ['CREATE','UPDATE','DELETE'];
+                const t = types[rand(0,2)];
+                const fields = ['QTY','ALT_MAT','PRICE','NOTE'];
+                const field = fields[rand(0, fields.length-1)];
+                const before = t==='CREATE'? undefined : rand(1,10);
+                const after  = t==='DELETE'? undefined : rand(1,10);
+                return {
+                    id: `${hoNo}-${idx}`,
+                    date: `${year}-${String(monthIndex0+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`,
+                    type: t,
+                    field,
+                    before,
+                    after,
+                    user: ['kimyh','parkjh','leejs'][rand(0,2)],
+                    reason: ['요청 반영','오타 수정','대체자재 적용','원가 조정'][rand(0,3)],
+                };
+            }).sort((a,b)=> a.date.localeCompare(b.date));
+            const lastChangedAt = logs.length? logs.map(l=>l.date).sort().at(-1) : undefined;
+            const status = logs.length===0? 'OK' : (logs.length<3? 'WARN' : 'ERROR');
+            units.push({ hoNo, plant, material, sentAt, changeCount: logs.length, lastChangedAt, status, logs });
+        }
+        return units.sort((a,b)=> (b.lastChangedAt||'').localeCompare(a.lastChangedAt||''));
+    }
+
+    // 상태 배지
+    function statusBadge(status){
+        if(status==='OK') return badge('정상','green');
+        if(status==='WARN') return badge('주의','orange');
+        return badge('검토필요','red');
+    }
+
+    // 전역 상태
+    let rows = [];
+    let selectedRow = null;
+
+    // KPI 갱신
+    function updateKPI(){
+        const total = rows.length;
+        const affected = rows.filter(r=> r.changeCount>0).length;
+        const changes = rows.reduce((a,r)=> a + r.changeCount, 0);
+        const avg = total? (changes/total).toFixed(1) : '0.0';
+        $('#kpiTotal').text(`${total} EA`);
+        $('#kpiAffected').text(`${affected} EA`);
+        $('#kpiChanges').text(`${changes} 건`);
+        $('#kpiAvg').text(`${avg} 건`);
+    }
+
+    // 일자별 변경 추이 시리즈 생성
+    function calcTrendSeries(){
+        const monthVal = $('#fMonth').val();
+        const [y,m] = String(monthVal).split('-').map(Number);
+        const dim = daysInMonth(y, (m||1)-1);
+        const map = {};
+        for(let d=1; d<=dim; d++){
+            const key = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            map[key] = 0;
+        }
+        const tCreate = $('#tCreate').is(':checked');
+        const tUpdate = $('#tUpdate').is(':checked');
+        const tDelete = $('#tDelete').is(':checked');
+        rows.forEach(r=> r.logs.forEach(l=>{
+            if(!String(l.date).startsWith(`${y}-${String(m).padStart(2,'0')}-`)) return;
+            if((l.type==='CREATE' && tCreate) || (l.type==='UPDATE' && tUpdate) || (l.type==='DELETE' && tDelete)){
+                map[l.date] = (map[l.date]||0) + 1;
+            }
+        }));
+        return Object.values(map);
+    }
+
+    function renderTrend(){
+        const series = calcTrendSeries();
+        $('#trendContainer').html(renderMiniBar(series));
+    }
+
+    // 테이블 렌더링
+    function renderTable(){
+        const $tbody = $('#tbody');
+        $tbody.empty();
+        if(rows.length===0){
+            $('#tableWrap').addClass('hidden');
+            $('#emptyState').removeClass('hidden');
+            return;
+        }
+        $('#tableWrap').removeClass('hidden');
+        $('#emptyState').addClass('hidden');
+        rows.forEach(r=>{
+            const mini = renderMiniBar(r.logs.map(()=>1));
+            const tr = $(`
+          <tr class="border-b last:border-none dark:border-zinc-800">
+            <td class="px-3 py-3 text-sm">
+              <div class="flex items-center gap-2">
+                <i data-lucide="factory" class="h-4 w-4 opacity-60"></i>
+                <span class="font-medium">${r.hoNo}</span>
+              </div>
+              <p class="text-xs text-gray-500">SAP 전송: ${r.sentAt}</p>
+            </td>
+            <td class="px-3 py-3 text-sm">
+              <div class="flex items-center gap-2">${badge(r.plant,'blue')}</div>
+              <p class="text-xs text-gray-500">${r.material}</p>
+            </td>
+            <td class="px-3 py-3 text-sm">
+              <div class="flex items-center gap-2">${statusBadge(r.status)}</div>
+              <p class="text-xs text-gray-500">최근변경: ${r.lastChangedAt || '-'}</p>
+            </td>
+            <td class="px-3 py-3 text-sm">
+              <div class="flex items-center gap-3">
+                <span class="font-semibold">${r.changeCount}</span>
+                <span class="inline-block">${mini}</span>
+              </div>
+            </td>
+            <td class="px-3 py-3 text-sm text-right">
+              <button class="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-zinc-800 dark:hover:bg-zinc-800 btn-detail">
+                상세 <i data-lucide="chevron-right" class="h-4 w-4"></i>
+              </button>
+            </td>
+          </tr>
+        `);
+            tr.find('.btn-detail').on('click', ()=> openModal(r));
+            $tbody.append(tr);
+        });
+        lucide.createIcons();
+    }
+
+    // 모달 열기/닫기
+    function openModal(row){
+        selectedRow = row;
+        $('#modalMeta').text(`호기 ${row.hoNo} • ${row.plant} • ${row.material}`);
+        const $list = $('#logList');
+        $list.empty();
+        if(row.logs.length===0){
+            $list.append('<p class="text-sm text-gray-500">이번달 변경 이력이 없습니다.</p>');
+        } else {
+            row.logs.forEach(l=>{
+                const typeBadge = l.type==='CREATE'? badge('CREATE','blue') : (l.type==='UPDATE'? badge('UPDATE','orange') : badge('DELETE','red'));
+                const item = $(`
+            <li class="mb-6 ml-4">
+              <div class="absolute -left-1.5 mt-1 h-3 w-3 rounded-full bg-blue-500"></div>
+              <div class="flex items-center gap-2 text-xs text-gray-500">
+                <i data-lucide="history" class="h-3.5 w-3.5"></i>
+                <span>${l.date}</span>
+                ${typeBadge}
+                ${l.user? `<span>• by ${l.user}</span>`: ''}
+                ${l.reason? `<span>• ${l.reason}</span>`: ''}
+              </div>
+              <div class="mt-2 rounded-xl border border-gray-200 p-3 text-sm dark:border-zinc-800">
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <p class="text-xs text-gray-500">필드</p>
+                    <p class="font-medium">${l.field}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500">Before</p>
+                    <p class="rounded-lg bg-rose-50 px-2 py-1 font-mono text-[13px] text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">${String(l.before ?? '-')}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-500">After</p>
+                    <p class="rounded-lg bg-emerald-50 px-2 py-1 font-mono text-[13px] text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">${String(l.after ?? '-')}</p>
+                  </div>
+                </div>
+              </div>
+            </li>
+          `);
+                $list.append(item);
+            });
+        }
+        $('#detailModal').removeClass('hidden');
+        lucide.createIcons();
+    }
+    function closeModal(){ $('#detailModal').addClass('hidden'); }
+
+    // 데이터 조회 (MOCK → 실제 API로 교체 지점)
+    function fetchData(){
+        const monthVal = $('#fMonth').val();
+        const material = $('#fMaterial').val();
+        const plant = $('#fPlant').val();
+        const [y, m] = String(monthVal).split('-').map(Number);
+
+        // TODO: 실제 API
+        // $.getJSON(`/api/sap/changes`, { month: monthVal, material, plant, types: types.join(',') })
+        //  .done(res => { rows = mapToRows(res); renderAll(); });
+
+        const mock = makeMockData(y, (m||1)-1).filter(r=>{
+            let ok = true;
+            if(plant) ok = ok && (r.plant===plant);
+            if(material) ok = ok && (String(r.material).includes(material));
+            return ok;
+        });
+        const tCreate = $('#tCreate').is(':checked');
+        const tUpdate = $('#tUpdate').is(':checked');
+        const tDelete = $('#tDelete').is(':checked');
+        rows = mock.map(r=> ({
+            ...r,
+            changeCount: r.logs.filter(l=> (l.type==='CREATE'&&tCreate) || (l.type==='UPDATE'&&tUpdate) || (l.type==='DELETE'&&tDelete)).length,
+            logs: r.logs.filter(l=> (l.type==='CREATE'&&tCreate) || (l.type==='UPDATE'&&tUpdate) || (l.type==='DELETE'&&tDelete))
+        }));
+        renderAll();
+    }
+
+    function renderAll(){
+        updateKPI();
+        renderTrend();
+        renderTable();
+    }
+
+    // CSV Export
+    function exportCSV(){
+        const header = ['hoNo','plant','material','sentAt','changeCount','lastChangedAt','status'];
+        const lines = rows.map(r=> header.map(h=> r[h] ?? '').join(','));
+        const csv = [header.join(','), ...lines].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `sap-change-${$('#fMonth').val()}.csv`; a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // 초기화
+    $(function(){
+        // 아이콘 렌더
+        lucide.createIcons();
+
+        // 기본 값
+        $('#fMonth').val(`${yyyy}-${mm}`);
+        $('#fMaterial').val('MAT-112233');
+
+        // 이벤트 바인딩
+        $('#btnSearch').on('click', fetchData);
+        $('#btnExport').on('click', exportCSV);
+        $('#btnRefresh').on('click', fetchData);
+        $(document).on('click','[data-close-modal]', closeModal);
+
+        // 다크모드 토글: html에 .dark 토글
+        const html = document.documentElement;
+        function setDark(on){
+            if(on){ html.classList.add('dark'); $('#toggleKnob').css('left','1rem'); }
+            else { html.classList.remove('dark'); $('#toggleKnob').css('left','0.125rem'); }
+        }
+        // 초기: 시스템 선호 무시하고 라이트로 시작
+        setDark(false);
+        $('#darkToggle').on('click', ()=> setDark(!html.classList.contains('dark')));
+
+        // 첫 렌더
+        fetchData();
+    });
+</script>
+</body>
+</html>
