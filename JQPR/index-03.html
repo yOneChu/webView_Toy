@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JQPR 비용 분석 대시보드</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        /*
+         * 제공된 CSS 변수 및 스타일을 이 곳에 삽입합니다.
+         * 편의상, 전체 CSS를 직접 삽입합니다.
+         */
+        :root {
+            --background: oklch(0.9911 0 0);
+            --foreground: oklch(0.2046 0 0);
+            --card: oklch(0.9911 0 0);
+            --card-foreground: oklch(0.2046 0 0);
+            --popover: oklch(0.9911 0 0);
+            --popover-foreground: oklch(0.4386 0 0);
+            --primary: oklch(0.8348 0.1302 160.9080);
+            --primary-foreground: oklch(0.2626 0.0147 166.4589);
+            --secondary: oklch(0.9940 0 0);
+            --secondary-foreground: oklch(0.2046 0 0);
+            --muted: oklch(0.9461 0 0);
+            --muted-foreground: oklch(0.2435 0 0);
+            --accent: oklch(0.9461 0 0);
+            --accent-foreground: oklch(0.2435 0 0);
+            --destructive: oklch(0.5523 0.1927 32.7272);
+            --destructive-foreground: oklch(0.9934 0.0032 17.2118);
+            --border: oklch(0.9037 0 0);
+            --input: oklch(0.9731 0 0);
+            --ring: oklch(0.8348 0.1302 160.9080);
+            --chart-1: oklch(0.8348 0.1302 160.9080);
+            --chart-2: oklch(0.6231 0.1880 259.8145);
+            --chart-3: oklch(0.6056 0.2189 292.7172);
+            --chart-4: oklch(0.7686 0.1647 70.0804);
+            --chart-5: oklch(0.6959 0.1491 162.4796);
+            --sidebar: oklch(0.9911 0 0);
+            --sidebar-foreground: oklch(0.5452 0 0);
+            --sidebar-primary: oklch(0.8348 0.1302 160.9080);
+            --sidebar-primary-foreground: oklch(0.2626 0.0147 166.4589);
+            --sidebar-accent: oklch(0.9461 0 0);
+            --sidebar-accent-foreground: oklch(0.2435 0 0);
+            --sidebar-border: oklch(0.9037 0 0);
+            --sidebar-ring: oklch(0.8348 0.1302 160.9080);
+            --font-sans: 'Outfit', sans-serif;
+            --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+            --font-mono: monospace;
+            --radius: 0.5rem;
+            --shadow: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 1px 2px -1px hsl(0 0% 0% / 0.17);
+            --tracking-normal: 0.025em;
+            --spacing: 0.25rem;
+        }
+
+        /* 폰트 적용 (Outfit 폰트는 별도 임베딩 필요, 여기서는 대체 폰트 사용) */
+        body {
+            font-family: var(--font-sans), 'Malgun Gothic', '맑은 고딕', sans-serif;
+            background-color: var(--background);
+            color: var(--foreground);
+            letter-spacing: var(--tracking-normal);
+            padding-top: 56px; /* 고정된 네비게이션 바 높이만큼 패딩 추가 */
+        }
+        .card {
+            background-color: var(--card);
+            color: var(--card-foreground);
+            border-color: var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem; /* 카드 하단 마진 */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        .navbar {
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+            box-shadow: var(--shadow-sm);
+        }
+        .navbar-brand, .nav-link {
+            color: var(--primary-foreground) !important;
+        }
+        .badge-destructive {
+            background-color: var(--destructive);
+            color: var(--destructive-foreground);
+        }
+        .table {
+            --bs-table-bg: var(--card);
+            --bs-table-color: var(--card-foreground);
+            --bs-table-border-color: var(--border);
+        }
+        .table th {
+            background-color: var(--muted);
+            color: var(--muted-foreground);
+        }
+        .kpi-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--destructive); /* 실패 비용을 강조 */
+        }
+        .chart-container {
+            height: 300px; /* 차트 높이 고정 */
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="#">
+            <span style="color: var(--destructive); margin-right: 5px;">⚠️</span> JQPR 대시보드
+        </a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="#">종합 현황</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">프로젝트별 분석</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">원인 상세 조회</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid py-4">
+    <h1 class="mb-4 fw-bold" style="color: var(--foreground);">엘리베이터 현장 오류 비용 (JQPR) 분석</h1>
+
+    <div class="row">
+        <div class="col-lg-3 col-md-6">
+            <div class="card p-4 text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">총 실패 비용 (누적)</h5>
+                    <div class="kpi-value" id="total-failure-cost">0 원</div>
+                    <p class="card-text text-muted small">지난 달 대비 <span class="badge badge-destructive">-5%</span></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card p-4 text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">총 자재비</h5>
+                    <div class="kpi-value" style="color: var(--chart-2);" id="total-material-cost">0 원</div>
+                    <p class="card-text text-muted small">JQPR 발생 건수: <span class="fw-bold" id="total-cases">0 건</span></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card p-4 text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">총 노무비</h5>
+                    <div class="kpi-value" style="color: var(--chart-3);" id="total-labor-cost">0 원</div>
+                    <p class="card-text text-muted small">건당 평균 비용: <span class="fw-bold" id="avg-cost">0 원</span></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card p-4 text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">주요 고장 원인</h5>
+                    <div class="kpi-value" style="font-size: 2rem; color: var(--chart-4);" id="top-cause">데이터 로딩 중</div>
+                    <p class="card-text text-muted small">가장 비용이 많이 발생한 원인</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card p-3">
+                <h5 class="card-header fw-bold">월별 JQPR 비용 추이</h5>
+                <div class="card-body chart-container">
+                    <canvas id="monthlyCostChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card p-3">
+                <h5 class="card-header fw-bold">고장 원인별 실패 비용 비중 (Top 5)</h5>
+                <div class="card-body chart-container">
+                    <canvas id="causeDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card p-3">
+                <h5 class="card-header fw-bold">JQPR 상세 현황 (최근 발생 건)</h5>
+                <div class="card-body table-responsive">
+                    <div class="mb-3 d-flex justify-content-between">
+                        <input type="text" class="form-control w-25" id="searchInput" placeholder="프로젝트명, 현장번호 등으로 검색">
+                        <div>
+                            <button class="btn btn-outline-secondary btn-sm me-2">필터 적용</button>
+                            <button class="btn btn-primary btn-sm">다운로드 (CSV)</button>
+                        </div>
+                    </div>
+
+                    <table class="table table-hover align-middle">
+                        <thead class="table-dark">
+                        <tr>
+                            <th>JQPR No</th>
+                            <th>프로젝트명</th>
+                            <th>현장번호</th>
+                            <th class="text-end">자재비</th>
+                            <th class="text-end">노무비</th>
+                            <th class="text-end" style="color: var(--destructive-foreground); background-color: var(--destructive);">실패 비용 (합계)</th>
+                            <th>작성일</th>
+                            <th>고장 원인</th>
+                            <th>고장 현상</th>
+                        </tr>
+                        </thead>
+                        <tbody id="jqpr-data-body">
+                        </tbody>
+                    </table>
+                    <nav>
+                        <ul class="pagination justify-content-center">
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 이 곳에 JavaScript 코드를 삽입합니다.
+    // 1. 가상 데이터 생성 (임시 데이터)
+    const rawData = [
+        { JQPRNO: 'JQP2407001', projectName: '강남 타워 A동', siteNo: 'S001-A', materialCost: 1500000, laborCost: 800000, failureCost: 2300000, date: '2024-07-01', cause: '부품 초기 불량', phenomenon: '승차감 불량 및 소음 발생' },
+        { JQPRNO: 'JQP2407002', projectName: '송도 아파트 101동', siteNo: 'S010-101', materialCost: 500000, laborCost: 300000, failureCost: 800000, date: '2024-07-05', cause: '설치 오류 (배선)', phenomenon: '도어 개폐 지연' },
+        { JQPRNO: 'JQP2406003', projectName: '강남 타워 A동', siteNo: 'S001-B', materialCost: 200000, laborCost: 100000, failureCost: 300000, date: '2024-06-10', cause: '사용자 부주의', phenomenon: '버튼 오작동' },
+        { JQPRNO: 'JQP2407004', projectName: '부산 마린시티', siteNo: 'S022-C', materialCost: 3000000, laborCost: 1500000, failureCost: 4500000, date: '2024-07-15', cause: '부품 초기 불량', phenomenon: '제어반 과열' },
+        { JQPRNO: 'JQP2405005', projectName: '송도 아파트 101동', siteNo: 'S010-102', materialCost: 800000, laborCost: 400000, failureCost: 1200000, date: '2024-05-20', cause: '협력사 작업 미숙', phenomenon: '수평 불일치' },
+        { JQPRNO: 'JQP2407006', projectName: '제주 리조트', siteNo: 'S030-R', materialCost: 100000, laborCost: 200000, failureCost: 300000, date: '2024-07-22', cause: '설치 오류 (배선)', phenomenon: '비상 정지 빈번' },
+        // 추가 데이터...
+    ];
+
+    // 숫자를 원화 포맷으로 변환하는 함수
+    const formatCurrency = (number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(number);
+
+    // 데이터를 기반으로 KPI 및 차트 데이터 계산
+    function calculateDashboardData(data) {
+        let totalFailureCost = 0;
+        let totalMaterialCost = 0;
+        let totalLaborCost = 0;
+        const monthlyCost = {}; // { 'YYYY-MM': cost }
+        const causeCost = {}; // { '원인': cost }
+
+        data.forEach(item => {
+            totalFailureCost += item.failureCost;
+            totalMaterialCost += item.materialCost;
+            totalLaborCost += item.laborCost;
+
+            // 월별 비용 계산
+            const month = item.date.substring(0, 7);
+            monthlyCost[month] = (monthlyCost[month] || 0) + item.failureCost;
+
+            // 원인별 비용 계산
+            causeCost[item.cause] = (causeCost[item.cause] || 0) + item.failureCost;
+        });
+
+        const totalCases = data.length;
+        const avgCost = totalCases > 0 ? totalFailureCost / totalCases : 0;
+
+        // Top 5 원인 추출
+        const sortedCauses = Object.entries(causeCost)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5);
+        const topCause = sortedCauses.length > 0 ? sortedCauses[0][0] : 'N/A';
+
+        return {
+            totalFailureCost,
+            totalMaterialCost,
+            totalLaborCost,
+            totalCases,
+            avgCost,
+            topCause,
+            monthlyCost,
+            causeDistribution: sortedCauses
+        };
+    }
+
+    // 2. 대시보드 KPI 업데이트
+    function updateKPIs(data) {
+        document.getElementById('total-failure-cost').textContent = formatCurrency(data.totalFailureCost);
+        document.getElementById('total-material-cost').textContent = formatCurrency(data.totalMaterialCost);
+        document.getElementById('total-labor-cost').textContent = formatCurrency(data.totalLaborCost);
+        document.getElementById('total-cases').textContent = data.totalCases + ' 건';
+        document.getElementById('avg-cost').textContent = formatCurrency(data.avgCost);
+        document.getElementById('top-cause').textContent = data.topCause;
+    }
+
+    // 3. 차트 생성
+    function createCharts(data) {
+        const chartColors = [
+            getComputedStyle(document.documentElement).getPropertyValue('--chart-1').trim(),
+            getComputedStyle(document.documentElement).getPropertyValue('--chart-2').trim(),
+            getComputedStyle(document.documentElement).getPropertyValue('--chart-3').trim(),
+            getComputedStyle(document.documentElement).getPropertyValue('--chart-4').trim(),
+            getComputedStyle(document.documentElement).getPropertyValue('--chart-5').trim(),
+        ];
+
+        // A. 월별 비용 추이 (선형 차트)
+        const sortedMonths = Object.keys(data.monthlyCost).sort();
+        const monthlyCosts = sortedMonths.map(month => data.monthlyCost[month]);
+
+        new Chart(document.getElementById('monthlyCostChart'), {
+            type: 'line',
+            data: {
+                labels: sortedMonths,
+                datasets: [{
+                    label: '실패 비용',
+                    data: monthlyCosts,
+                    backgroundColor: 'rgba(var(--primary-rgb), 0.5)',
+                    borderColor: chartColors[0],
+                    tension: 0.3,
+                    borderWidth: 2,
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: '비용 (원)' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (context) => formatCurrency(context.parsed.y) } }
+                }
+            }
+        });
+
+        // B. 고장 원인별 비용 비중 (도넛 차트)
+        const causeLabels = data.causeDistribution.map(item => item[0]);
+        const causeValues = data.causeDistribution.map(item => item[1]);
+
+        new Chart(document.getElementById('causeDistributionChart'), {
+            type: 'doughnut',
+            data: {
+                labels: causeLabels,
+                datasets: [{
+                    data: causeValues,
+                    backgroundColor: chartColors,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' },
+                    tooltip: { callbacks: { label: (context) => `${context.label}: ${formatCurrency(context.parsed)}` } }
+                }
+            }
+        });
+    }
+
+    // 4. 상세 테이블 데이터 채우기
+    function populateTable(data) {
+        const tableBody = document.getElementById('jqpr-data-body');
+        tableBody.innerHTML = ''; // 기존 데이터 초기화
+
+        // 데이터를 JQPRNO 또는 작성일 기준으로 내림차순 정렬하여 최신 건을 위로 표시
+        const sortedData = [...data].sort((a, b) => b.JQPRNO.localeCompare(a.JQPRNO));
+
+        sortedData.forEach(item => {
+            const row = tableBody.insertRow();
+            row.innerHTML = `
+            <td>${item.JQPRNO}</td>
+            <td class="fw-medium">${item.projectName}</td>
+            <td>${item.siteNo}</td>
+            <td class="text-end">${formatCurrency(item.materialCost)}</td>
+            <td class="text-end">${formatCurrency(item.laborCost)}</td>
+            <td class="text-end fw-bold text-danger">${formatCurrency(item.failureCost)}</td>
+            <td>${item.date}</td>
+            <td><span class="badge bg-secondary">${item.cause}</span></td>
+            <td>${item.phenomenon}</td>
+        `;
+        });
+    }
+
+    // 5. 대시보드 초기화 함수
+    function initDashboard() {
+        const calculatedData = calculateDashboardData(rawData);
+        updateKPIs(calculatedData);
+        createCharts(calculatedData);
+        populateTable(rawData);
+    }
+
+    // 페이지 로드 시 대시보드 실행
+    document.addEventListener('DOMContentLoaded', initDashboard);
+</script>
+</body>
+</html>

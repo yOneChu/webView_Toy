@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JQPR 시스템 - 현장 비용 관리</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root {
+            --hyundai-blue: #003876;
+            --hyundai-light-blue: #0066cc;
+            --hyundai-gray: #f8f9fa;
+            --hyundai-dark-gray: #6c757d;
+            --hyundai-red: #dc3545;
+            --hyundai-green: #28a745;
+        }
+        body { background-color: var(--hyundai-gray); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .header { background: linear-gradient(135deg, var(--hyundai-blue) 0%, var(--hyundai-light-blue) 100%); color: white; padding: 1.5rem 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header h1 { margin: 0; font-weight: 600; font-size: 2rem; }
+        .stats-card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-left: 4px solid var(--hyundai-light-blue); transition: transform 0.3s ease; }
+        .stats-card:hover { transform: translateY(-5px); }
+        .stats-number { font-size: 2.5rem; font-weight: 700; color: var(--hyundai-blue); margin: 0; }
+        .stats-label { color: var(--hyundai-dark-gray); font-size: 0.9rem; margin-top: 0.5rem; }
+        .data-table { background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
+        .table-header { background: var(--hyundai-blue); color: white; padding: 1rem; border-radius: 12px 12px 0 0; }
+        .table th { background: var(--hyundai-light-blue); color: white; border: none; font-weight: 600; padding: 1rem 0.75rem; white-space: nowrap; }
+        .table td { padding: 1rem 0.75rem; vertical-align: middle; border-color: #e9ecef; }
+        .table tbody tr:hover { background-color: #f8f9ff; }
+        .btn-hyundai { background: var(--hyundai-blue); border-color: var(--hyundai-blue); color: white; font-weight: 600; border-radius: 8px; padding: 0.5rem 1rem; }
+        .btn-hyundai:hover { background: var(--hyundai-light-blue); border-color: var(--hyundai-light-blue); color: white; }
+        .cost-high { color: var(--hyundai-red); font-weight: 600; }
+        .cost-medium { color: #ffc107; font-weight: 600; }
+        .cost-low { color: var(--hyundai-green); font-weight: 600; }
+        .search-box { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .modal-header { background: var(--hyundai-blue); color: white; border-radius: 12px 12px 0 0; }
+        .form-control:focus { border-color: var(--hyundai-light-blue); box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25); }
+        .pagination .page-link { color: var(--hyundai-blue); }
+        .pagination .page-item.active .page-link { background-color: var(--hyundai-blue); border-color: var(--hyundai-blue); }
+        .badge-filter { background: #eef6ff; color: var(--hyundai-blue); border: 1px solid #d7e8ff; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="fas fa-building me-3"></i>JQPR 시스템</h1>
+                <p class="mb-0">엘리베이터 설치 현장 비용 관리 시스템</p>
+            </div>
+            <div>
+                <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addModal">
+                    <i class="fa-solid fa-plus me-2"></i>새 JQPR 등록
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-4">
+    <!-- 상단 KPI -->
+    <div class="row mb-4">
+        <div class="col-md-3"><div class="stats-card"><div class="d-flex justify-content-between align-items-center">
+            <div><p class="stats-number" id="totalCases">0</p><p class="stats-label">총 사례 수</p></div>
+            <i class="fas fa-clipboard-list fa-2x text-primary"></i></div></div></div>
+        <div class="col-md-3"><div class="stats-card"><div class="d-flex justify-content-between align-items-center">
+            <div><p class="stats-number" id="totalCost">₩0</p><p class="stats-label">총 비용</p></div>
+            <i class="fas fa-won-sign fa-2x text-danger"></i></div></div></div>
+        <div class="col-md-3"><div class="stats-card"><div class="d-flex justify-content-between align-items-center">
+            <div><p class="stats-number" id="avgCost">₩0</p><p class="stats-label">평균 비용</p></div>
+            <i class="fas fa-chart-bar fa-2x text-warning"></i></div></div></div>
+        <div class="col-md-3"><div class="stats-card"><div class="d-flex justify-content-between align-items-center">
+            <div><p class="stats-number" id="thisMonthCases">0</p><p class="stats-label">이번 달 사례</p></div>
+            <i class="fas fa-calendar-alt fa-2x text-success"></i></div></div></div>
+    </div>
+
+    <!-- 월별 비용 + 분석 필터 -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="stats-card">
+                <h5 class="mb-3"><i class="fas fa-chart-line me-2"></i>월별 비용 추이</h5>
+                <canvas id="monthlyChart" height="100"></canvas>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stats-card">
+                <h5 class="mb-3"><i class="fas fa-calendar me-2"></i>월별 분석 필터</h5>
+                <div class="mb-3">
+                    <label class="form-label">분석 연도</label>
+                    <select class="form-control" id="analysisYear" onchange="updateMonthlyAnalysis()"></select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">분석 월</label>
+                    <select class="form-control" id="analysisMonth" onchange="updateMonthlyAnalysis()">
+                        <option value="">전체 월</option>
+                        <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+                        <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+                        <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+                        <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+                    </select>
+                </div>
+                <div class="alert alert-info">
+                    <strong id="monthlyStats"></strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 검색 박스 (요청 컬럼 추가) -->
+    <div class="search-box">
+        <h5 class="mb-3"><i class="fa-solid fa-magnifying-glass me-2"></i>검색</h5>
+        <div class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">JQPR번호</label>
+                <input type="text" id="searchJqprNo" class="form-control" placeholder="예) JQPR-001">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">고장현장</label>
+                <input type="text" id="searchFaultSite" class="form-control" placeholder="현장명 검색">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">고장원인</label>
+                <input type="text" id="searchCause" class="form-control" placeholder="원인 키워드">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">자재비(이상)</label>
+                <input type="number" id="searchMatMin" class="form-control" placeholder="₩">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">자재비(이하)</label>
+                <input type="number" id="searchMatMax" class="form-control" placeholder="₩">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">노무비(이상)</label>
+                <input type="number" id="searchLabMin" class="form-control" placeholder="₩">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">노무비(이하)</label>
+                <input type="number" id="searchLabMax" class="form-control" placeholder="₩">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">실패비용(이상)</label>
+                <input type="number" id="searchFailMin" class="form-control" placeholder="₩">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">실패비용(이하)</label>
+                <input type="number" id="searchFailMax" class="form-control" placeholder="₩">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">총비용(이상)</label>
+                <input type="number" id="searchTotMin" class="form-control" placeholder="₩">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">총비용(이하)</label>
+                <input type="number" id="searchTotMax" class="form-control" placeholder="₩">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">발생일(부터)</label>
+                <input type="date" id="searchDateFrom" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">발생일(까지)</label>
+                <input type="date" id="searchDateTo" class="form-control">
+            </div>
+            <div class="col-md-12 d-flex gap-2 mt-2">
+                <button class="btn btn-hyundai" id="btnSearch"><i class="fa-solid fa-filter me-2"></i>필터 적용</button>
+                <button class="btn btn-outline-secondary" id="btnReset"><i class="fa-solid fa-rotate-left me-2"></i>초기화</button>
+                <span class="ms-auto badge badge-filter align-self-center" id="searchSummary">필터 미적용</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 고장원인 TOP 5 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="stats-card">
+                <h5 class="mb-3"><i class="fa-solid fa-bolt me-2"></i>고장원인 TOP 5</h5>
+                <canvas id="causeTop5Chart" height="80"></canvas>
+                <small class="text-muted d-block mt-2">* 현재 적용된 검색 조건(필터) 기준으로 집계됩니다.</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- 데이터 테이블 -->
+    <div class="data-table">
+        <div class="table-header">
+            <h5 class="mb-0"><i class="fas fa-table me-2"></i>JQPR 데이터 목록</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                <tr>
+                    <th>JQPR번호</th>
+                    <th>고장현장</th>
+                    <th>문제발생자</th>
+                    <th>발생일자</th>
+                    <th>자재비</th>
+                    <th>노무비</th>
+                    <th>실패비용</th>
+                    <th>총비용</th>
+                    <th>고장원인</th>
+                    <th>현장주소</th>
+                    <th>관리</th>
+                </tr>
+                </thead>
+                <tbody id="dataTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+    <nav class="mt-4"><ul class="pagination justify-content-center" id="pagination"></ul></nav>
+</div>
+
+<!-- 추가 모달 -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-lg"><div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title"><i class="fas fa-plus me-2"></i>새 JQPR 데이터 추가</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <form id="addForm">
+                <div class="row">
+                    <div class="col-md-6"><div class="mb-3">
+                        <label class="form-label">JQPR번호</label>
+                        <input type="text" class="form-control" id="jqprNo" required>
+                    </div></div>
+                    <div class="col-md-6"><div class="mb-3">
+                        <label class="form-label">고장현장</label>
+                        <input type="text" class="form-control" id="siteName" required>
+                    </div></div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6"><div class="mb-3">
+                        <label class="form-label">문제발생자</label>
+                        <input type="text" class="form-control" id="problemPerson" required>
+                    </div></div>
+                    <div class="col-md-6"><div class="mb-3">
+                        <label class="form-label">발생일자</label>
+                        <input type="date" class="form-control" id="problemDate" required>
+                    </div></div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4"><div class="mb-3">
+                        <label class="form-label">자재비 (원)</label>
+                        <input type="number" class="form-control" id="materialCost" required>
+                    </div></div>
+                    <div class="col-md-4"><div class="mb-3">
+                        <label class="form-label">노무비 (원)</label>
+                        <input type="number" class="form-control" id="laborCost" required>
+                    </div></div>
+                    <div class="col-md-4"><div class="mb-3">
+                        <label class="form-label">실패비용 (원)</label>
+                        <input type="number" class="form-control" id="failureCost" required>
+                    </div></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">고장원인</label>
+                    <input class="form-control" id="problemReason" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">현장주소</label>
+                    <input type="text" class="form-control" id="siteAddress" required>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+            <button type="button" class="btn btn-hyundai" onclick="addData()">추가</button>
+        </div>
+    </div></div>
+</div>
+
+<!-- 상세 모달 -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg"><div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>JQPR 상세 정보</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="detailContent"></div>
+    </div></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+<!-- 메인 스크립트 -->
+<script>
+    /* ======= 샘플 데이터 ======= */
+    let jqprData = [
+        {
+            jqprNo: "JQPR-001",
+            siteName: "서울 강남 센터",
+            problemPerson: "홍길동",
+            problemDate: "2025-09-05",
+            materialCost: 1200000, laborCost: 800000, failureCost: 200000,
+            problemReason: "부품 오배송",
+            siteAddress: "서울 강남구 테헤란로 123"
+        },
+        {
+            jqprNo: "JQPR-002",
+            siteName: "부산 해운대 타워",
+            problemPerson: "김영희",
+            problemDate: "2025-09-18",
+            materialCost: 500000, laborCost: 600000, failureCost: 150000,
+            problemReason: "설치 오류",
+            siteAddress: "부산 해운대구 해운대로 45"
+        },
+        {
+            jqprNo: "JQPR-003",
+            siteName: "대전 정부청사",
+            problemPerson: "이민수",
+            problemDate: "2025-10-02",
+            materialCost: 900000, laborCost: 400000, failureCost: 100000,
+            problemReason: "도면 불일치",
+            siteAddress: "대전 서구 청사로 1"
+        },
+        {
+            jqprNo: "JQPR-004",
+            siteName: "인천 송도 파크",
+            problemPerson: "박지훈",
+            problemDate: "2025-08-22",
+            materialCost: 300000, laborCost: 700000, failureCost: 500000,
+            problemReason: "현장 지연",
+            siteAddress: "인천 연수구 송도과학로 77"
+        },
+        {
+            jqprNo: "JQPR-005",
+            siteName: "울산 혁신도시",
+            problemPerson: "최은지",
+            problemDate: "2025-10-01",
+            materialCost: 1500000, laborCost: 500000, failureCost: 300000,
+            problemReason: "부품 파손",
+            siteAddress: "울산 중구 번영로 200"
+        }
+    ].map(r => ({ ...r, totalCost: r.materialCost + r.laborCost + r.failureCost }));
+
+    /* ======= 상태 ======= */
+    let currentPage = 1;
+    const PAGE_SIZE = 8;
+    let filtered = [...jqprData]; // 필터 결과
+    let monthlyChart, causeTop5Chart;
+
+    /* ======= 유틸 ======= */
+    const fmt = n => "₩" + (n||0).toLocaleString("ko-KR");
+    const parseDate = s => new Date(s + "T00:00:00");
+
+    /* ======= 렌더링 ======= */
+    function renderKPIs() {
+        const totalCases = filtered.length;
+        const totalCost = filtered.reduce((sum, r) => sum + (r.totalCost || 0), 0);
+        const avgCost = totalCases ? Math.round(totalCost / totalCases) : 0;
+
+        const now = new Date();
+        const thisMonth = now.getMonth(), thisYear = now.getFullYear();
+        const thisMonthCount = filtered.filter(r => {
+            const d = parseDate(r.problemDate);
+            return d.getFullYear() === thisYear && d.getMonth() === thisMonth;
+        }).length;
+
+        document.getElementById("totalCases").textContent = totalCases.toString();
+        document.getElementById("totalCost").textContent = fmt(totalCost);
+        document.getElementById("avgCost").textContent = fmt(avgCost);
+        document.getElementById("thisMonthCases").textContent = thisMonthCount.toString();
+    }
+
+    function renderTable(page = 1) {
+        currentPage = page;
+        const tbody = document.getElementById("dataTableBody");
+        tbody.innerHTML = "";
+
+        const start = (page - 1) * PAGE_SIZE;
+        const rows = filtered.slice(start, start + PAGE_SIZE);
+
+        rows.forEach(r => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+      <td>${r.jqprNo}</td>
+      <td>${r.siteName}</td>
+      <td>${r.problemPerson}</td>
+      <td>${r.problemDate}</td>
+      <td>${fmt(r.materialCost)}</td>
+      <td>${fmt(r.laborCost)}</td>
+      <td>${fmt(r.failureCost)}</td>
+      <td><strong>${fmt(r.totalCost)}</strong></td>
+      <td>${r.problemReason}</td>
+      <td>${r.siteAddress}</td>
+      <td>
+        <button class="btn btn-sm btn-hyundai" onclick='showDetail(${JSON.stringify(rjq(r))})'>
+          상세
+        </button>
+      </td>
+    `;
+            tbody.appendChild(tr);
+        });
+
+        renderPagination();
+    }
+
+    function rjq(obj) {
+        // 상세보기 onClick 직렬화 보조 (따옴표 이슈 방지)
+        return JSON.stringify(obj).replace(/"/g, '&quot;');
+    }
+
+    function renderPagination() {
+        const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+        const ul = document.getElementById("pagination");
+        ul.innerHTML = "";
+
+        function addItem(label, page, disabled=false, active=false) {
+            const li = document.createElement("li");
+            li.className = `page-item ${disabled ? "disabled" : ""} ${active ? "active" : ""}`;
+            li.innerHTML = `<a class="page-link" href="#">${label}</a>`;
+            if (!disabled && !active) {
+                li.addEventListener("click", e => { e.preventDefault(); renderTable(page); });
+            }
+            ul.appendChild(li);
+        }
+
+        addItem("«", 1, currentPage === 1);
+        addItem("‹", Math.max(1, currentPage - 1), currentPage === 1);
+
+        const windowSize = 5;
+        let start = Math.max(1, currentPage - Math.floor(windowSize/2));
+        let end = Math.min(totalPages, start + windowSize - 1);
+        if (end - start + 1 < windowSize) start = Math.max(1, end - windowSize + 1);
+
+        for (let p = start; p <= end; p++) addItem(p, p, false, p === currentPage);
+
+        addItem("›", Math.min(totalPages, currentPage + 1), currentPage === totalPages);
+        addItem("»", totalPages, currentPage === totalPages);
+    }
+
+    /* ======= 차트 ======= */
+    function renderMonthlyChart() {
+        const ctx = document.getElementById("monthlyChart").getContext("2d");
+        const months = Array.from({length:12}, (_,i)=>i);
+        // 연도 선택 반영
+        const yearSel = document.getElementById("analysisYear").value || "ALL";
+        const monthlySum = months.map(m => filtered
+            .filter(r => {
+                const d = parseDate(r.problemDate);
+                return (yearSel === "ALL" || d.getFullYear().toString() === yearSel) && d.getMonth() === m;
+            })
+            .reduce((s, r) => s + (r.totalCost||0), 0)
+        );
+
+        const labels = months.map(m => `${m+1}월`);
+
+        if (monthlyChart) monthlyChart.destroy();
+        monthlyChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels,
+                datasets: [{ label: "총비용", data: monthlySum, tension: 0.25, fill: false }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: "top" } },
+                scales: {
+                    y: { ticks: { callback: v => "₩" + Number(v).toLocaleString("ko-KR") } }
+                }
+            }
+        });
+    }
+
+    function renderCauseTop5() {
+        const ctx = document.getElementById("causeTop5Chart").getContext("2d");
+        const counts = {};
+        filtered.forEach(r => {
+            const key = (r.problemReason || "기타").trim();
+            counts[key] = (counts[key] || 0) + 1;
+        });
+        const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        const labels = entries.map(e=>e[0]);
+        const data = entries.map(e=>e[1]);
+
+        if (causeTop5Chart) causeTop5Chart.destroy();
+        causeTop5Chart = new Chart(ctx, {
+            type: "bar",
+            data: { labels, datasets: [{ label: "건수", data }] },
+            options: {
+                indexAxis: "y",
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, precision: 0 } }
+            }
+        });
+    }
+
+    /* ======= 분석 필터 ======= */
+    function initYearOptions() {
+        const years = Array.from(new Set(jqprData.map(r => parseDate(r.problemDate).getFullYear()))).sort();
+        const sel = document.getElementById("analysisYear");
+        sel.innerHTML = `<option value="ALL">전체 연도</option>` + years.map(y=>`<option value="${y}">${y}년</option>`).join("");
+        sel.value = "ALL";
+        updateMonthlyAnalysis();
+    }
+
+    function updateMonthlyAnalysis() {
+        const year = document.getElementById("analysisYear").value;
+        const month = document.getElementById("analysisMonth").value;
+
+        let subset = [...filtered];
+        if (year && year !== "ALL") subset = subset.filter(r => parseDate(r.problemDate).getFullYear().toString() === year);
+        if (month) subset = subset.filter(r => (parseDate(r.problemDate).getMonth()+1).toString() === month);
+
+        const total = subset.reduce((s,r)=>s+(r.totalCost||0),0);
+        const avg = subset.length ? Math.round(total / subset.length) : 0;
+
+        const text = `${year==="ALL"?"전체 연도":year+"년"} ${month?month+"월":"전체 월"} - 건수 ${subset.length}건, 총비용 ${fmt(total)}, 평균 ${fmt(avg)}`;
+        document.getElementById("monthlyStats").textContent = text;
+
+        renderMonthlyChart();
+    }
+
+    /* ======= 검색/필터 ======= */
+    function applyFilters() {
+        const jqprNo = document.getElementById("searchJqprNo").value.trim();
+        const site = document.getElementById("searchFaultSite").value.trim();
+        const cause = document.getElementById("searchCause").value.trim();
+        const matMin = Number(document.getElementById("searchMatMin").value || 0);
+        const matMax = document.getElementById("searchMatMax").value ? Number(document.getElementById("searchMatMax").value) : Number.MAX_SAFE_INTEGER;
+        const labMin = Number(document.getElementById("searchLabMin").value || 0);
+        const labMax = document.getElementById("searchLabMax").value ? Number(document.getElementById("searchLabMax").value) : Number.MAX_SAFE_INTEGER;
+        const failMin = Number(document.getElementById("searchFailMin").value || 0);
+        const failMax = document.getElementById("searchFailMax").value ? Number(document.getElementById("searchFailMax").value) : Number.MAX_SAFE_INTEGER;
+        const totMin = Number(document.getElementById("searchTotMin").value || 0);
+        const totMax = document.getElementById("searchTotMax").value ? Number(document.getElementById("searchTotMax").value) : Number.MAX_SAFE_INTEGER;
+        const dFrom = document.getElementById("searchDateFrom").value;
+        const dTo = document.getElementById("searchDateTo").value;
+
+        filtered = jqprData.filter(r => {
+            if (jqprNo && !r.jqprNo.toLowerCase().includes(jqprNo.toLowerCase())) return false;
+            if (site && !r.siteName.toLowerCase().includes(site.toLowerCase())) return false;
+            if (cause && !r.problemReason.toLowerCase().includes(cause.toLowerCase())) return false;
+            if (r.materialCost < matMin || r.materialCost > matMax) return false;
+            if (r.laborCost < labMin || r.laborCost > labMax) return false;
+            if (r.failureCost < failMin || r.failureCost > failMax) return false;
+            if (r.totalCost < totMin || r.totalCost > totMax) return false;
+
+            if (dFrom) {
+                const from = parseDate(dFrom);
+                if (parseDate(r.problemDate) < from) return false;
+            }
+            if (dTo) {
+                const to = parseDate(dTo);
+                if (parseDate(r.problemDate) > to) return false;
+            }
+            return true;
+        });
+
+        // 요약 배지
+        const parts = [];
+        if (jqprNo) parts.push(`번호:${jqprNo}`);
+        if (site) parts.push(`현장:${site}`);
+        if (cause) parts.push(`원인:${cause}`);
+        if (matMin||document.getElementById("searchMatMax").value) parts.push(`자재비:${matMin.toLocaleString()}~${matMax===Number.MAX_SAFE_INTEGER?"∞":matMax.toLocaleString()}`);
+        if (labMin||document.getElementById("searchLabMax").value) parts.push(`노무비:${labMin.toLocaleString()}~${labMax===Number.MAX_SAFE_INTEGER?"∞":labMax.toLocaleString()}`);
+        if (failMin||document.getElementById("searchFailMax").value) parts.push(`실패:${failMin.toLocaleString()}~${failMax===Number.MAX_SAFE_INTEGER?"∞":failMax.toLocaleString()}`);
+        if (totMin||document.getElementById("searchTotMax").value) parts.push(`총비:${totMin.toLocaleString()}~${totMax===Number.MAX_SAFE_INTEGER?"∞":totMax.toLocaleString()}`);
+        if (dFrom||dTo) parts.push(`날짜:${dFrom||"-"}~${dTo||"-"}`);
+        document.getElementById("searchSummary").textContent = parts.length? parts.join(" · ") : "필터 미적용";
+
+        // 리렌더
+        renderKPIs();
+        updateMonthlyAnalysis();
+        renderCauseTop5();
+        renderTable(1);
+    }
+
+    function resetFilters() {
+        ["searchJqprNo","searchFaultSite","searchCause","searchMatMin","searchMatMax","searchLabMin","searchLabMax","searchFailMin","searchFailMax","searchTotMin","searchTotMax","searchDateFrom","searchDateTo"].forEach(id => {
+            document.getElementById(id).value = "";
+        });
+        filtered = [...jqprData];
+        document.getElementById("searchSummary").textContent = "필터 미적용";
+        renderKPIs();
+        updateMonthlyAnalysis();
+        renderCauseTop5();
+        renderTable(1);
+    }
+
+    /* ======= 상세 ======= */
+    function showDetail(item) {
+        const r = (typeof item === "string") ? JSON.parse(item.replace(/&quot;/g,'"')) : item;
+        const html = `
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="p-3 border rounded">
+          <h6 class="mb-2">기본 정보</h6>
+          <div><strong>JQPR번호:</strong> ${r.jqprNo}</div>
+          <div><strong>고장현장:</strong> ${r.siteName}</div>
+          <div><strong>문제발생자:</strong> ${r.problemPerson}</div>
+          <div><strong>발생일자:</strong> ${r.problemDate}</div>
+          <div><strong>현장주소:</strong> ${r.siteAddress}</div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="p-3 border rounded">
+          <h6 class="mb-2">비용 내역</h6>
+          <div>자재비: <strong>${fmt(r.materialCost)}</strong></div>
+          <div>노무비: <strong>${fmt(r.laborCost)}</strong></div>
+          <div>실패비용: <strong>${fmt(r.failureCost)}</strong></div>
+          <div class="mt-2">총비용: <span class="fs-5">${fmt(r.totalCost)}</span></div>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="p-3 border rounded">
+          <h6 class="mb-2">고장원인</h6>
+          <p class="mb-0">${r.problemReason}</p>
+        </div>
+      </div>
+    </div>
+  `;
+        document.getElementById("detailContent").innerHTML = html;
+        new bootstrap.Modal(document.getElementById("detailModal")).show();
+    }
+
+    /* ======= 데이터 추가 ======= */
+    function addData() {
+        const jqprNo = document.getElementById("jqprNo").value.trim();
+        const siteName = document.getElementById("siteName").value.trim();
+        const problemPerson = document.getElementById("problemPerson").value.trim();
+        const problemDate = document.getElementById("problemDate").value;
+        const materialCost = Number(document.getElementById("materialCost").value || 0);
+        const laborCost = Number(document.getElementById("laborCost").value || 0);
+        const failureCost = Number(document.getElementById("failureCost").value || 0);
+        const problemReason = document.getElementById("problemReason").value.trim();
+        const siteAddress = document.getElementById("siteAddress").value.trim();
+
+        if (!jqprNo || !siteName || !problemPerson || !problemDate || !problemReason || !siteAddress) {
+            alert("필수 입력값을 확인하세요.");
+            return;
+        }
+
+        const row = { jqprNo, siteName, problemPerson, problemDate, materialCost, laborCost, failureCost, problemReason, siteAddress };
+        row.totalCost = materialCost + laborCost + failureCost;
+
+        jqprData.unshift(row);
+        filtered = [...jqprData];
+
+        document.getElementById("addForm").reset();
+        bootstrap.Modal.getInstance(document.getElementById("addModal")).hide();
+
+        renderKPIs();
+        updateMonthlyAnalysis();
+        renderCauseTop5();
+        renderTable(1);
+    }
+
+    /* ======= 초기화 ======= */
+    function initEvents() {
+        document.getElementById("btnSearch").addEventListener("click", applyFilters);
+        document.getElementById("btnReset").addEventListener("click", resetFilters);
+    }
+
+    function init() {
+        initEvents();
+        initYearOptions();
+        renderKPIs();
+        renderMonthlyChart();
+        renderCauseTop5();
+        renderTable(1);
+    }
+    document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>

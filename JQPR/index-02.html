@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="inline">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JQPR 대시보드</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --background: oklch(0.9911 0 0);
+            --foreground: oklch(0.2046 0 0);
+            --card: oklch(0.9911 0 0);
+            --card-foreground: oklch(0.2046 0 0);
+            --popover: oklch(0.9911 0 0);
+            --popover-foreground: oklch(0.4386 0 0);
+            --primary: oklch(0.8348 0.1302 160.9080);
+            --primary-foreground: oklch(0.2626 0.0147 166.4589);
+            --secondary: oklch(0.9940 0 0);
+            --secondary-foreground: oklch(0.2046 0 0);
+            --muted: oklch(0.9461 0 0);
+            --muted-foreground: oklch(0.2435 0 0);
+            --accent: oklch(0.9461 0 0);
+            --accent-foreground: oklch(0.2435 0 0);
+            --destructive: oklch(0.5523 0.1927 32.7272);
+            --destructive-foreground: oklch(0.9934 0.0032 17.2118);
+            --border: oklch(0.9037 0 0);
+            --input: oklch(0.9731 0 0);
+            --ring: oklch(0.8348 0.1302 160.9080);
+            --chart-1: oklch(0.8348 0.1302 160.9080);
+            --chart-2: oklch(0.6231 0.1880 259.8145);
+            --chart-3: oklch(0.6056 0.2189 292.7172);
+            --chart-4: oklch(0.7686 0.1647 70.0804);
+            --chart-5: oklch(0.6959 0.1491 162.4796);
+            --sidebar: oklch(0.9911 0 0);
+            --sidebar-foreground: oklch(0.5452 0 0);
+            --sidebar-primary: oklch(0.8348 0.1302 160.9080);
+            --sidebar-primary-foreground: oklch(0.2626 0.0147 166.4589);
+            --sidebar-accent: oklch(0.9461 0 0);
+            --sidebar-accent-foreground: oklch(0.2435 0 0);
+            --sidebar-border: oklch(0.9037 0 0);
+            --sidebar-ring: oklch(0.8348 0.1302 160.9080);
+            --font-sans: Outfit, sans-serif;
+            --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+            --font-mono: monospace;
+            --radius: 0.5rem;
+            --shadow-x: 0px;
+            --shadow-y: 1px;
+            --shadow-blur: 3px;
+            --shadow-spread: 0px;
+            --shadow-opacity: 0.17;
+            --shadow-color: #000000;
+            --shadow-2xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.09);
+            --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.09);
+            --shadow-sm: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 1px 2px -1px hsl(0 0% 0% / 0.17);
+            --shadow: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 1px 2px -1px hsl(0 0% 0% / 0.17);
+            --shadow-md: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 2px 4px -1px hsl(0 0% 0% / 0.17);
+            --shadow-lg: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 4px 6px -1px hsl(0 0% 0% / 0.17);
+            --shadow-xl: 0px 1px 3px 0px hsl(0 0% 0% / 0.17), 0px 8px 10px -1px hsl(0 0% 0% / 0.17);
+            --shadow-2xl: 0px 1px 3px 0px hsl(0 0% 0% / 0.43);
+            --tracking-normal: 0.025em;
+            --spacing: 0.25rem;
+        }
+
+        .dark {
+            --background: oklch(0.1822 0 0);
+            --foreground: oklch(0.9288 0.0126 255.5078);
+            --card: oklch(0.2046 0 0);
+            --card-foreground: oklch(0.9288 0.0126 255.5078);
+            --popover: oklch(0.2603 0 0);
+            --popover-foreground: oklch(0.7348 0 0);
+            --primary: oklch(0.4365 0.1044 156.7556);
+            --primary-foreground: oklch(0.9213 0.0135 167.1556);
+            --secondary: oklch(0.2603 0 0);
+            --secondary-foreground: oklch(0.9851 0 0);
+            --muted: oklch(0.2393 0 0);
+            --muted-foreground: oklch(0.7122 0 0);
+            --accent: oklch(0.3132 0 0);
+            --accent-foreground: oklch(0.9851 0 0);
+            --destructive: oklch(0.3123 0.0852 29.7877);
+            --destructive-foreground: oklch(0.9368 0.0045 34.3092);
+            --border: oklch(0.2809 0 0);
+            --input: oklch(0.2603 0 0);
+            --ring: oklch(0.8003 0.1821 151.7110);
+            --chart-1: oklch(0.8003 0.1821 151.7110);
+            --chart-2: oklch(0.7137 0.1434 254.6240);
+            --chart-3: oklch(0.7090 0.1592 293.5412);
+            --chart-4: oklch(0.8369 0.1644 84.4286);
+            --chart-5: oklch(0.7845 0.1325 181.9120);
+            --sidebar: oklch(0.1822 0 0);
+            --sidebar-foreground: oklch(0.6301 0 0);
+            --sidebar-primary: oklch(0.4365 0.1044 156.7556);
+            --sidebar-primary-foreground: oklch(0.9213 0.0135 167.1556);
+            --sidebar-accent: oklch(0.3132 0 0);
+            --sidebar-accent-foreground: oklch(0.9851 0 0);
+            --sidebar-border: oklch(0.2809 0 0);
+            --sidebar-ring: oklch(0.8003 0.1821 151.7110);
+        }
+
+        body { font-family: var(--font-sans); background: var(--background); color: var(--foreground); letter-spacing: var(--tracking-normal); }
+        .card { background: var(--card); color: var(--card-foreground); border-color: var(--border) !important; border-radius: var(--radius); box-shadow: var(--shadow); }
+        .badge-soft { background: var(--muted); color: var(--muted-foreground); }
+        .btn-primary { background: var(--primary); border-color: var(--primary); }
+        .btn-outline-primary { color: var(--primary); border-color: var(--primary); }
+        .btn-outline-primary:hover { background: var(--primary); color: var(--primary-foreground); }
+        .form-control, .form-select { background: var(--input); border-color: var(--border); color: var(--foreground); }
+        .table thead th { position: sticky; top: 0; background: var(--card); z-index: 1; }
+        .table-hover tbody tr:hover { background: var(--muted); }
+        .kpi { display:flex; align-items:center; gap:.75rem; }
+        .kpi .icon { width:44px; height:44px; display:grid; place-items:center; border-radius:12px; background: var(--muted); color: var(--primary); }
+        .grad-bar { height: 3px; background: linear-gradient(90deg, var(--chart-1), var(--chart-2), var(--chart-3)); opacity:.6; }
+        .shadow-soft { box-shadow: var(--shadow-lg) !important; }
+        .nav-blur { backdrop-filter: blur(8px); background: color-mix(in oklch, var(--card) 80%, transparent); border-bottom: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+<!-- Top Navbar -->
+<nav class="navbar navbar-expand-lg nav-blur sticky-top">
+    <div class="container-xxl py-2">
+        <a class="navbar-brand fw-bold" href="#">
+            <i class="bi bi-clipboard2-pulse me-2"></i>JQPR 대시보드
+        </a>
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            <button id="btnExport" class="btn btn-outline-primary btn-sm"><i class="bi bi-download me-1"></i>CSV 내보내기</button>
+            <button id="btnPrint" class="btn btn-outline-primary btn-sm"><i class="bi bi-printer me-1"></i>인쇄</button>
+            <div class="form-check form-switch ms-2">
+                <input class="form-check-input" type="checkbox" role="switch" id="themeSwitch">
+                <label class="form-check-label" for="themeSwitch">Dark</label>
+            </div>
+        </div>
+    </div>
+</nav>
+<div class="grad-bar"></div>
+
+<main class="container-xxl my-4">
+    <!-- Filters -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label class="form-label">프로젝트명</label>
+                    <input id="filterProject" type="text" class="form-control" placeholder="예) 파크타워">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">현장번호</label>
+                    <input id="filterSite" type="text" class="form-control" placeholder="예) ST-1024">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">고장원인</label>
+                    <input id="filterCause" type="text" class="form-control" placeholder="예) 배선불량">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">작성일(시작)</label>
+                    <input id="filterFrom" type="date" class="form-control">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">작성일(종료)</label>
+                    <input id="filterTo" type="date" class="form-control">
+                </div>
+                <div class="col-12 col-md-1 d-grid">
+                    <button id="btnReset" class="btn btn-secondary">초기화</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-lg-3">
+            <div class="card shadow-soft h-100">
+                <div class="card-body kpi">
+                    <div class="icon"><i class="bi bi-currency-won"></i></div>
+                    <div>
+                        <div class="small text-muted">총 오류비용</div>
+                        <div id="kpiTotal" class="fs-4 fw-semibold">-</div>
+                        <div id="kpiMoM" class="small text-muted">전월 대비 -</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-3">
+            <div class="card shadow-soft h-100">
+                <div class="card-body kpi">
+                    <div class="icon"><i class="bi bi-list-check"></i></div>
+                    <div>
+                        <div class="small text-muted">JQPR 건수</div>
+                        <div id="kpiCount" class="fs-4 fw-semibold">-</div>
+                        <div class="small text-muted">평균 건당 비용 <span id="kpiAvg">-</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-3">
+            <div class="card shadow-soft h-100">
+                <div class="card-body kpi">
+                    <div class="icon"><i class="bi bi-diagram-3"></i></div>
+                    <div>
+                        <div class="small text-muted">상위 고장원인</div>
+                        <div id="kpiTopCause" class="fs-6 fw-semibold">-</div>
+                        <div class="small text-muted">비중 <span id="kpiTopCauseShare">-</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-3">
+            <div class="card shadow-soft h-100">
+                <div class="card-body kpi">
+                    <div class="icon"><i class="bi bi-bar-chart-line"></i></div>
+                    <div>
+                        <div class="small text-muted">이번달 누계</div>
+                        <div id="kpiThisMonth" class="fs-4 fw-semibold">-</div>
+                        <div id="kpiForecast" class="small text-muted">월간 예측 -</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-soft h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold"><i class="bi bi-graph-up-arrow me-2"></i>월별 오류비용 추이</span>
+                </div>
+                <div class="card-body"><canvas id="trendChart" height="120"></canvas></div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-soft h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold"><i class="bi bi-clipboard-pulse me-2"></i>고장원인 Top 5 (Pareto)</span>
+                </div>
+                <div class="card-body"><canvas id="paretoChart" height="120"></canvas></div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="card shadow-soft h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold"><i class="bi bi-pie-chart me-2"></i>비용 구성 비율</span>
+                </div>
+                <div class="card-body"><canvas id="breakdownChart" height="100"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card shadow-soft">
+        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+            <span class="fw-semibold"><i class="bi bi-table me-2"></i>JQPR 목록</span>
+            <div class="d-flex gap-2 align-items-center">
+                <input id="quickSearch" type="search" class="form-control form-control-sm" placeholder="빠른 검색 (번호/프로젝트/현상/원인)">
+            </div>
+        </div>
+        <div class="table-responsive" style="max-height: 520px;">
+            <table class="table table-hover align-middle mb-0" id="jqprTable">
+                <thead>
+                <tr>
+                    <th>JQPRNO</th>
+                    <th>프로젝트명</th>
+                    <th>현장번호</th>
+                    <th class="text-end">자재비</th>
+                    <th class="text-end">노무비</th>
+                    <th class="text-end">실패비용</th>
+                    <th class="text-end">총비용</th>
+                    <th>작성일</th>
+                    <th>고장원인</th>
+                    <th>고장현상</th>
+                </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-search me-2"></i>JQPR 상세</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="detailContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Utilities ---
+    const KRW = new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW', maximumFractionDigits: 0 });
+    const fmt = (n) => KRW.format(Math.round(n || 0));
+    const parseDate = (s) => new Date(s + 'T00:00:00');
+
+    const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    const chartColors = {
+        c1: css('--chart-1'), c2: css('--chart-2'), c3: css('--chart-3'), c4: css('--chart-4'), c5: css('--chart-5'),
+    };
+
+    // --- Sample Data (replace with API data) ---
+    const data = [
+        { JQPRNO:'JQ-250901', project:'파크타워 A', site:'ST-1024', material:3200000, labor:1800000, failure:900000, date:'2025-08-28', cause:'배선불량', symptom:'층표시 오동작' },
+        { JQPRNO:'JQ-250902', project:'파크타워 A', site:'ST-1024', material:800000, labor:1200000, failure:500000, date:'2025-09-02', cause:'부품파손', symptom:'도어 열림 지연' },
+        { JQPRNO:'JQ-250903', project:'리버시티 B', site:'ST-2048', material:2200000, labor:900000, failure:300000, date:'2025-09-10', cause:'설치미숙', symptom:'진동/소음' },
+        { JQPRNO:'JQ-250904', project:'스카이뷰 C', site:'ST-3050', material:1500000, labor:700000, failure:200000, date:'2025-09-15', cause:'부품파손', symptom:'급정지 알람' },
+        { JQPRNO:'JQ-250905', project:'메트로 D', site:'ST-1101', material:900000, labor:600000, failure:150000, date:'2025-09-18', cause:'배선불량', symptom:'호출버튼 불량' },
+        { JQPRNO:'JQ-250906', project:'오션시티 E', site:'ST-9901', material:1800000, labor:1600000, failure:400000, date:'2025-09-23', cause:'설계변경누락', symptom:'승차감 불량' },
+        { JQPRNO:'JQ-250907', project:'오션시티 E', site:'ST-9901', material:2600000, labor:900000, failure:700000, date:'2025-09-28', cause:'배선불량', symptom:'층간 레벨링 불량' },
+        { JQPRNO:'JQ-250908', project:'파크타워 A', site:'ST-1024', material:1200000, labor:500000, failure:200000, date:'2025-10-01', cause:'부품파손', symptom:'도어 소음' },
+        { JQPRNO:'JQ-250909', project:'리버시티 B', site:'ST-2048', material:2400000, labor:1400000, failure:600000, date:'2025-10-03', cause:'설치미숙', symptom:'상승 속도 저하' },
+        { JQPRNO:'JQ-250910', project:'스카이뷰 C', site:'ST-3050', material:700000, labor:400000, failure:150000, date:'2025-10-04', cause:'배선불량', symptom:'층 도착벨 불량' },
+        { JQPRNO:'JQ-250911', project:'메트로 D', site:'ST-1101', material:2100000, labor:1300000, failure:450000, date:'2025-10-05', cause:'설계변경누락', symptom:'도어 간섭' },
+        { JQPRNO:'JQ-250912', project:'메트로 D', site:'ST-1101', material:950000, labor:850000, failure:250000, date:'2025-10-06', cause:'부품파손', symptom:'현가장치 소음' },
+    ].map(r=>({ ...r, total: (r.material||0)+(r.labor||0)+(r.failure||0) }));
+
+    // --- State & Filtering ---
+    const state = { project:'', site:'', cause:'', from:'', to:'', search:'' };
+    const filters = {
+        apply() {
+            const from = state.from ? parseDate(state.from) : null;
+            const to = state.to ? parseDate(state.to) : null;
+            return data.filter(r => {
+                const okProject = !state.project || r.project.toLowerCase().includes(state.project);
+                const okSite = !state.site || r.site.toLowerCase().includes(state.site);
+                const okCause = !state.cause || r.cause.toLowerCase().includes(state.cause);
+                const d = parseDate(r.date);
+                const okFrom = !from || d >= from;
+                const okTo = !to || d <= to;
+                const q = state.search;
+                const okSearch = !q || [r.JQPRNO, r.project, r.site, r.cause, r.symptom].some(v => String(v).toLowerCase().includes(q));
+                return okProject && okSite && okCause && okFrom && okTo && okSearch;
+            });
+        }
+    };
+
+    // --- KPIs ---
+    function updateKPIs(rows){
+        const total = rows.reduce((s,r)=>s+r.total,0);
+        const count = rows.length;
+        const avg = count? total/count : 0;
+        document.getElementById('kpiTotal').textContent = fmt(total);
+        document.getElementById('kpiCount').textContent = count.toLocaleString('ko-KR');
+        document.getElementById('kpiAvg').textContent = fmt(avg);
+
+        // This month
+        const now = new Date();
+        const ym = (d)=> `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const thisMonthRows = rows.filter(r => r.date.startsWith(ym(now)));
+        const thisMonth = thisMonthRows.reduce((s,r)=>s+r.total,0);
+        document.getElementById('kpiThisMonth').textContent = fmt(thisMonth);
+
+        // Simple forecast: daily avg * days in month
+        const daysPassed = now.getDate();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+        const daily = daysPassed? thisMonth/daysPassed : 0;
+        const forecast = daily*daysInMonth;
+        document.getElementById('kpiForecast').textContent = `월간 예측 ${fmt(forecast)}`;
+
+        // MoM: compare last month
+        const last = new Date(now.getFullYear(), now.getMonth()-1, 1);
+        const lastMonthKey = ym(last);
+        const lastMonth = rows.filter(r=> r.date.startsWith(lastMonthKey)).reduce((s,r)=>s+r.total,0);
+        const mom = lastMonth? ((thisMonth-lastMonth)/lastMonth)*100 : 0;
+        const momEl = document.getElementById('kpiMoM');
+        momEl.textContent = `전월 대비 ${mom>=0?'+':''}${mom.toFixed(1)}%`;
+
+        // Top cause share
+        const byCause = Object.groupBy(rows, r=>r.cause);
+        let topName='-', topShare='-';
+        if(byCause){
+            const totals = Object.entries(byCause).map(([k,v])=>[k, v.reduce((s,r)=>s+r.total,0)]).sort((a,b)=>b[1]-a[1]);
+            if(totals[0]){
+                topName = totals[0][0];
+                topShare = `${((totals[0][1]/total)*100||0).toFixed(1)}%`;
+            }
+        }
+        document.getElementById('kpiTopCause').textContent = topName;
+        document.getElementById('kpiTopCauseShare').textContent = topShare;
+    }
+
+    // --- Table ---
+    function renderTable(rows){
+        const tb = document.getElementById('tableBody');
+        tb.innerHTML = '';
+        const frag = document.createDocumentFragment();
+        rows.forEach(r=>{
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+          <td><a href="#" class="link-primary text-decoration-none" data-jqpr="${r.JQPRNO}">${r.JQPRNO}</a></td>
+          <td>${r.project}</td>
+          <td>${r.site}</td>
+          <td class="text-end">${fmt(r.material)}</td>
+          <td class="text-end">${fmt(r.labor)}</td>
+          <td class="text-end">${fmt(r.failure)}</td>
+          <td class="text-end fw-semibold">${fmt(r.total)}</td>
+          <td>${r.date}</td>
+          <td><span class="badge rounded-pill badge-soft">${r.cause}</span></td>
+          <td>${r.symptom}</td>`;
+            tr.addEventListener('click', (e)=>{
+                if(e.target.tagName === 'A' || e.currentTarget === tr){
+                    showDetail(r);
+                }
+            });
+            frag.appendChild(tr);
+        });
+        tb.appendChild(frag);
+    }
+
+    function showDetail(r){
+        const el = document.getElementById('detailContent');
+        el.innerHTML = `
+        <div class="row g-3">
+          <div class="col-12 col-lg-6">
+            <div class="card">
+              <div class="card-body">
+                <div class="d-flex justify-content-between"><span class="text-muted">JQPRNO</span><span class="fw-semibold">${r.JQPRNO}</span></div>
+                <div class="d-flex justify-content-between"><span class="text-muted">프로젝트</span><span>${r.project}</span></div>
+                <div class="d-flex justify-content-between"><span class="text-muted">현장번호</span><span>${r.site}</span></div>
+                <div class="d-flex justify-content-between"><span class="text-muted">작성일</span><span>${r.date}</span></div>
+                <div class="d-flex justify-content-between"><span class="text-muted">고장원인</span><span class="badge rounded-pill badge-soft">${r.cause}</span></div>
+                <div class="mt-2"><div class="text-muted">고장현상</div><div class="fw-semibold">${r.symptom}</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-lg-6">
+            <div class="card">
+              <div class="card-body">
+                <div class="d-flex justify-content-between"><span class="text-muted">자재비</span><span>${fmt(r.material)}</span></div>
+                <div class="d-flex justify-content-between"><span class="text-muted">노무비</span><span>${fmt(r.labor)}</span></div>
+                <div class="d-flex justify-content-between"><span class="text-muted">실패비용</span><span>${fmt(r.failure)}</span></div>
+                <hr/>
+                <div class="d-flex justify-content-between fs-5"><span>총비용</span><span class="fw-bold">${fmt(r.total)}</span></div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+        const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+        modal.show();
+    }
+
+    // --- Charts ---
+    let trendChart, paretoChart, breakdownChart;
+
+    function destroyCharts(){
+        for(const c of [trendChart, paretoChart, breakdownChart]){ c && c.destroy && c.destroy(); }
+    }
+
+    function buildCharts(rows){
+        destroyCharts();
+        const byMonth = {};
+        rows.forEach(r=>{ const m = r.date.slice(0,7); byMonth[m] = (byMonth[m]||0)+r.total; });
+        const months = Object.keys(byMonth).sort();
+        const monthVals = months.map(m=>byMonth[m]);
+
+        const ctx1 = document.getElementById('trendChart');
+        trendChart = new Chart(ctx1, {
+            type:'line',
+            data:{ labels: months, datasets:[{ label:'총 오류비용', data: monthVals, tension:.3, fill:true, backgroundColor:Chart.helpers.color(chartColors.c1).alpha(0.2), borderColor:chartColors.c1, pointRadius:3 }]},
+            options:{ plugins:{ legend:{ display:false } }, scales:{ y:{ ticks:{ callback:(v)=> KRW.format(v) }}} }
+        });
+
+        // Pareto by cause (Top5)
+        const byCause = {};
+        rows.forEach(r=>{ byCause[r.cause] = (byCause[r.cause]||0)+r.total; });
+        const sorted = Object.entries(byCause).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        const labels = sorted.map(x=>x[0]);
+        const values = sorted.map(x=>x[1]);
+        const cum = values.reduce((arr,v,i)=>{ arr.push(v + (arr[i-1]||0)); return arr; },[]);
+        const total = values.reduce((s,v)=>s+v,0); const cumPct = cum.map(v=> (v/total*100));
+
+        paretoChart = new Chart(document.getElementById('paretoChart'), {
+            data:{ labels, datasets:[
+                    { type:'bar', label:'비용', data: values, yAxisID:'y', backgroundColor: chartColors.c2, borderRadius: 6 },
+                    { type:'line', label:'누적 %', data: cumPct, yAxisID:'y1', borderColor: chartColors.c3, tension:.3, pointRadius:3 }
+                ]},
+            options:{ plugins:{ legend:{ display:true } }, scales:{ y:{ position:'left', ticks:{ callback:(v)=>KRW.format(v) } }, y1:{ position:'right', min:0, max:100, grid:{ drawOnChartArea:false }, ticks:{ callback:(v)=> v+'%' } } } }
+        });
+
+        // Breakdown pie
+        const m = rows.reduce((s,r)=>s+r.material,0);
+        const l = rows.reduce((s,r)=>s+r.labor,0);
+        const f = rows.reduce((s,r)=>s+r.failure,0);
+        breakdownChart = new Chart(document.getElementById('breakdownChart'), {
+            type:'doughnut',
+            data:{ labels:['자재비','노무비','실패비용'], datasets:[{ data:[m,l,f], backgroundColor:[chartColors.c1, chartColors.c4, chartColors.c5] }]},
+            options:{ plugins:{ legend:{ position:'bottom' } } }
+        });
+    }
+
+    // --- Export CSV ---
+    function exportCSV(rows){
+        const headers = ['JQPRNO','프로젝트명','현장번호','자재비','노무비','실패비용','총비용','작성일','고장원인','고장현상'];
+        const lines = [headers.join(',')].concat(rows.map(r=>[
+            r.JQPRNO, r.project, r.site, r.material, r.labor, r.failure, r.total, r.date, r.cause, '"'+r.symptom.replaceAll('"','""')+'"'
+        ].join(',')));
+        const blob = new Blob(["\ufeff"+lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `JQPR_export_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // --- Print ---
+    function printPage(){ window.print(); }
+
+    // --- Bindings ---
+    function refresh(){
+        const rows = filters.apply();
+        renderTable(rows);
+        updateKPIs(rows);
+        buildCharts(rows);
+    }
+
+    function bind(){
+        document.getElementById('filterProject').addEventListener('input', e=>{ state.project = e.target.value.trim().toLowerCase(); refresh(); });
+        document.getElementById('filterSite').addEventListener('input', e=>{ state.site = e.target.value.trim().toLowerCase(); refresh(); });
+        document.getElementById('filterCause').addEventListener('input', e=>{ state.cause = e.target.value.trim().toLowerCase(); refresh(); });
+        document.getElementById('filterFrom').addEventListener('change', e=>{ state.from = e.target.value; refresh(); });
+        document.getElementById('filterTo').addEventListener('change', e=>{ state.to = e.target.value; refresh(); });
+        document.getElementById('quickSearch').addEventListener('input', e=>{ state.search = e.target.value.trim().toLowerCase(); refresh(); });
+        document.getElementById('btnReset').addEventListener('click', ()=>{
+            for(const id of ['filterProject','filterSite','filterCause','filterFrom','filterTo','quickSearch']){ document.getElementById(id).value=''; }
+            Object.assign(state,{ project:'', site:'', cause:'', from:'', to:'', search:'' });
+            refresh();
+        });
+        document.getElementById('btnExport').addEventListener('click', ()=> exportCSV(filters.apply()));
+        document.getElementById('btnPrint').addEventListener('click', printPage);
+
+        // Theme switch
+        const themeSwitch = document.getElementById('themeSwitch');
+        const savedTheme = localStorage.getItem('jqpr-theme');
+        if(savedTheme==='dark'){ document.documentElement.classList.add('dark'); themeSwitch.checked = true; }
+        themeSwitch.addEventListener('change', ()=>{
+            document.documentElement.classList.toggle('dark', themeSwitch.checked);
+            localStorage.setItem('jqpr-theme', themeSwitch.checked? 'dark':'light');
+            // Recompute colors for charts
+            chartColors.c1 = css('--chart-1'); chartColors.c2 = css('--chart-2'); chartColors.c3 = css('--chart-3'); chartColors.c4 = css('--chart-4'); chartColors.c5 = css('--chart-5');
+            refresh();
+        });
+    }
+
+    // --- Bootstrap Init ---
+    let bootstrap; // placeholder for linter
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" onload="bootstrap = window.bootstrap; bind(); refresh();"></script>
+</body>
+</html>
