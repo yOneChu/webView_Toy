@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>Tabulator Grid 데모</title>
+
+    <!-- ✅ Tabulator CDN -->
+    <link href="https://unpkg.com/tabulator-tables@5.6.2/dist/css/tabulator.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/tabulator-tables@5.6.2/dist/js/tabulator.min.js"></script>
+
+    <!-- (선택) XLSX 내보내기용 SheetJS -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style>
+        :root{
+            --hyundai-blue:#003876;
+            --bg:#f5f7fa;
+        }
+        body{margin:0;padding:24px;background:var(--bg);font-family:"Noto Sans KR",system-ui,-apple-system,Segoe UI,Roboto;}
+        h2{margin:0 0 16px;color:var(--hyundai-blue)}
+        .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+        .toolbar .spacer{flex:1}
+        #grid{background:#fff;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+        .layout{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+        .card{background:#fff;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:12px}
+        .kv{display:grid;grid-template-columns:90px 1fr;row-gap:6px}
+        .kv b{color:#555}
+        .footer-note{margin-top:8px;color:#666;font-size:12px}
+        .btn{padding:8px 12px;border:1px solid #d0d7de;border-radius:8px;background:#fff;cursor:pointer}
+        .btn.primary{background:var(--hyundai-blue);color:#fff;border-color:var(--hyundai-blue)}
+        .btn.danger{background:#dc3545;color:#fff;border-color:#dc3545}
+        input[type="search"]{padding:8px 10px;border:1px solid #d0d7de;border-radius:8px;min-width:260px}
+        @media (max-width:1100px){.layout{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+
+<h2>📊 Tabulator Grid Demo (정렬/필터/편집/페이징/엑셀)</h2>
+
+<!-- 🔧 Toolbar -->
+<div class="toolbar">
+    <input id="q" type="search" placeholder="이름/부서 빠른 검색" />
+    <div class="spacer"></div>
+    <button class="btn" id="addRow">행 추가</button>
+    <button class="btn danger" id="delRow">선택 삭제</button>
+    <button class="btn" id="csv">CSV 저장</button>
+    <button class="btn" id="xlsx">XLSX 저장</button>
+</div>
+
+<div class="layout">
+    <!-- 메인 그리드 -->
+    <div id="grid"></div>
+
+    <!-- 우측 상세 카드 -->
+    <div class="card">
+        <h3 style="margin:0 0 8px">선택 상세</h3>
+        <div class="kv" id="detail">
+            <b>ID</b><span>-</span>
+            <b>이름</b><span>-</span>
+            <b>부서</b><span>-</span>
+            <b>날짜</b><span>-</span>
+            <b>급여</b><span>-</span>
+            <b>재직</b><span>-</span>
+        </div>
+        <div class="footer-note">행을 클릭하면 상세가 갱신됩니다.</div>
+    </div>
+</div>
+
+<script>
+    // 📌 샘플 데이터
+    const sampleData = [
+        { id:1,  name:"홍길동", dept:"개발팀", date:"2025-10-17", salary:5000, active:true },
+        { id:2,  name:"김영환", dept:"설계팀", date:"2025-10-16", salary:4800, active:true },
+        { id:3,  name:"이수민", dept:"영업팀", date:"2025-10-15", salary:5200, active:false },
+        { id:4,  name:"박민수", dept:"구매팀", date:"2025-10-14", salary:4500, active:true },
+        { id:5,  name:"정다은", dept:"개발팀", date:"2025-10-13", salary:5100, active:true },
+        { id:6,  name:"최유나", dept:"영업팀", date:"2025-10-12", salary:4700, active:false },
+        { id:7,  name:"오지훈", dept:"설계팀", date:"2025-10-11", salary:4950, active:true },
+        { id:8,  name:"한지원", dept:"개발팀", date:"2025-10-10", salary:5300, active:true },
+        { id:9,  name:"서태경", dept:"구매팀", date:"2025-10-09", salary:4400, active:false },
+        { id:10, name:"문수현", dept:"영업팀", date:"2025-10-08", salary:4600, active:true },
+    ];
+
+    // ₩ 통화 포매터
+    const won = (v)=> v==null || v==="" ? "" : "₩ " + Number(v).toLocaleString("ko-KR");
+
+    // ✅ Tabulator 생성
+    const table = new Tabulator("#grid", {
+        data: sampleData,
+        layout:"fitColumns",
+        height:"480px",
+        pagination:true,
+        paginationMode:"local",
+        paginationSize:6,
+        paginationSizeSelector:[6,10,20,50],
+        clipboard:true,
+        selectable:1,
+        reactiveData:false,
+
+        columns:[
+            { title:"ID", field:"id", width:70, sorter:"number", headerFilter:"number", hozAlign:"center" },
+            { title:"이름", field:"name", sorter:"string", headerFilter:"input", editor:"input" },
+            { title:"부서", field:"dept", width:120, sorter:"string",
+                headerFilter:"select", headerFilterParams:{values:["","개발팀","설계팀","영업팀","구매팀"]},
+                editor:"list", editorParams:{ values:["개발팀","설계팀","영업팀","구매팀"] }
+            },
+            { title:"날짜", field:"date", width:130, sorter:"date", sorterParams:{format:"YYYY-MM-DD"},
+                headerFilter:"input",
+                editor:"input", // (간단히 input 사용; 필요시 datepicker로 교체 가능)
+                validator:[{type:"regex", parameters:/^\d{4}-\d{2}-\d{2}$/}]
+            },
+            { title:"급여", field:"salary", width:130, sorter:"number", hozAlign:"right",
+                headerFilter:"number",
+                editor:"number",
+                mutatorEdit:(value)=> Number(value),
+                formatter:(cell)=> won(cell.getValue()),
+                bottomCalc:"sum",
+                bottomCalcFormatter:(cell)=> won(cell.getValue())
+            },
+            { title:"재직", field:"active", width:80, hozAlign:"center",
+                headerFilter:"select", headerFilterParams:{values:{"":"", "true":"재직", "false":"퇴사"}},
+                editor:true, formatter:"tickCross", formatterParams:{crossElement:false}
+            },
+        ],
+
+        rowSelectionChanged:function(data, rows){
+            // 단일 선택만 허용했으므로 첫 번째만 상세 표시
+            const d = data[0];
+            const els = document.querySelectorAll("#detail span");
+            if(!d){
+                els[0].textContent = els[1].textContent = els[2].textContent =
+                    els[3].textContent = els[4].textContent = els[5].textContent = "-";
+                return;
+            }
+            els[0].textContent = d.id;
+            els[1].textContent = d.name;
+            els[2].textContent = d.dept;
+            els[3].textContent = d.date;
+            els[4].textContent = won(d.salary);
+            els[5].textContent = d.active ? "재직" : "퇴사";
+        },
+
+        cellEdited:function(cell){
+            const row = cell.getRow().getData();
+            const field = cell.getField();
+            const oldValue = cell.getOldValue();
+            const newValue = cell.getValue();
+            console.log("changed:", row.id, field, oldValue, "→", newValue);
+            // TODO: 필요 시 여기서 fetch('/api/save', {method:'POST', body:JSON.stringify(row)})
+        },
+    });
+
+    // 🔎 빠른 검색(이름/부서)
+    const q = document.getElementById("q");
+    q.addEventListener("input", () => {
+        const v = q.value.trim().toLowerCase();
+        if(!v){
+            table.clearFilter(true);
+        }else{
+            table.setFilter([
+                [{field:"name", type:"like", value:v}],
+                [{field:"dept", type:"like", value:v}],
+            ]);
+        }
+    });
+
+    // ➕ 행 추가
+    document.getElementById("addRow").addEventListener("click", ()=>{
+        const nextId = (table.getDataMax("id")||0)+1;
+        const today = new Date().toISOString().slice(0,10);
+        table.addData([{ id:nextId, name:"신규", dept:"개발팀", date:today, salary:0, active:true }], true);
+    });
+
+    // 🗑️ 선택 삭제
+    document.getElementById("delRow").addEventListener("click", ()=>{
+        const row = table.getSelectedRows()[0];
+        if(row) row.delete();
+    });
+
+    // ⬇ CSV 저장
+    document.getElementById("csv").addEventListener("click", ()=>{
+        table.download("csv", "tabulator-demo.csv", {bom:true});
+    });
+
+    // ⬇ XLSX 저장 (SheetJS 필요)
+    document.getElementById("xlsx").addEventListener("click", ()=>{
+        // SheetJS가 로드되지 않은 경우 CSV로 폴백
+        if(typeof XLSX === "undefined"){
+            table.download("csv", "tabulator-demo.csv", {bom:true});
+        }else{
+            table.download("xlsx", "tabulator-demo.xlsx", {sheetName:"Data"});
+        }
+    });
+</script>
+</body>
+</html>
+

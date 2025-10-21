@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>Webix Grid 샘플</title>
+
+    <!-- ✅ Webix CDN -->
+    <link rel="stylesheet" href="https://cdn.webix.com/edge/webix.css">
+    <script src="https://cdn.webix.com/edge/webix.js"></script>
+
+    <style>
+        html, body { height: 100%; }
+        body { margin: 0; background: #f5f7fa; font-family: "Noto Sans KR", sans-serif; }
+    </style>
+</head>
+<body>
+
+<script>
+    // 📌 샘플 데이터
+    const sampleData = [
+        { id:1,  name:"홍길동", dept:"개발팀",  date:"2025-10-17", salary:5000,  active:1 },
+        { id:2,  name:"김영환", dept:"설계팀",  date:"2025-10-16", salary:4800,  active:1 },
+        { id:3,  name:"이수민", dept:"영업팀",  date:"2025-10-15", salary:5200,  active:0 },
+        { id:4,  name:"박민수", dept:"구매팀",  date:"2025-10-14", salary:4500,  active:1 },
+        { id:5,  name:"정다은", dept:"개발팀",  date:"2025-10-13", salary:5100,  active:1 },
+        { id:6,  name:"최유나", dept:"영업팀",  date:"2025-10-12", salary:4700,  active:0 },
+        { id:7,  name:"오지훈", dept:"설계팀",  date:"2025-10-11", salary:4950,  active:1 },
+        { id:8,  name:"한지원", dept:"개발팀",  date:"2025-10-10", salary:5300,  active:1 },
+        { id:9,  name:"서태경", dept:"구매팀",  date:"2025-10-09", salary:4400,  active:0 },
+        { id:10, name:"문수현", dept:"영업팀",  date:"2025-10-08", salary:4600,  active:1 }
+    ];
+
+    // 📌 공통 포맷 (₩ 통화)
+    webix.i18n.setLocale();
+    const moneyFormat = webix.Number.format;
+    function wonFormat(value){
+        if (value === null || value === undefined || value === "") return "";
+        return "₩ " + moneyFormat(value, { groupSize:3, groupDelimiter:",", decimalDelimiter:".", decimalSize:0 });
+    }
+
+    webix.ready(function(){
+        webix.ui({
+            rows:[
+                // 상단 툴바
+                {
+                    view:"toolbar", css:"webix_dark",
+                    cols:[
+                        { view:"label", label:"📊 Webix Grid Demo", width:240 },
+                        { view:"search", id:"q", placeholder:"이름/부서 검색", width:280, on:{
+                                onTimedKeyPress:function(){
+                                    const v = this.getValue().toLowerCase();
+                                    $$("grid").filter(function(obj){
+                                        return (obj.name+" "+obj.dept).toLowerCase().indexOf(v) !== -1;
+                                    });
+                                }
+                            }},
+                        {},
+                        { view:"button", value:"행 추가", width:90, click:()=> {
+                                $$("grid").add({ date:webix.Date.dateToStr("%Y-%m-%d")(new Date()), active:1 }, 0);
+                            }
+                        },
+                        { view:"button", value:"선택 삭제", width:100, css:"webix_danger", click:()=>{
+                                const id = $$("grid").getSelectedId();
+                                if(id) $$("grid").remove(id);
+                            }
+                        },
+                        { view:"button", value:"엑셀로 내보내기", width:150, click:()=>{
+                                webix.toExcel($$("grid"), { filename:"webix-grid-demo" });
+                            }
+                        }
+                    ]
+                },
+
+                // 본문 레이아웃
+                {
+                    cols:[
+                        // 메인 그리드
+                        {
+                            view:"datatable", id:"grid", select:"row", editable:true, clipboard:"selection",
+                            resizeColumn:true, resizeRow:true, dragColumn:true,
+                            footer:true,  // 합계/건수 표시용
+                            columns:[
+                                { id:"id", header:["ID", {content:"numberFilter"}], width:70, sort:"int" },
+                                { id:"name", header:["이름", {content:"textFilter"}], fillspace:1, editor:"text", sort:"string" },
+                                { id:"dept", header:["부서", {content:"selectFilter"}], width:120, sort:"string",
+                                    editor:"combo", collection:["개발팀","설계팀","영업팀","구매팀"]
+                                },
+                                { id:"date", header:["날짜", {content:"dateFilter"}], width:140, sort:"date",
+                                    // 에디터: 달력
+                                    editor:"date", format:webix.Date.dateToStr("%Y-%m-%d")
+                                },
+                                { id:"salary", header:["급여", {content:"numberFilter"}], width:120, sort:"int",
+                                    editor:"text", css:{"text-align":"right"},
+                                    format:wonFormat, footer:{ content:"summColumn", css:{"text-align":"right"}, format:wonFormat }
+                                },
+                                { id:"active", header:["재직", {content:"selectFilter"}], width:80, sort:"int",
+                                    editor:"checkbox", template:"{common.checkbox()}", checkValue:1, uncheckValue:0,
+                                    footer:{ text:"건수", colspan:1 }
+                                }
+                            ],
+                            data: sampleData,
+                            pager:"pagerA",
+                            on:{
+                                // 편집 종료 시 변경 로그 (실무에선 여기서 API 호출)
+                                onAfterEditStop:function(state, editor){
+                                    // state.value, state.old, editor.row, editor.column
+                                    console.log("changed:", editor.row, editor.column, "=>", state.old, "→", state.value);
+                                }
+                            }
+                        },
+
+                        // 오른쪽 사이드 카드 (선택행 상세)
+                        {
+                            width:320, rows:[
+                                { view:"template", type:"header", template:"선택 상세" },
+                                { id:"detail", view:"property", elements:[
+                                        { label:"ID",        type:"text", id:"id" },
+                                        { label:"이름",      type:"text", id:"name" },
+                                        { label:"부서",      type:"text", id:"dept" },
+                                        { label:"날짜",      type:"text", id:"date" },
+                                        { label:"급여",      type:"text", id:"salary" },
+                                        { label:"재직",      type:"text", id:"active" }
+                                    ]},
+                                { height:10 },
+                                { view:"button", value:"선택 행 콘솔 출력", click:()=>{
+                                        const item = $$("grid").getSelectedItem();
+                                        console.log("selected row:", item);
+                                    }
+                                },
+                                {}
+                            ]
+                        }
+                    ]
+                },
+
+                // 페이지네이션
+                {
+                    view:"pager", id:"pagerA", size:6, group:5,
+                    template:"현재 페이지 #page# / 총 #pages# (총 #count#건)",
+                    height:40
+                }
+            ]
+        });
+
+        // 선택 행 변경 시 상세 패널 갱신
+        $$("grid").attachEvent("onAfterSelect", function(id){
+            const item = this.getItem(id);
+            // 표시용 포맷 적용
+            const view = $$("detail");
+            view.setValues({
+                id: item.id,
+                name: item.name,
+                dept: item.dept,
+                date: item.date,
+                salary: wonFormat(item.salary),
+                active: item.active ? "재직" : "퇴사"
+            }, true);
+        });
+    });
+</script>
+
+</body>
+</html>
