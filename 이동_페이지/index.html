@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>새 시스템으로 이동 안내</title>
+    <style>
+        :root{
+            --bg1:#0b1220; --bg2:#0f1b3d; --card:#111827ee; --text:#e5e7eb; --sub:#9ca3af;
+            --accent:#3b82f6; --accent-2:#10b981; --danger:#ef4444; --shadow:0 20px 50px rgba(0,0,0,.35);
+            --radius:20px;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0; min-height:100dvh; color:var(--text); font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif;
+            background: radial-gradient(80% 60% at 20% 20%, #14224a 0%, transparent 60%),
+            radial-gradient(70% 50% at 80% 30%, #173b5c 0%, transparent 60%),
+            linear-gradient(180deg, var(--bg1), var(--bg2));
+            display:grid; place-items:center; padding:24px;
+        }
+        .card{
+            width:min(920px, 100%);
+            background:linear-gradient(180deg, #0f172aee, #0b1022ee);
+            border:1px solid #1f2a44;
+            border-radius:var(--radius);
+            box-shadow:var(--shadow);
+            overflow:hidden;
+        }
+        .header{
+            display:flex; align-items:center; gap:12px; padding:18px 22px; border-bottom:1px solid #1f2a44;
+            background:linear-gradient(90deg, #0b132b, #0f1f3a);
+        }
+        .logo{
+            width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,#39a0ff,#0076ff);
+            display:grid; place-items:center; font-weight:900; letter-spacing:.5px;
+            box-shadow:0 6px 22px rgba(59,130,246,.4); color:white;
+        }
+        .title-wrap{display:flex; flex-direction:column}
+        .title{font-size:18px; font-weight:700}
+        .subtitle{font-size:12px; color:var(--sub)}
+        .body{padding:28px; display:grid; gap:22px}
+        .badge-row{display:flex; flex-wrap:wrap; gap:10px}
+        .badge{
+            font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid #2a3a68; color:#bcd7ff; background:#0a1535;
+        }
+        .panel{
+            display:grid; gap:14px; background:rgba(17,24,39,.6); border:1px solid #1f2a44;
+            padding:18px; border-radius:14px;
+        }
+        .panel h2{margin:0; font-size:22px}
+        .panel p{margin:0; color:var(--sub); line-height:1.6}
+        .list{display:grid; gap:10px; margin-top:6px}
+        .li{display:flex; gap:10px; align-items:flex-start}
+        .dot{width:8px; height:8px; border-radius:50%; background:var(--accent-2); margin-top:7px; flex:0 0 8px}
+        .actions{display:flex; flex-wrap:wrap; gap:10px}
+        button, .btn{
+            cursor:pointer; border:none; border-radius:12px; padding:12px 16px; font-weight:700; font-size:14px;
+            display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+        }
+        .primary{background:var(--accent); color:white; box-shadow:0 8px 20px rgba(59,130,246,.35)}
+        .secondary{background:#0e162b; color:#c7d2fe; border:1px solid #25325a}
+        .ghost{background:transparent; color:#93c5fd; border:1px dashed #24406b}
+        .danger{background:var(--danger); color:white}
+        .count-wrap{display:flex; align-items:center; gap:8px; color:#cbd5e1}
+        .progress{
+            height:8px; width:100%; background:#0a1226; border:1px solid #1f2a44; border-radius:999px; overflow:hidden;
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+        }
+        .bar{height:100%; width:0%; background:linear-gradient(90deg,#60a5fa,#22d3ee); transition:width .3s ease}
+        .footer{
+            display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; color:#7f8ea3;
+            border-top:1px solid #1f2a44; padding:14px 22px; font-size:12px;
+        }
+        .pill{padding:4px 8px; border-radius:999px; background:#0f1a36; border:1px solid #21315a; color:#9eb4ff}
+        .qr{
+            width:110px; height:110px; border-radius:12px; background:conic-gradient(from 0deg,#0f3b8a,#0f1a36,#0f3b8a);
+            display:grid; place-items:center; font-size:10px; color:#cfe3ff; border:1px solid #22407a;
+        }
+        @media (max-width:640px){
+            .body{padding:18px}
+            .panel h2{font-size:18px}
+        }
+    </style>
+</head>
+<body>
+<div class="card" role="region" aria-label="새 시스템 안내">
+    <div class="header">
+        <div class="logo" aria-hidden="true">N</div>
+        <div class="title-wrap">
+            <div class="title">새 시스템으로 이동 안내</div>
+            <div class="subtitle">더 빠르고 안정적인 환경으로 업그레이드되었습니다.</div>
+        </div>
+    </div>
+
+    <div class="body">
+        <div class="badge-row">
+            <span class="badge">신규 URL 적용</span>
+            <span class="badge">보안/속도 개선</span>
+            <span class="badge">반응형 UI</span>
+            <span class="badge">데이터 동기화</span>
+        </div>
+
+        <section class="panel" aria-live="polite">
+            <h2>이 페이지는 더 이상 서비스되지 않습니다</h2>
+            <p>
+                현재 보고 계신 구(舊) 시스템 페이지는 <strong>읽기 전용</strong>으로 전환되었습니다.
+                <br>아래 버튼을 눌러 <strong>새 시스템</strong>으로 바로 이동해주세요.
+            </p>
+
+            <div class="list">
+                <div class="li"><span class="dot"></span><p>접속 속도와 안정성이 대폭 향상되었습니다.</p></div>
+                <div class="li"><span class="dot"></span><p>단일 로그인(SSO) 및 권한 체계가 개선되었습니다.</p></div>
+                <div class="li"><span class="dot"></span><p>모바일/태블릿 환경 최적화 및 접근성 강화.</p></div>
+            </div>
+
+            <div class="actions">
+                <a id="goBtn" class="btn primary" href="#" rel="nofollow">🚀 새 시스템으로 즉시 이동</a>
+                <button class="secondary" id="copyUrlBtn">🔗 새 URL 복사</button>
+                <button class="ghost" id="cancelAutoBtn">⏸ 자동 이동 취소</button>
+                <button class="ghost" id="stayBtn">↩️ 현재 페이지 머무르기</button>
+                <a class="btn secondary" id="helpBtn" href="#" target="_blank" rel="noopener">💬 문의/가이드</a>
+            </div>
+
+            <div class="count-wrap">
+                <div>자동 이동까지 <strong id="sec">5</strong>초</div>
+                <div class="progress" aria-hidden="true"><div class="bar" id="bar"></div></div>
+            </div>
+        </section>
+    </div>
+
+    <div class="footer">
+        <div class="pill">공지: 구 시스템은 데이터 입력이 제한됩니다.</div>
+        <div style="display:flex; align-items:center; gap:10px">
+            <div class="qr" id="qrBox">QR</div>
+            <div>모바일로 접속하실 땐 QR을 스캔하세요.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // === 설정 영역 ===
+    // 새 시스템 URL을 여기에 입력하세요.
+    const NEW_URL = "https://vault-in.hdel.co.kr:8070/pid/searchPIDDetail"; // ← 변경
+    // 문의/가이드 URL(선택)
+    const HELP_URL = "https://help.example.com"; // ← 변경 또는 빈 값 유지
+
+    // URL 쿼리로 newUrl을 넘기면 우선 적용: ?newUrl=https://...
+    const params = new URLSearchParams(location.search);
+    const overrideUrl = params.get("newUrl");
+    const targetUrl = overrideUrl || NEW_URL;
+
+    // 요소 참조
+    const goBtn = document.getElementById("goBtn");
+    const copyBtn = document.getElementById("copyUrlBtn");
+    const cancelBtn = document.getElementById("cancelAutoBtn");
+    const stayBtn = document.getElementById("stayBtn");
+    const helpBtn = document.getElementById("helpBtn");
+    const secEl = document.getElementById("sec");
+    const barEl = document.getElementById("bar");
+    const qrBox = document.getElementById("qrBox");
+
+    // 버튼 링크 바인딩
+    goBtn.href = targetUrl;
+    if (HELP_URL) helpBtn.href = HELP_URL; else helpBtn.style.display = "none";
+
+    // 자동 이동 카운트다운
+    let seconds = 5;
+    let canceled = false;
+    const total = seconds;
+    const timer = setInterval(() => {
+        if (canceled) return;
+        seconds--;
+        secEl.textContent = seconds;
+        barEl.style.width = ((total - seconds) / total) * 100 + "%";
+        if (seconds <= 0) {
+            clearInterval(timer);
+            if (!canceled) {
+                window.location.href = targetUrl;
+            }
+        }
+    }, 1000);
+    // 초기 진행바
+    requestAnimationFrame(()=> barEl.style.width = (1/total)*100 + "%");
+
+    // 이벤트
+    cancelBtn.addEventListener("click", () => {
+        canceled = true;
+        secEl.textContent = "취소됨";
+        barEl.style.width = "0%";
+        cancelBtn.disabled = true;
+        cancelBtn.textContent = "⏸ 자동 이동 취소됨";
+    });
+
+    stayBtn.addEventListener("click", () => {
+        canceled = true;
+        alert("현재 페이지에 머무르기를 선택하셨습니다.\n언제든지 '새 시스템으로 즉시 이동'을 클릭해 주세요.");
+    });
+
+    copyBtn.addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(targetUrl);
+            copyBtn.textContent = "✅ 복사 완료";
+            setTimeout(()=> copyBtn.textContent = "🔗 새 URL 복사", 1500);
+        } catch {
+            prompt("복사에 실패했습니다. 아래 URL을 수동으로 복사하세요:", targetUrl);
+        }
+    });
+
+    // 아주 간단한 텍스트 QR 대체(실제 배포 시 진짜 QR 라이브러리 사용 권장)
+    // 텍스트를 11x11 pseudo QR처럼 찍어주는 간이 표시
+    (function fakeQR(text){
+        // 가벼운 안내만 표시. 실제 운영은 QR 라이브러리(e.g. QRCode.js) 사용 권장.
+        qrBox.textContent = "";
+        const small = document.createElement("div");
+        small.style.fontSize = "9px";
+        small.style.textAlign = "center";
+        small.style.lineHeight = "1.1";
+        small.style.padding = "6px";
+        small.innerHTML = "Scan<br>URL";
+        qrBox.appendChild(small);
+        qrBox.title = targetUrl;
+    })(targetUrl);
+
+    // 만약 X-Frame-Options 문제 등으로 내장 페이지에서 새 URL이 안 열릴 때 대비
+    // (여기서는 단순 안내만)
+    document.addEventListener("securitypolicyviolation", () => {
+        canceled = true;
+        alert("보안 정책으로 자동 이동이 차단되었습니다. '새 시스템으로 즉시 이동' 버튼을 클릭해 주세요.");
+    });
+
+    // 키보드 접근성: Enter로 즉시 이동
+    document.addEventListener("keydown", (e)=>{
+        if (e.key === "Enter") window.location.href = targetUrl;
+    });
+</script>
+</body>
+</html>
