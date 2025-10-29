@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>MindMap Explorer</title>
+
+    <!-- Bootstrap & Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet"/>
+
+    <!-- vis-network (D3 아님) -->
+    <link href="https://unpkg.com/vis-network/styles/vis-network.min.css" rel="stylesheet"/>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
+    <!-- 한국어 가독성 좋은 폰트 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;800&display=swap" rel="stylesheet"/>
+
+    <style>
+        :root{
+            /* Hyundai Elevator palette (bright) */
+            --brand:#00A650;            /* Hyundai Green */
+            --brand-blue:#014DA2;       /* Secondary */
+            --brand-yellow:#FDB911;     /* Accent (highlight) */
+            --ink:#10231b;              /* 본문 글자 */
+            --bg:#F7FAF8;               /* 페이지 배경(밝음) */
+            --card:#FFFFFF;             /* 카드/패널 */
+            --line:#DCE7E1;             /* 경계선 */
+        }
+        html,body{height:100%}
+        body{
+            font-family: "Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, "Apple SD Gothic Neo", "맑은 고딕", "Malgun Gothic", sans-serif;
+            background:
+                    radial-gradient(1200px 600px at 75% -10%, rgba(0,166,80,.08) 0%, transparent 60%),
+                    linear-gradient(180deg, #FFFFFF 0%, var(--bg) 60%, #FFFFFF 100%);
+            color:var(--ink);
+            overflow:hidden;
+        }
+
+        /* 은은한 라이트 그리드 */
+        .grid-overlay{
+            position:fixed; inset:0;
+            background:
+                    linear-gradient(transparent 49%, rgba(0,0,0,0.04) 50%) 0 0/ 28px 28px,
+                    linear-gradient(90deg, transparent 49%, rgba(0,0,0,0.04) 50%) 0 0/ 28px 28px,
+                    radial-gradient(circle at 12% 20%, rgba(0,166,80,.10), transparent 40%),
+                    radial-gradient(circle at 82% 30%, rgba(1,77,162,.08), transparent 45%);
+            animation: drift 40s linear infinite;
+            pointer-events:none; opacity:.55;
+        }
+        @keyframes drift{
+            0%{transform:translate3d(0,0,0) scale(1)}
+            50%{transform:translate3d(-24px,-16px,0) scale(1.02)}
+            100%{transform:translate3d(0,0,0) scale(1)}
+        }
+
+        /* 헤더: 화이트 + 그린 보더 */
+        .app-header{
+            position:relative;
+            background:#ffffffcc;
+            border-bottom:2px solid rgba(0,166,80,.25);
+            backdrop-filter: blur(6px);
+            z-index:3;
+        }
+        .logo-dot{
+            width:12px; height:12px; border-radius:50%;
+            background: radial-gradient(circle at 30% 30%, #7ef0b7, var(--brand));
+            display:inline-block; margin-right:8px;
+            box-shadow: 0 0 10px rgba(0,166,80,.45);
+        }
+
+        /* 툴바/사이드패널: 밝은 카드 */
+        .toolbar, .side-panel{
+            background: var(--card);
+            border:1px solid var(--line);
+            box-shadow: 0 8px 28px rgba(16,35,27,.08);
+            border-radius:18px;
+            backdrop-filter: blur(6px);
+        }
+        .toolbar{
+            position:absolute; top:72px; left:50%; transform:translateX(-50%);
+            width:min(1200px, 94vw);
+            padding:14px 16px; z-index:5;
+        }
+        .side-panel{
+            position:absolute; right:28px; top:156px; width:340px; max-width:90vw;
+            padding:16px; z-index:6;
+        }
+        .badge-soft{ background:rgba(0,166,80,.12); color:#0f5737; border:1px solid rgba(0,166,80,.28)}
+
+        .toolbar .form-control, .toolbar .form-select{
+            background:#fff; border:1px solid var(--line); color:var(--ink);
+        }
+        .toolbar .btn{ border-radius:12px }
+
+        .btn-brand{
+            background:linear-gradient(135deg, var(--brand), #21c86f);
+            border:0; color:#032314; font-weight:700;
+        }
+        .btn-outline-brand{
+            border-color: var(--brand); color:#0b5b3d;
+        }
+        .btn-outline-brand:hover{ background:rgba(0,166,80,.12); color:#063b27 }
+
+        /* 네트워크 캔버스: 밝은 화이트 */
+        #network{
+            position:absolute; inset:140px 18px 18px 18px;
+            border-radius:18px;
+            background:
+                    radial-gradient(1200px 700px at 20% 120%, rgba(0,166,80,.06), transparent 60%),
+                    radial-gradient(700px 380px at 90% 15%, rgba(1,77,162,.05), transparent 55%),
+                    #fff;
+            box-shadow: inset 0 0 0 1px var(--line);
+        }
+
+        /* 힌트: 라이트 토스트 */
+        .hint{
+            position:absolute; left:32px; bottom:24px; z-index:6; opacity:.95;
+            font-size:.93rem; color:#184938;
+            background:#ffffffea; padding:10px 14px; border-radius:10px;
+            border:1px solid var(--line);
+            box-shadow: 0 6px 20px rgba(16,35,27,.06);
+        }
+
+        /* 작은 장식 */
+        .legend-dot{ width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px }
+    </style>
+</head>
+<body>
+<div class="grid-overlay"></div>
+
+<!-- Header -->
+<header class="app-header py-3">
+    <div class="container-fluid px-4 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <span class="logo-dot"></span>
+            <h1 class="h4 m-0 fw-bold">MindMap Explorer</h1>
+            <span class="ms-3 badge rounded-pill bg-success-subtle text-success-emphasis">Interactive • Physics • Pro</span>
+        </div>
+        <div class="text-end small text-secondary">
+            <span class="me-2"><i class="fa-solid fa-arrows-up-down-left-right me-1"></i>드래그</span>
+            <span class="me-2"><i class="fa-solid fa-magnifying-glass-plus me-1"></i>휠 확대/축소</span>
+            <span><i class="fa-solid fa-hand-pointer me-1"></i>더블클릭: 자식 추가</span>
+        </div>
+    </div>
+</header>
+
+<!-- Toolbar -->
+<div class="toolbar">
+    <div class="row g-2 align-items-end">
+        <div class="col-12 col-md-4">
+            <label class="form-label mb-1">중앙 KEY</label>
+            <input id="keyInput" class="form-control form-control-lg" placeholder="예) 프로젝트 LUX 3.0" value="PLM-VAULT 연계 MindMap"/>
+        </div>
+        <div class="col-6 col-md-3">
+            <label class="form-label mb-1">자식 노드</label>
+            <input id="childInput" class="form-control" placeholder="추가할 노드 라벨"/>
+        </div>
+        <div class="col-6 col-md-3">
+            <label class="form-label mb-1">부모 선택</label>
+            <select id="parentSelect" class="form-select"></select>
+        </div>
+        <div class="col-12 col-md-2 d-grid d-md-flex gap-2">
+            <button id="addBtn" class="btn btn-brand w-100"><i class="fa-solid fa-plus me-1"></i>추가</button>
+        </div>
+
+        <div class="col-12"><hr class="border-secondary-subtle my-2"></div>
+
+
+    </div>
+</div>
+
+<!-- Network Canvas -->
+<div id="network"></div>
+
+
+
+
+<script>
+    // ---------- 데이터셋 ----------
+    const nodes = new vis.DataSet([]);
+    const edges = new vis.DataSet([]);
+
+    // 유틸: 색상 by level
+    function levelColor(level){
+        if(level<=2) return '#21d07a';
+        if(level===3) return '#5dd39e';
+        return '#9be7c7';
+    }
+
+    // 루트/기본 데이터
+    function seed(keyLabel){
+        nodes.clear(); edges.clear();
+
+        nodes.add({ id: 'ROOT', label: keyLabel || 'KEY', level: 0, shape:'dot',
+            size: 42, color:{background:'#12c76a', border:'#eafff5'}, font:{size:20, color:'#032314', face:'Noto Sans KR', bold:true},
+            fixed:{x:true, y:true}, x:0, y:0
+        });
+
+        const base = [
+            ['전략', ['목표','지표','로드맵']],
+            ['시스템', ['PLM 연계','Vault 연계','보안']],
+            ['데이터', ['스키마','거버넌스','카탈로그']],
+            ['UI/UX', ['대시보드','검색','다크테마']],
+            ['운영', ['모니터링','백업','장애대응']]
+        ];
+
+        let id=1;
+        base.forEach(([cat, children], idx)=>{
+            const catId = 'N'+(id++);
+            addNode('ROOT', catId, cat, 1);
+            children.forEach(ch=>{
+                addNode(catId, 'N'+(id++), ch, 2);
+            });
+        });
+    }
+
+    // 노드 추가 헬퍼
+    function addNode(parentId, id, label, levelOverride){
+        const parent = nodes.get(parentId);
+        const level = levelOverride ?? ((parent?.level||0)+1);
+        nodes.add({
+            id, label, level,
+            shape:'dot',
+            size: Math.max(12, 26 - level*3),
+            color:{ background: levelColor(level), border:'#eafff5' },
+            font:{ color:'#041911', size: 14 + Math.max(0, 6 - level*2), face:'Noto Sans KR' }
+        });
+        edges.add({
+            id: 'E'+id, from: parentId, to: id,
+            smooth:{type:'dynamic', roundness:0.6},
+            width: Math.max(1, 3 - level*0.3),
+            color:{color:'rgba(180,255,220,.45)', highlight:'rgba(180,255,220,.9)'}
+        });
+    }
+
+    // ---------- 네트워크 생성 ----------
+    const container = document.getElementById('network');
+    const data = { nodes, edges };
+    const options = {
+        autoResize:true,
+        layout:{ improvedLayout:true },
+        physics:{
+            enabled: true,
+            solver: 'forceAtlas2Based',
+            stabilization: { iterations: 120 },
+            forceAtlas2Based: { gravitationalConstant:-36, springLength: 110, springConstant:0.09, damping:0.4 }
+        },
+        interaction: {
+            hover:true, tooltipDelay: 120,
+            dragNodes:true, dragView:true, zoomView:true,
+            navigationButtons:true, keyboard:true
+        },
+        nodes:{ borderWidth:1.5, shadow:true, shapeProperties:{borderDashes:false}},
+        edges:{ selectionWidth:1.5, shadow:false }
+    };
+    const network = new vis.Network(container, data, options);
+
+    // ---------- 초기화 ----------
+    const keyInput = document.getElementById('keyInput');
+    seed(keyInput.value);
+
+    // 부모 선택 목록 갱신
+    function refreshParentSelect(){
+        const sel = document.getElementById('parentSelect');
+        const all = nodes.get().sort((a,b)=> (a.level ?? 0)-(b.level ?? 0));
+        sel.innerHTML = '';
+        all.forEach(n=>{
+            const opt = document.createElement('option');
+            opt.value = n.id;
+            opt.textContent = `[Lv${n.level}] ${n.label}`;
+            sel.appendChild(opt);
+        });
+    }
+    refreshParentSelect();
+
+    // 네트워크 이벤트
+    network.on("click", params=>{
+        if(params.nodes.length){
+            const n = nodes.get(params.nodes[0]);
+            showNodeInfo(n);
+        }
+    });
+
+    network.on("doubleClick", params=>{
+        const targetId = params.nodes[0] || 'ROOT';
+        const newId = 'N' + String(Math.floor(Math.random()*1e9));
+        const label = prompt('추가할 자식 노드 라벨을 입력하세요:', '새 노드');
+        if(label){
+            addNode(targetId, newId, label);
+            refreshParentSelect();
+        }
+    });
+
+    // 선택 노드 정보 표시
+    function showNodeInfo(n){
+        const el = document.getElementById('nodeInfo');
+        if(!n){ el.innerHTML = '노드를 클릭하면 상세가 표시됩니다.'; return; }
+        el.innerHTML = `
+        <div class="mb-2"><b>라벨</b>: ${n.label}</div>
+        <div class="mb-2"><b>ID</b>: ${n.id}</div>
+        <div class="mb-2"><b>레벨</b>: ${n.level ?? '—'}</div>
+        <div class="d-grid gap-2 mt-3">
+          <button class="btn btn-sm btn-outline-success" id="focusBtn"><i class="fa-solid fa-bullseye me-1"></i>이 노드로 포커스</button>
+          <button class="btn btn-sm btn-outline-warning" id="lockBtn"><i class="fa-solid fa-thumbtack me-1"></i>고정/해제</button>
+        </div>
+      `;
+        setTimeout(()=>{
+            document.getElementById('focusBtn')?.addEventListener('click', ()=>{
+                network.focus(n.id, { scale:1.2, animation:{duration:600, easingFunction:'easeInOutCubic'}});
+                network.selectNodes([n.id]);
+            });
+            document.getElementById('lockBtn')?.addEventListener('click', ()=>{
+                const fixed = nodes.get(n.id).fixed;
+                nodes.update({id:n.id, fixed: fixed ? (fixed.x || fixed.y ? false : false) : {x:true,y:true}});
+            });
+        }, 0);
+    }
+
+    // 키보드: L -> 고정 토글
+    document.addEventListener('keydown', (e)=>{
+        if(e.key.toLowerCase()==='l'){
+            const sel = network.getSelectedNodes()[0];
+            if(sel){
+                const cur = nodes.get(sel).fixed;
+                nodes.update({id:sel, fixed: cur ? (cur.x || cur.y ? false : false) : {x:true,y:true}});
+            }
+        }
+    });
+
+    // ---------- 툴바 동작 ----------
+    document.getElementById('addBtn').addEventListener('click', ()=>{
+        const parentId = document.getElementById('parentSelect').value || 'ROOT';
+        const label = document.getElementById('childInput').value?.trim();
+        if(!label) return;
+        const newId = 'N' + String(Math.floor(Math.random()*1e9));
+        addNode(parentId, newId, label);
+        document.getElementById('childInput').value='';
+        refreshParentSelect();
+    });
+
+    document.getElementById('fitBtn').addEventListener('click', ()=>{
+        network.fit({animation:{duration:600, easingFunction:'easeInOutCubic'}});
+    });
+
+    let physicsOn = true;
+    document.getElementById('physicsBtn').addEventListener('click', ()=>{
+        physicsOn = !physicsOn;
+        network.setOptions({ physics:{ enabled: physicsOn }});
+    });
+
+    document.getElementById('hierBtn').addEventListener('click', ()=>{
+        network.setOptions({
+            layout:{ hierarchical: {
+                    direction:'UD',
+                    sortMethod:'directed',
+                    nodeSpacing: 180,
+                    levelSeparation: 140,
+                    treeSpacing: 200
+                }},
+            physics:{ enabled:false }
+        });
+        network.fit({animation:true});
+    });
+
+    document.getElementById('clusterBtn').addEventListener('click', ()=>{
+        // 레벨 기준 클러스터
+        const clusterByLevel = (level)=>{
+            const clusterOptionsByData = {
+                joinCondition: (n)=> n.level===level,
+                clusterNodeProperties:{
+                    id: 'cluster_lvl_'+level,
+                    label: `Lv${level} 그룹`,
+                    shape:'dot',
+                    size: 30 - level*2,
+                    color:{background: levelColor(level), border:'#eafff5'},
+                    font:{color:'#042016', size:14}
+                }
+            };
+            network.cluster(clusterOptionsByData);
+        };
+        clusterByLevel(3);
+        clusterByLevel(4);
+    });
+
+    document.getElementById('deleteBtn').addEventListener('click', ()=>{
+        const sel = network.getSelectedNodes();
+        if(!sel.length) return;
+        if(sel.includes('ROOT')){ alert('ROOT는 삭제할 수 없습니다.'); return; }
+        // 연결 엣지 포함 삭제
+        const toRemove = new Set(sel);
+        // 자식도 연쇄 삭제
+        let added = true;
+        while(added){
+            added=false;
+            edges.get().forEach(e=>{
+                if(toRemove.has(e.from) && !toRemove.has(e.to)){ toRemove.add(e.to); added=true; }
+            });
+        }
+        // 엣지 정리
+        edges.get().forEach(e=>{
+            if(toRemove.has(e.from) || toRemove.has(e.to)){ edges.remove(e.id); }
+        });
+        nodes.remove([...toRemove]);
+        refreshParentSelect();
+        document.getElementById('nodeInfo').innerHTML='노드를 클릭하면 상세가 표시됩니다.';
+    });
+
+    // 검색 하이라이트
+    document.getElementById('searchInput').addEventListener('keydown', (e)=>{
+        if(e.key!=='Enter') return;
+        const q = e.target.value.trim().toLowerCase();
+        const all = nodes.get();
+        const hits = [];
+        all.forEach(n=>{
+            const match = q && n.label.toLowerCase().includes(q);
+            nodes.update({
+                id:n.id,
+                color:{ background: match ? '#fff465' : levelColor(n.level ?? 1), border:'#eafff5' },
+                font:{ color: match ? '#1f1500' : '#041911' }
+            });
+            if(match) hits.push(n.id);
+        });
+        if(hits.length){
+            network.selectNodes(hits);
+            network.focus(hits[0], {scale:1.2, animation:{duration:600, easingFunction:'easeInOutCubic'}});
+        }
+    });
+
+    // 중앙 KEY 변경
+    keyInput.addEventListener('change', ()=>{
+        const isRootExists = nodes.get('ROOT');
+        if(isRootExists){
+            nodes.update({id:'ROOT', label:keyInput.value});
+        }else{
+            seed(keyInput.value);
+        }
+    });
+
+    // PNG 내보내기
+    document.getElementById('exportPngBtn').addEventListener('click', ()=>{
+        const canvas = container.querySelector('canvas');
+        const url = canvas.toDataURL('image/png', 1.0);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mindmap.png';
+        a.click();
+    });
+
+    // 초기 포커스 & 부모 옵션 세팅
+    network.once('stabilizationIterationsDone', ()=> network.fit({animation:true}));
+    nodes.on('*', refreshParentSelect);
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

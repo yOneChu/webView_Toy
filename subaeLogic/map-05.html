@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <title>특성 코드 뷰어</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Bootstrap 5 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Chart.js (상세 패널 미니 차트) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        :root{
+            --brand1:#1f7ae0;
+            --brand2:#7639ff;
+            --bg-grad: linear-gradient(120deg, var(--brand1), var(--brand2));
+        }
+        body{ background:#f5f7fb; }
+        .app-header{
+            background: var(--bg-grad);
+            color:#fff; border-bottom:0; box-shadow:0 8px 24px rgba(31,122,224,.25);
+        }
+        .brand-title{ font-weight:700; letter-spacing:.2px; }
+        .subtitle{ opacity:.9; }
+        .toolbar .btn{ border-radius:999px; }
+        .layout{
+            height: calc(100vh - 140px);
+        }
+        .card{
+            border:0; box-shadow:0 8px 24px rgba(0,0,0,.06); border-radius:18px;
+        }
+        /* Tree */
+        .tree{
+            list-style:none; padding-left:0; margin:0;
+        }
+        .tree li{
+            position:relative; padding-left:1.25rem;
+        }
+        .tree .node{
+            display:flex; align-items:center; gap:.5rem;
+            padding:.4rem .6rem; border-radius:10px; cursor:pointer;
+            transition: background .18s ease;
+        }
+        .tree .node:hover{ background:#eef3ff; }
+        .node .label{ flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .node .badge{ font-weight:600; }
+        .toggle{
+            width:22px; height:22px; border-radius:6px;
+            display:inline-flex; align-items:center; justify-content:center;
+            background:#f0f3fa; color:#555; border:1px solid #e5e9f2;
+            transition:transform .18s;
+        }
+        .toggle.rot{ transform:rotate(90deg); }
+        .children{ margin-left:1rem; border-left:1px dashed #e6eaf2; padding-left:.6rem; }
+        .search-hit{ background: #fff7cc; }
+        .empty-hint{ color:#9aa5b1; }
+        .sidebar{
+            overflow:auto; padding:14px; border-right:1px solid #eef1f6;
+        }
+        .detail{
+            overflow:auto; padding:18px;
+        }
+        .breadcrumb{
+            --bs-breadcrumb-divider: "›";
+        }
+        .meta-grid .meta{
+            background:#f6f8fc; border-radius:12px; padding:10px 12px; height:100%;
+        }
+        .fade-in{ animation:fade .22s ease; }
+        @keyframes fade{ from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none} }
+    </style>
+</head>
+<body>
+<!-- Header -->
+<header class="app-header py-4">
+    <div class="container">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <div class="h3 mb-1 brand-title">특성 코드 뷰어</div>
+                <div class="subtitle">연계 하위 코드를 트리로 빠르게 파악하세요</div>
+            </div>
+            <div class="toolbar d-flex gap-2">
+                <button id="btnExpandAll" class="btn btn-light btn-sm"><i class="bi bi-arrows-angle-expand me-1"></i>전체 펼치기</button>
+                <button id="btnCollapseAll" class="btn btn-light btn-sm"><i class="bi bi-arrows-angle-contract me-1"></i>전체 접기</button>
+                <button id="btnExport" class="btn btn-outline-light btn-sm"><i class="bi bi-download me-1"></i>JSON 내보내기</button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Main -->
+<main class="container my-4">
+    <div class="row g-4 layout">
+        <!-- Left: Tree -->
+        <div class="col-12 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body sidebar">
+                    <div class="d-flex gap-2 mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                            <input id="searchInput" type="text" class="form-control" placeholder="코드/명 검색 (Enter)">
+                            <button id="btnClear" class="btn btn-outline-secondary">초기화</button>
+                        </div>
+                    </div>
+                    <ul id="treeRoot" class="tree"></ul>
+                    <div id="emptyHint" class="text-center mt-4 d-none">
+                        <i class="bi bi-binoculars fs-3 d-block mb-2 text-secondary"></i>
+                        <div class="empty-hint">검색 결과가 없습니다.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Detail -->
+        <div class="col-12 col-lg-8">
+            <div class="card h-100">
+                <div class="card-body detail">
+                    <div id="breadcrumbBox" class="mb-3"></div>
+                    <h4 id="title" class="mb-2">노드를 선택하세요</h4>
+                    <p id="subtitle" class="text-secondary mb-4">트리에서 항목을 클릭하면 상세 정보가 표시됩니다.</p>
+
+                    <div class="row g-3 meta-grid">
+                        <div class="col-md-4">
+                            <div class="meta">
+                                <div class="small text-secondary mb-1">코드</div>
+                                <div id="metaCode" class="fw-bold">—</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="meta">
+                                <div class="small text-secondary mb-1">유형</div>
+                                <div id="metaType" class="fw-bold">—</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="meta">
+                                <div class="small text-secondary mb-1">하위 개수</div>
+                                <div id="metaCount" class="fw-bold">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="mb-3">
+                        <div class="small text-secondary mb-2">태그</div>
+                        <div id="tagBox" class="d-flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="small text-secondary mb-2">연결 관계(샘플)</div>
+                        <ul id="relationList" class="list-group list-group-flush"></ul>
+                    </div>
+
+                    <div>
+                        <div class="small text-secondary mb-2">하위 코드 분포(샘플)</div>
+                        <canvas id="miniChart" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- 샘플 데이터: 실제 시스템에서 교체하세요 -->
+<script>
+    // 평면 데이터 예시: id, parentId(null=루트), code, name, type, tags
+    const FEATURE_DATA = [
+        { id: 'A', parentId: null, code:'FEAT-A', name:'승강기 시스템', type:'Feature', tags:['Core','Safety'] },
+        { id: 'A1', parentId:'A', code:'FEAT-A1', name:'구동부', type:'Group', tags:['Motor','Inverter'] },
+        { id: 'A1-1', parentId:'A1', code:'FEAT-A1-1', name:'메인 모터', type:'Spec', tags:['AC','5.5kW'] },
+        { id: 'A1-2', parentId:'A1', code:'FEAT-A1-2', name:'인버터', type:'Spec', tags:['VVVF'] },
+
+        { id: 'A2', parentId:'A', code:'FEAT-A2', name:'도어부', type:'Group', tags:['Door'] },
+        { id: 'A2-1', parentId:'A2', code:'FEAT-A2-1', name:'도어 패널', type:'Spec', tags:['Stainless'] },
+        { id: 'A2-2', parentId:'A2', code:'FEAT-A2-2', name:'도어 오퍼레이터', type:'Spec', tags:['Brushless'] },
+
+        { id: 'B', parentId: null, code:'FEAT-B', name:'제어 시스템', type:'Feature', tags:['Control'] },
+        { id: 'B1', parentId:'B', code:'FEAT-B1', name:'메인 컨트롤러', type:'Group', tags:['PLC','I/O'] },
+        { id: 'B1-1', parentId:'B1', code:'FEAT-B1-1', name:'CPU 모듈', type:'Spec', tags:['ARM'] },
+        { id: 'B1-2', parentId:'B1', code:'FEAT-B1-2', name:'I/O 모듈', type:'Spec', tags:['24V'] },
+    ];
+</script>
+
+<!-- App Logic -->
+<script>
+    // 유틸: 평면 → 트리 변환
+    function buildTree(data){
+        const map = new Map(data.map(d=>[d.id, {...d, children:[]}]));
+        const roots=[];
+        data.forEach(d=>{
+            if(d.parentId){
+                const p=map.get(d.parentId);
+                if(p) p.children.push(map.get(d.id));
+            }else{
+                roots.push(map.get(d.id));
+            }
+        });
+        return roots;
+    }
+
+    // DOM 생성
+    function createTreeDOM(nodes){
+        const ul=document.createElement('ul'); ul.className='tree';
+        nodes.forEach(n=> ul.appendChild(createNodeLI(n)));
+        return ul;
+    }
+
+    function createNodeLI(node){
+        const li=document.createElement('li');
+        // row
+        const row=document.createElement('div'); row.className='node';
+        // toggle
+        const hasChildren = node.children && node.children.length>0;
+        const tgl=document.createElement('span');
+        tgl.className='toggle' + (hasChildren ? '' : ' invisible');
+        tgl.innerHTML='<i class="bi bi-caret-right-fill"></i>';
+        // label
+        const label=document.createElement('div'); label.className='label';
+        label.title = `${node.code} · ${node.name}`;
+        label.innerHTML = `<span class="fw-semibold">${node.name}</span> <span class="text-secondary ms-1">(${node.code})</span>`;
+        // badge
+        const badge=document.createElement('span');
+        badge.className='badge bg-primary-subtle text-primary border border-primary-subtle';
+        badge.textContent = (node.children?.length||0);
+
+        row.appendChild(tgl); row.appendChild(label); row.appendChild(badge);
+        li.appendChild(row);
+
+        // children
+        if(hasChildren){
+            const childBox=document.createElement('div'); childBox.className='children';
+            node.children.forEach(ch=> childBox.appendChild(createNodeLI(ch)));
+            li.appendChild(childBox);
+            // 초기: 접기
+            childBox.style.display='none';
+        }
+
+        // 이벤트
+        row.addEventListener('click', (e)=>{
+            e.stopPropagation();
+            selectNode(node, row);
+        });
+        if(hasChildren){
+            tgl.addEventListener('click', (e)=>{
+                e.stopPropagation();
+                const box=li.querySelector(':scope > .children');
+                const open = box.style.display!=='none';
+                box.style.display = open? 'none':'block';
+                tgl.classList.toggle('rot', !open);
+            });
+            // 라벨 클릭 시도 토글 (아이콘 작게 클릭 어려운 사용자 고려)
+            label.addEventListener('dblclick', (e)=> {
+                e.stopPropagation();
+                tgl.click();
+            });
+        }
+        return li;
+    }
+
+    // 선택 처리
+    let currentRow = null;
+    function selectNode(node, rowEl){
+        if(currentRow) currentRow.classList.remove('bg-light');
+        currentRow = rowEl; currentRow.classList.add('bg-light');
+
+        // 브레드크럼
+        renderBreadcrumb(node.id);
+
+        // 메타
+        document.getElementById('title').textContent = `${node.name}`;
+        document.getElementById('subtitle').textContent = node.code;
+        document.getElementById('metaCode').textContent = node.code || '—';
+        document.getElementById('metaType').textContent = node.type || '—';
+        document.getElementById('metaCount').textContent = node.children?.length || 0;
+
+        // 태그
+        const tagBox=document.getElementById('tagBox'); tagBox.innerHTML='';
+        (node.tags||[]).forEach(t=>{
+            const s=document.createElement('span');
+            s.className='badge rounded-pill text-bg-light border';
+            s.textContent=t; tagBox.appendChild(s);
+        });
+        if((node.tags||[]).length===0){
+            tagBox.innerHTML='<span class="text-secondary">태그 없음</span>';
+        }
+
+        // 관계 리스트(샘플: 자식 나열)
+        const rel=document.getElementById('relationList'); rel.innerHTML='';
+        (node.children||[]).forEach(ch=>{
+            const li=document.createElement('li');
+            li.className='list-group-item d-flex justify-content-between align-items-center';
+            li.innerHTML=`<span>${ch.name} <span class="text-secondary">(${ch.code})</span></span>
+                      <span class="badge text-bg-secondary">${ch.children?.length||0}</span>`;
+            rel.appendChild(li);
+        });
+        if((node.children||[]).length===0){
+            rel.innerHTML='<li class="list-group-item text-secondary">하위 연결 없음</li>';
+        }
+
+        // 미니 차트(샘플: 자식 수를 유형별로 집계)
+        const cntByType = {};
+        (node.children||[]).forEach(ch=>{
+            cntByType[ch.type] = (cntByType[ch.type]||0)+1;
+        });
+        renderMiniChart(Object.keys(cntByType), Object.values(cntByType));
+    }
+
+    // 브레드크럼 계산
+    function renderBreadcrumb(nodeId){
+        const chain = [];
+        const map = new Map(FEATURE_DATA.map(d=>[d.id, d]));
+        let cur = map.get(nodeId);
+        while(cur){
+            chain.unshift(cur);
+            cur = cur.parentId ? map.get(cur.parentId) : null;
+        }
+        const box=document.getElementById('breadcrumbBox');
+        if(chain.length===0){ box.innerHTML=''; return; }
+        const html = `
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-2">
+            ${chain.map((n,i)=> `<li class="breadcrumb-item ${i===chain.length-1?'active':''}" ${i===chain.length-1?'aria-current="page"':''}>
+                ${i===chain.length-1? n.name : `<a href="#" data-goto="${n.id}">${n.name}</a>`}
+            </li>`).join('')}
+          </ol>
+        </nav>`;
+        box.innerHTML = html;
+        box.querySelectorAll('[data-goto]').forEach(a=>{
+            a.addEventListener('click',(e)=>{
+                e.preventDefault();
+                focusNodeById(a.dataset.goto);
+            });
+        });
+    }
+
+    // 노드 포커스(브레드크럼 클릭용)
+    function focusNodeById(id){
+        // 트리를 펼치며 해당 노드까지
+        const map = new Map(FEATURE_DATA.map(d=>[d.id, d]));
+        const path = [];
+        let cur = map.get(id);
+        while(cur){ path.unshift(cur.id); cur = cur.parentId? map.get(cur.parentId): null; }
+
+        // 루트에서 내려가며 open
+        let container = document.getElementById('treeRoot');
+        // 펼치기: children을 display:block
+        document.querySelectorAll('.children').forEach(el=> el.style.display='none');
+        document.querySelectorAll('.toggle').forEach(t=> t.classList.remove('rot'));
+
+        // 대상 row 찾기
+        const targetRow = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+        // 경로상의 children 열기
+        path.forEach(pid=>{
+            const li = document.querySelector(`li[data-id="${CSS.escape(pid)}"]`);
+            const box = li?.querySelector(':scope > .children');
+            const tgl = li?.querySelector(':scope > .node .toggle');
+            if(box){ box.style.display='block'; tgl?.classList.add('rot'); }
+        });
+        if(targetRow){
+            targetRow.scrollIntoView({block:'center', behavior:'smooth'});
+            targetRow.click();
+        }
+    }
+
+    // 검색
+    function searchTree(q){
+        const lower = q.trim().toLowerCase();
+        const nodes = document.querySelectorAll('#treeRoot .node');
+        let hitCount=0;
+        nodes.forEach(n=> n.classList.remove('search-hit'));
+        if(!lower){
+            document.getElementById('emptyHint').classList.add('d-none');
+            return;
+        }
+        // 모든 children 펼침 (검색 맥락 노출)
+        document.querySelectorAll('.children').forEach(el=> el.style.display='block');
+        document.querySelectorAll('.toggle').forEach(t=> t.classList.add('rot'));
+        document.querySelectorAll('#treeRoot li').forEach(li=>{
+            const label = li.querySelector(':scope > .node .label')?.textContent.toLowerCase() || '';
+            const match = label.includes(lower);
+            li.style.display = match ? '' : 'none';
+            if(match){ li.querySelector(':scope > .node')?.classList.add('search-hit'); hitCount++; }
+        });
+        document.getElementById('emptyHint').classList.toggle('d-none', hitCount>0);
+    }
+
+    // 차트
+    let chart;
+    function renderMiniChart(labels, data){
+        const ctx=document.getElementById('miniChart');
+        if(chart){ chart.destroy(); }
+        chart = new Chart(ctx, {
+            type:'bar',
+            data:{ labels, datasets:[{ label:'하위 코드 수', data }]},
+            options:{
+                responsive:true,
+                plugins:{ legend:{ display:false }},
+                scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
+            }
+        });
+    }
+
+    // 전체 펼치기/접기
+    function expandAll(){
+        document.querySelectorAll('.children').forEach(el=> el.style.display='block');
+        document.querySelectorAll('.toggle').forEach(t=> t.classList.add('rot'));
+    }
+    function collapseAll(){
+        document.querySelectorAll('.children').forEach(el=> el.style.display='none');
+        document.querySelectorAll('.toggle').forEach(t=> t.classList.remove('rot'));
+    }
+
+    // JSON 다운로드
+    function downloadJSON(filename, obj){
+        const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // 초기화
+    function init(){
+        // 트리 구성
+        const roots = buildTree(FEATURE_DATA);
+        const treeBox = document.getElementById('treeRoot');
+        treeBox.innerHTML='';
+        const dom = createTreeDOM(roots);
+        // LI에 data-id / ROW에 data-id 부여
+        dom.querySelectorAll('li').forEach(li=>{
+            const row = li.querySelector(':scope > .node');
+            const txt = row?.querySelector('.label')?.textContent || '';
+            // id 추출: 라벨 옆 코드가 아닌 실제 데이터 id를 저장해야 하므로 트리 생성 시 심자.
+        });
+        // 위 루프 대신 createNodeLI에서 부여
+        // → 수정: createNodeLI 내에서 세팅
+        // 실제로 세팅:
+        function stampIds(li){
+            const row = li.querySelector(':scope > .node');
+            // code/name 텍스트로 찾지 말고, 자식 .children의 유무에 따라 추정 불가 → 생성시 data-id 세팅으로 해결
+        }
+        // 다시 생성: 데이터 id stamp를 위해 재정의
+        treeBox.appendChild(createPatchedDOM(roots));
+
+        // 이벤트
+        document.getElementById('btnExpandAll').addEventListener('click', expandAll);
+        document.getElementById('btnCollapseAll').addEventListener('click', collapseAll);
+        document.getElementById('btnExport').addEventListener('click', ()=> downloadJSON('feature-tree.json', FEATURE_DATA));
+        const input = document.getElementById('searchInput');
+        input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ searchTree(input.value); }});
+        document.getElementById('btnClear').addEventListener('click', ()=>{
+            input.value=''; // 접고 보이기 복원
+            document.querySelectorAll('#treeRoot li').forEach(li=> li.style.display='');
+            document.querySelectorAll('#treeRoot .node').forEach(n=> n.classList.remove('search-hit'));
+            document.getElementById('emptyHint').classList.add('d-none');
+            collapseAll();
+        });
+
+        // 최초 루트 자동 선택
+        const firstRow = document.querySelector('#treeRoot .node');
+        if(firstRow){ firstRow.click(); }
+    }
+
+    // createNodeLI를 약간 확장: li와 row에 data-id 지정
+    function createPatchedDOM(nodes){
+        const ul=document.createElement('ul'); ul.className='tree';
+        nodes.forEach(n=> ul.appendChild(patchedLI(n)));
+        return ul;
+    }
+    function patchedLI(node){
+        const li=document.createElement('li'); li.setAttribute('data-id', node.id);
+        // row
+        const row=document.createElement('div'); row.className='node'; row.setAttribute('data-id', node.id);
+        const hasChildren = node.children && node.children.length>0;
+        const tgl=document.createElement('span');
+        tgl.className='toggle' + (hasChildren ? '' : ' invisible');
+        tgl.innerHTML='<i class="bi bi-caret-right-fill"></i>';
+        const label=document.createElement('div'); label.className='label';
+        label.title = `${node.code} · ${node.name}`;
+        label.innerHTML = `<span class="fw-semibold">${node.name}</span> <span class="text-secondary ms-1">(${node.code})</span>`;
+        const badge=document.createElement('span');
+        badge.className='badge bg-primary-subtle text-primary border border-primary-subtle';
+        badge.textContent = (node.children?.length||0);
+        row.appendChild(tgl); row.appendChild(label); row.appendChild(badge);
+        li.appendChild(row);
+
+        if(hasChildren){
+            const box=document.createElement('div'); box.className='children';
+            node.children.forEach(ch=> box.appendChild(patchedLI(ch)));
+            li.appendChild(box);
+            box.style.display='none';
+        }
+        row.addEventListener('click', (e)=>{ e.stopPropagation(); selectNode(node, row); });
+        if(hasChildren){
+            tgl.addEventListener('click', (e)=>{
+                e.stopPropagation();
+                const box=li.querySelector(':scope > .children');
+                const open = box.style.display!=='none';
+                box.style.display = open? 'none':'block';
+                tgl.classList.toggle('rot', !open);
+            });
+            label.addEventListener('dblclick', (e)=> { e.stopPropagation(); tgl.click(); });
+        }
+        return li;
+    }
+
+    // 시작
+    init();
+</script>
+</body>
+</html>

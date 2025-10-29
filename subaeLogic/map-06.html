@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <title>특성 코드 트리 뷰어</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- jsTree -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css" rel="stylesheet">
+
+    <style>
+        :root{
+            --brand-grad: linear-gradient(135deg,#4f46e5 0%, #16a085 100%);
+        }
+        body{
+            background: #f5f7fb;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, "Apple SD Gothic Neo", "맑은 고딕", "Malgun Gothic", sans-serif;
+        }
+        .app-header{
+            background: var(--brand-grad);
+            color: #fff;
+            border-bottom-left-radius: 24px;
+            border-bottom-right-radius: 24px;
+            box-shadow: 0 10px 30px rgba(79,70,229,.25);
+        }
+        .app-header .title{
+            font-weight: 700;
+            letter-spacing: .2px;
+        }
+        .kpi-card{
+            border: 0;
+            border-radius: 18px;
+            box-shadow: 0 8px 22px rgba(0,0,0,.06);
+        }
+        .kpi-value{
+            font-weight: 700;
+            font-size: 1.6rem;
+        }
+        .toolbar .btn{
+            border-radius: 12px;
+        }
+        .tree-wrap{
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 8px 22px rgba(0,0,0,.06);
+            padding: 16px;
+            height: calc(100vh - 260px);
+            overflow: auto;
+        }
+        .detail-wrap{
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 8px 22px rgba(0,0,0,.06);
+            padding: 16px;
+            height: calc(100vh - 260px);
+            overflow: auto;
+        }
+        .badge-soft{
+            background: #eef2ff;
+            color: #3730a3;
+            border-radius: 8px;
+            padding: .35rem .55rem;
+            font-weight: 600;
+        }
+        /* jsTree selection aesthetic */
+        .jstree-default .jstree-clicked{
+            background: rgba(79,70,229,.12) !important;
+            border-radius: 8px;
+        }
+        .jstree-default .jstree-hovered{
+            background: rgba(79,70,229,.08) !important;
+            border-radius: 8px;
+        }
+        .muted{
+            color:#6b7280;
+        }
+        .search-hint{
+            font-size:.85rem;
+            color:#64748b;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="app-header py-4">
+    <div class="container-fluid">
+        <div class="d-flex flex-wrap align-items-center justify-content-between">
+            <div class="mb-3 mb-md-0">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-diagram-3 fs-2"></i>
+                    <div>
+                        <div class="title h3 mb-0">특성 코드 트리 뷰어</div>
+                        <div class="opacity-75">Feature Code → Child Code 관계를 한눈에</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="toolbar d-flex gap-2">
+                <button id="btnExpandAll" class="btn btn-light">
+                    <i class="bi bi-arrows-angle-expand me-1"></i> 전체 펼치기
+                </button>
+                <button id="btnCollapseAll" class="btn btn-light">
+                    <i class="bi bi-arrows-angle-contract me-1"></i> 전체 접기
+                </button>
+                <button id="btnCopyPath" class="btn btn-outline-light">
+                    <i class="bi bi-clipboard-check me-1"></i> 선택 경로 복사
+                </button>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="row g-3 mt-3">
+            <div class="col-12 col-md-4">
+                <div class="card kpi-card">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted">총 코드 수</div>
+                            <div id="kpiTotal" class="kpi-value">-</div>
+                        </div>
+                        <i class="bi bi-hash fs-2 text-primary"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="card kpi-card">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted">루트 개수</div>
+                            <div id="kpiRoots" class="kpi-value">-</div>
+                        </div>
+                        <i class="bi bi-diagram-3 fs-2 text-success"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="card kpi-card">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted">리프 개수</div>
+                            <div id="kpiLeaves" class="kpi-value">-</div>
+                        </div>
+                        <i class="bi bi-tree fs-2 text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="row mt-3">
+            <div class="col-12 col-lg-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input id="searchInput" type="text" class="form-control" placeholder="코드/명칭 검색 (예: FC-1001, 도어 타입, 속성명)">
+                    <button id="btnClearSearch" class="btn btn-outline-light">초기화</button>
+                </div>
+                <div class="search-hint mt-1">검색은 트리에서 즉시 하이라이트됩니다. (엔터 없이 실시간)</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Main -->
+<div class="container-fluid mt-4">
+    <div class="row g-4">
+        <div class="col-12 col-lg-6">
+            <div class="tree-wrap">
+                <div id="tree"></div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="detail-wrap">
+                <div class="d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>선택한 코드 상세</h5>
+                    <span class="badge-soft" id="selType">-</span>
+                </div>
+                <hr/>
+                <dl class="row">
+                    <dt class="col-sm-3">코드</dt>
+                    <dd class="col-sm-9" id="selCode" class="fw-bold">-</dd>
+
+                    <dt class="col-sm-3">명칭</dt>
+                    <dd class="col-sm-9" id="selName">-</dd>
+
+                    <dt class="col-sm-3">설명</dt>
+                    <dd class="col-sm-9" id="selDesc" class="muted">-</dd>
+
+                    <dt class="col-sm-3">경로</dt>
+                    <dd class="col-sm-9"><code id="selPath">-</code></dd>
+
+                    <dt class="col-sm-3">자식 수</dt>
+                    <dd class="col-sm-9" id="selChildrenCount">-</dd>
+                </dl>
+                <div>
+                    <button id="btnOpenAllUnder" class="btn btn-outline-primary btn-sm me-2"><i class="bi bi-plus-square me-1"></i>하위 전체 펼치기</button>
+                    <button id="btnCloseAllUnder" class="btn btn-outline-secondary btn-sm"><i class="bi bi-dash-square me-1"></i>하위 전체 접기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+    <div id="mainToast" class="toast align-items-center text-bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="toastBody">복사되었습니다.</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<!-- JS libs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    /** --------------------------------------------------------------------------------
+     * 1) 데모 데이터
+     * - 실제에선 서버에서 가져와 jsTree 포맷으로 내려주세요.
+     *   { id, parent, text, li_attr, data: { code, name, desc, type } }
+     *   parent === '#' 이면 루트
+     * --------------------------------------------------------------------------------*/
+    const demoNodes = [
+        { id:'FC-1000', parent:'#', text:'FC-1000 · 승강기(엘리베이터)', icon:'bi bi-box', data:{code:'FC-1000', name:'승강기(엘리베이터)', desc:'최상위 특성', type:'FEATURE'} },
+        { id:'FC-1100', parent:'FC-1000', text:'FC-1100 · 구동방식', icon:'bi bi-gear', data:{code:'FC-1100', name:'구동방식', desc:'트랙션/유압 등', type:'GROUP'} },
+        { id:'FC-1110', parent:'FC-1100', text:'FC-1110 · 트랙션', icon:'bi bi-cpu', data:{code:'FC-1110', name:'트랙션', desc:'와이어 로프 방식', type:'OPTION'} },
+        { id:'FC-1120', parent:'FC-1100', text:'FC-1120 · 유압', icon:'bi bi-droplet', data:{code:'FC-1120', name:'유압', desc:'오일 유압 방식', type:'OPTION'} },
+
+        { id:'FC-1200', parent:'FC-1000', text:'FC-1200 · 도어타입', icon:'bi bi-door-open', data:{code:'FC-1200', name:'도어타입', desc:'센터/사이드 등', type:'GROUP'} },
+        { id:'FC-1210', parent:'FC-1200', text:'FC-1210 · 센터도어', icon:'bi bi-columns', data:{code:'FC-1210', name:'센터도어', desc:'중앙 개폐', type:'OPTION'} },
+        { id:'FC-1220', parent:'FC-1200', text:'FC-1220 · 사이드도어', icon:'bi bi-layout-sidebar-inset', data:{code:'FC-1220', name:'사이드도어', desc:'측면 개폐', type:'OPTION'} },
+
+        { id:'FC-1300', parent:'FC-1000', text:'FC-1300 · 속도 등급', icon:'bi bi-speedometer2', data:{code:'FC-1300', name:'속도 등급', desc:'m/s', type:'GROUP'} },
+        { id:'FC-1310', parent:'FC-1300', text:'FC-1310 · 1.0 m/s', icon:'bi bi-lightning', data:{code:'FC-1310', name:'1.0 m/s', desc:'저속', type:'OPTION'} },
+        { id:'FC-1320', parent:'FC-1300', text:'FC-1320 · 1.75 m/s', icon:'bi bi-lightning', data:{code:'FC-1320', name:'1.75 m/s', desc:'중속', type:'OPTION'} },
+        { id:'FC-1330', parent:'FC-1300', text:'FC-1330 · 2.5 m/s', icon:'bi bi-lightning', data:{code:'FC-1330', name:'2.5 m/s', desc:'고속', type:'OPTION'} }
+    ];
+
+    /** --------------------------------------------------------------------------------
+     * 2) jsTree 초기화
+     * - 플러그인: search, wholerow, types
+     * - 대용량 시 AJAX 패턴 아래 주석 참고
+     * --------------------------------------------------------------------------------*/
+    let $tree = $('#tree');
+    let treeApi = null;
+
+    $(function(){
+        $tree
+            .on('ready.jstree', function(){
+                treeApi = $tree.jstree(true);
+                updateKpis();
+                // 첫 루트 펼치기
+                treeApi.open_node('FC-1000');
+            })
+            .on('select_node.jstree', function(e, data){
+                const node = data.node;
+                renderDetail(node);
+            })
+            .jstree({
+                core:{
+                    check_callback: true,
+                    data: demoNodes,
+                    // 대용량/지연로딩 예시 (서버에서 children만 반환)
+                    // data: function (obj, cb) {
+                    //   const parentId = obj.id === '#' ? 'ROOT' : obj.id;
+                    //   fetch(`/api/feature-codes?parent=${encodeURIComponent(parentId)}`)
+                    //     .then(res => res.json())
+                    //     .then(list => cb(list))
+                    //     .catch(() => cb([]));
+                    // }
+                },
+                plugins: ['search','wholerow','types'],
+                types: {
+                    'default': { 'icon': 'bi bi-dot' }
+                }
+            });
+
+        // 검색
+        let to = false;
+        $('#searchInput').on('keyup', function () {
+            if(to){ clearTimeout(to); }
+            to = setTimeout(function () {
+                const v = $('#searchInput').val();
+                $tree.jstree(true).search(v);
+            }, 150);
+        });
+        $('#btnClearSearch').on('click', () => {
+            $('#searchInput').val('');
+            $tree.jstree(true).clear_search();
+        });
+
+        // 전체 펼치기/접기
+        $('#btnExpandAll').on('click', () => $tree.jstree(true).open_all());
+        $('#btnCollapseAll').on('click', () => $tree.jstree(true).close_all());
+
+        // 선택 경로 복사
+        $('#btnCopyPath').on('click', copySelectedPath);
+
+        // 하위 전체 펼치기/접기
+        $('#btnOpenAllUnder').on('click', () => {
+            const sel = $tree.jstree(true).get_selected(true)[0];
+            if(!sel) return;
+            openAllUnder(sel);
+        });
+        $('#btnCloseAllUnder').on('click', () => {
+            const sel = $tree.jstree(true).get_selected(true)[0];
+            if(!sel) return;
+            closeAllUnder(sel);
+        });
+    });
+
+    /** --------------------------------------------------------------------------------
+     * 3) 상세 패널 렌더링
+     * --------------------------------------------------------------------------------*/
+    function renderDetail(node){
+        const d = (node && node.data) || {};
+        const path = getPathText(node);
+
+        $('#selType').text(d.type || '-');
+        $('#selCode').text(d.code || node?.id || '-');
+        $('#selName').text(d.name || node?.text || '-');
+        $('#selDesc').text(d.desc || '-');
+        $('#selPath').text(path || '-');
+
+        const childrenCount = node?.children_d?.length ?? 0;
+        $('#selChildrenCount').text(childrenCount);
+    }
+
+    function getPathText(node){
+        if(!node) return '';
+        const api = $tree.jstree(true);
+        const ancestors = api.get_path(node, ' > ');
+        return ancestors; // already text path
+    }
+
+    function copySelectedPath(){
+        const sel = $tree.jstree(true).get_selected(true)[0];
+        const text = sel ? getPathText(sel) : '';
+        if(!text){
+            showToast('선택된 노드가 없습니다.');
+            return;
+        }
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('경로가 복사되었습니다.');
+        });
+    }
+
+    function openAllUnder(node){
+        const api = $tree.jstree(true);
+        api.open_node(node);
+        (node.children_d || []).forEach(id => api.open_node(id));
+    }
+    function closeAllUnder(node){
+        const api = $tree.jstree(true);
+        (node.children_d || []).forEach(id => api.close_node(id));
+        api.close_node(node);
+    }
+
+    /** --------------------------------------------------------------------------------
+     * 4) KPI 계산
+     * --------------------------------------------------------------------------------*/
+    function updateKpis(){
+        const api = $tree.jstree(true);
+        const all = api.get_json('#', {flat:true});
+        const total = all.length;
+        const roots = all.filter(n => n.parent === '#').length;
+        const leaves = all.filter(n => !n.children || n.children.length === 0).length;
+
+        $('#kpiTotal').text(total.toLocaleString());
+        $('#kpiRoots').text(roots.toLocaleString());
+        $('#kpiLeaves').text(leaves.toLocaleString());
+    }
+
+    /** --------------------------------------------------------------------------------
+     * 5) 토스트
+     * --------------------------------------------------------------------------------*/
+    function showToast(message){
+        const el = document.getElementById('mainToast');
+        document.getElementById('toastBody').innerText = message;
+        const t = new bootstrap.Toast(el);
+        t.show();
+    }
+
+    /** --------------------------------------------------------------------------------
+     * 6) 서버 연동 가이드 (예시)
+     *
+     *  [백엔드 → jsTree 포맷]
+     *   - Java (예: ArrayList<HashMap<String,String>>) 를 아래 형태로 변환하여 JSON 응답:
+     *     [
+     *       { "id":"FC-1000", "parent":"#", "text":"FC-1000 · 승강기", "data":{ "code":"FC-1000", "name":"승강기", "desc":"...", "type":"FEATURE" } },
+     *       { "id":"FC-1100", "parent":"FC-1000", "text":"FC-1100 · 구동방식", "data":{ ... } }
+     *     ]
+     *
+     *  [지연 로딩]
+     *    - 처음엔 루트만 내려주고, 특정 노드를 펼칠 때 parent=노드ID 로 자식만 반환
+     *    - 위의 core.data 함수를 fetch 로 교체하면 됩니다.
+     *
+     *  [JSP/서블릿 예시 응답]
+     *    response.setContentType("application/json; charset=UTF-8");
+     *    out.print(jsonString);  // 위 포맷
+     * --------------------------------------------------------------------------------*/
+</script>
+</body>
+</html>
