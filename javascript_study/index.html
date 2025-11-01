@@ -2,13 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!--<meta name="viewport" content="width=device-width, initial-scale=1">-->
     <title>Document</title>
     <!--<script type="module" src="./promise-chaining.js"></script>-->
-    <script src="./script.js" defer></script>
+    <!--<script src="./script.js" defer></script>-->
+
+
+    <script>
+        const output = function () {
+            console.log('함수실행함');
+        };
+
+        const dateFormMaker = function () {
+            console.log(document.querySelector("#target-year-input").value)
+        };
+    </script>
+
 </head>
 <body>
-<button id="btn">버튼</button>
+
+<input id="target-year-input" class="target-input" />
+<button id="btn" onclick="dateFormMaker()">버튼</button>
 
 </body>
 </html>
