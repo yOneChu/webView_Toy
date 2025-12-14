@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>제품 조회 & 분석 대시보드</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="./dist/plugins/fontawesome-free/css/all.min.css">
+
+    <!-- AdminLTE -->
+    <link rel="stylesheet" href="./dist/css/adminlte.min.css">
+
+    <!-- DataTables -->
+    <link rel="stylesheet" href="./dist/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="./dist/plugins/datatables-responsive/css/responsive.bootstrap4.min.css">
+    <link rel="stylesheet" href="./dist/plugins/datatables-buttons/css/buttons.bootstrap4.min.css">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --hyundai-blue: #003876;
+            --hyundai-light-blue: #0066cc;
+            --hyundai-gray: #f8f9fa;
+            --hyundai-dark-gray: #6c757d;
+            --hyundai-red: #dc3545;
+            --hyundai-green: #28a745;
+        }
+
+        body { background: var(--hyundai-gray); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        .page-hero {
+            background: linear-gradient(135deg, var(--hyundai-blue) 0%, var(--hyundai-light-blue) 100%);
+            color: #fff;
+            border-radius: 14px;
+            padding: 18px 22px;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+            margin-bottom: 18px;
+        }
+
+        .page-hero h1 { margin: 0; font-weight: 700; font-size: 1.55rem; }
+        .page-hero p { margin: 4px 0 0; opacity: 0.92; }
+
+        .card-soft {
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+            border: 0;
+        }
+
+        .kpi {
+            border-left: 4px solid var(--hyundai-light-blue);
+            border-radius: 14px;
+            padding: 14px 16px;
+            background: #fff;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+            height: 100%;
+        }
+        .kpi .val { font-size: 1.6rem; font-weight: 800; color: var(--hyundai-blue); margin: 0; }
+        .kpi .lbl { font-size: 0.85rem; color: var(--hyundai-dark-gray); margin: 4px 0 0; }
+
+        .btn-hyundai {
+            background: var(--hyundai-blue);
+            border-color: var(--hyundai-blue);
+            color: #fff;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 8px 12px;
+        }
+        .btn-hyundai:hover { background: var(--hyundai-light-blue); border-color: var(--hyundai-light-blue); color: #fff; }
+
+        .filter-box {
+            background: #fff;
+            border-radius: 14px;
+            padding: 16px 16px 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 14px;
+        }
+
+        table.dataTable tbody tr.selected { background: rgba(0,102,204,0.10) !important; }
+
+        .modal-header {
+            background: var(--hyundai-blue);
+            color: white;
+            border-radius: 14px 14px 0 0;
+        }
+
+        .chart-card { padding: 14px 14px 10px; }
+        .chart-title { font-weight: 800; color: #1b2b4b; margin-bottom: 10px; }
+
+        .small-hint { font-size: 0.82rem; color: var(--hyundai-dark-gray); }
+    </style>
+</head>
+
+<body class="hold-transition sidebar-mini text-sm">
+<div class="wrapper">
+
+    <div class="content-wrapper" style="background: transparent;">
+        <div class="container-fluid pt-3">
+
+            <div class="page-hero">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                        <h1><i class="fas fa-industry me-2"></i>제품 조회</h1>
+                        <p>호기/속도/기종/브랜드/담당자 기준으로 조회하고, 분석 버튼으로 통찰 대시보드를 확인하세요.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-light" id="btnReset">
+                            <i class="fas fa-undo me-1"></i>초기화
+                        </button>
+                        <button class="btn btn-hyundai" id="btnAnalyzeAll">
+                            <i class="fas fa-chart-pie me-1"></i>분석(현재 조회결과)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI -->
+            <div class="row g-3 mb-2">
+                <div class="col-6 col-lg-3">
+                    <div class="kpi">
+                        <p class="val" id="kpiTotal">0</p>
+                        <p class="lbl">조회 결과 건수</p>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="kpi">
+                        <p class="val" id="kpiAvgSpeed">-</p>
+                        <p class="lbl">평균 속도 (m/min)</p>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="kpi">
+                        <p class="val" id="kpiMaxSpeed">-</p>
+                        <p class="lbl">최대 속도 (m/min)</p>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="kpi">
+                        <p class="val" id="kpiBrandCnt">0</p>
+                        <p class="lbl">브랜드 종류 수</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filter-box">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">호기번호</label>
+                        <input class="form-control" id="fHo" placeholder="예: HYC-00123" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">속도(m/min)</label>
+                        <select class="form-control" id="fSpeed">
+                            <option value="">전체</option>
+                            <option value="<=120">≤ 120</option>
+                            <option value="121~180">121 ~ 180</option>
+                            <option value="181~240">181 ~ 240</option>
+                            <option value=">240">> 240</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">기종</label>
+                        <input class="form-control" id="fType" placeholder="예: GTLX" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">브랜드</label>
+                        <input class="form-control" id="fBrand" placeholder="예: HYUNDAI" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">담당자</label>
+                        <input class="form-control" id="fOwner" placeholder="예: 홍길동" />
+                    </div>
+                    <div class="col-md-1 d-grid">
+                        <button class="btn btn-hyundai" id="btnSearch">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-2 small-hint">
+                    <i class="fas fa-info-circle me-1"></i>
+                    팁: 테이블 행을 클릭하면 선택됩니다. 선택 후 “행 분석” 버튼으로 해당 행 중심 분석도 가능하게 확장할 수 있습니다.
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="card card-soft">
+                <div class="card-header" style="border:0; padding: 14px 16px;">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div style="font-weight:900; color: var(--hyundai-blue);">
+                            <i class="fas fa-table me-2"></i>제품 목록
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-secondary" id="btnExportCsv">
+                                <i class="fas fa-file-csv me-1"></i>CSV
+                            </button>
+                            <button class="btn btn-hyundai" id="btnAnalyzeSelected">
+                                <i class="fas fa-bolt me-1"></i>분석(선택행 기준)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body pt-0">
+                    <div class="table-responsive">
+                        <table id="productTable" class="table table-hover nowrap" style="width:100%">
+                            <thead>
+                            <tr>
+                                <th>엘리베이터 호기번호</th>
+                                <th>속도(m/min)</th>
+                                <th>기종</th>
+                                <th>브랜드</th>
+                                <th>담당자</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Analyze Modal -->
+    <div class="modal fade" id="analyzeModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius: 14px;">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-chart-line me-2"></i>분석 대시보드</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+
+                    <div class="row g-3 mb-2" id="dashKpis"></div>
+
+                    <div class="row g-3">
+                        <div class="col-lg-6">
+                            <div class="card card-soft chart-card">
+                                <div class="chart-title"><i class="fas fa-tachometer-alt me-2"></i>속도 구간 분포</div>
+                                <canvas id="chartSpeedBins" height="140"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card card-soft chart-card">
+                                <div class="chart-title"><i class="fas fa-tags me-2"></i>브랜드 비중</div>
+                                <canvas id="chartBrandDonut" height="140"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-7">
+                            <div class="card card-soft chart-card">
+                                <div class="chart-title"><i class="fas fa-layer-group me-2"></i>기종 TOP</div>
+                                <canvas id="chartTypeTop" height="140"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-5">
+                            <div class="card card-soft chart-card">
+                                <div class="chart-title"><i class="fas fa-user-check me-2"></i>담당자별 건수</div>
+                                <canvas id="chartOwner" height="140"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="alert alert-info mb-0" id="insightBox">
+                                <b>인사이트</b><br/>
+                                -
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Scripts -->
+<script src="./dist/js/jquery-3.7.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script src="./dist/plugins/datatables/jquery.dataTables.min.js"></script>
+<script src="./dist/plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
+<script src="./dist/plugins/datatables-responsive/js/dataTables.responsive.min.js"></script>
+<script src="./dist/plugins/datatables-responsive/js/responsive.bootstrap4.min.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/dataTables.buttons.min.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/buttons.bootstrap4.min.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+<script>
+    // =========================
+    // 1) 샘플 데이터 (서버 연동 시 교체)
+    // =========================
+    const sampleData = [
+        {ho:"HYC-00021", speed:120, type:"STO",  brand:"HYUNDAI", owner:"김영환"},
+        {ho:"HYC-00022", speed:180, type:"GTLX", brand:"HYUNDAI", owner:"김영환"},
+        {ho:"HYC-00023", speed:240, type:"GTLX", brand:"HYUNDAI", owner:"홍길동"},
+        {ho:"HYC-00024", speed:300, type:"HGS",  brand:"HYUNDAI", owner:"이몽룡"},
+        {ho:"HYC-00025", speed:150, type:"STO",  brand:"HYUNDAI", owner:"홍길동"},
+        {ho:"HYC-00026", speed:210, type:"GTLX", brand:"HYUNDAI", owner:"홍길동"},
+        {ho:"HYC-00027", speed:90,  type:"RM",   brand:"HYUNDAI", owner:"성춘향"},
+        {ho:"HYC-00028", speed:105, type:"RM",   brand:"HYUNDAI", owner:"성춘향"},
+        {ho:"HYC-00029", speed:180, type:"STO",  brand:"HYUNDAI", owner:"이몽룡"},
+        {ho:"HYC-00030", speed:240, type:"HGS",  brand:"HYUNDAI", owner:"김영환"},
+        {ho:"HYC-00031", speed:360, type:"HGS",  brand:"HYUNDAI", owner:"김영환"},
+        {ho:"HYC-00032", speed:200, type:"GTLX", brand:"HYUNDAI", owner:"홍길동"},
+    ];
+
+    let table;
+    let currentRows = [...sampleData];
+    let selectedRow = null;
+
+    // Chart instances
+    let chSpeed=null, chBrand=null, chType=null, chOwner=null;
+
+    // =========================
+    // 2) 유틸
+    // =========================
+    const fmtNum = (n) => (n ?? 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const uniq = (arr) => [...new Set(arr)];
+
+    function groupCount(rows, keyFn) {
+        const m = new Map();
+        rows.forEach(r => {
+            const k = keyFn(r);
+            m.set(k, (m.get(k) || 0) + 1);
+        });
+        // Map -> array
+        return [...m.entries()].sort((a,b)=>b[1]-a[1]);
+    }
+
+    function speedBin(speed) {
+        if (speed <= 120) return "≤120";
+        if (speed <= 180) return "121~180";
+        if (speed <= 240) return "181~240";
+        return ">240";
+    }
+
+    // =========================
+    // 3) 테이블 초기화/갱신
+    // =========================
+    function renderTable(rows) {
+        currentRows = rows;
+
+        // KPI 갱신
+        const total = rows.length;
+        const speeds = rows.map(r=>r.speed);
+        const avg = total ? (speeds.reduce((a,b)=>a+b,0)/total) : 0;
+        const max = total ? Math.max(...speeds) : 0;
+        const brandCnt = uniq(rows.map(r=>r.brand)).length;
+
+        $("#kpiTotal").text(fmtNum(total));
+        $("#kpiAvgSpeed").text(total ? avg.toFixed(1) : "-");
+        $("#kpiMaxSpeed").text(total ? fmtNum(max) : "-");
+        $("#kpiBrandCnt").text(fmtNum(brandCnt));
+
+        // DataTables
+        if (table) {
+            table.clear().rows.add(rows).draw();
+            selectedRow = null;
+            return;
+        }
+
+        table = $("#productTable").DataTable({
+            data: rows,
+            responsive: true,
+            pageLength: 10,
+            lengthChange: true,
+            ordering: true,
+            info: true,
+            columns: [
+                { data: "ho" },
+                { data: "speed" },
+                { data: "type" },
+                { data: "brand" },
+                { data: "owner" },
+            ],
+            language: {
+                search: "빠른검색:",
+                lengthMenu: "_MENU_ 개씩 보기",
+                info: "총 _TOTAL_건 중 _START_~_END_",
+                paginate: { previous: "이전", next: "다음" },
+                emptyTable: "데이터가 없습니다."
+            }
+        });
+
+        // 행 선택
+        $('#productTable tbody').on('click', 'tr', function () {
+            if ($(this).hasClass('selected')) {
+                $(this).removeClass('selected');
+                selectedRow = null;
+            } else {
+                table.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+                selectedRow = table.row(this).data();
+            }
+        });
+    }
+
+    // =========================
+    // 4) 필터링
+    // =========================
+    function applyFilters() {
+        const ho = ($("#fHo").val() || "").trim().toLowerCase();
+        const speedSel = $("#fSpeed").val();
+        const type = ($("#fType").val() || "").trim().toLowerCase();
+        const brand = ($("#fBrand").val() || "").trim().toLowerCase();
+        const owner = ($("#fOwner").val() || "").trim().toLowerCase();
+
+        const rows = sampleData.filter(r => {
+            if (ho && !r.ho.toLowerCase().includes(ho)) return false;
+            if (type && !r.type.toLowerCase().includes(type)) return false;
+            if (brand && !r.brand.toLowerCase().includes(brand)) return false;
+            if (owner && !r.owner.toLowerCase().includes(owner)) return false;
+
+            if (speedSel) {
+                if (speedSel === "<=120" && !(r.speed <= 120)) return false;
+                if (speedSel === "121~180" && !(r.speed >= 121 && r.speed <= 180)) return false;
+                if (speedSel === "181~240" && !(r.speed >= 181 && r.speed <= 240)) return false;
+                if (speedSel === ">240" && !(r.speed > 240)) return false;
+            }
+            return true;
+        });
+
+        renderTable(rows);
+    }
+
+    // =========================
+    // 5) 분석 모달
+    // =========================
+    function destroyCharts() {
+        [chSpeed, chBrand, chType, chOwner].forEach(ch => { if (ch) ch.destroy(); });
+        chSpeed=chBrand=chType=chOwner=null;
+    }
+
+    function buildInsights(rows) {
+        if (!rows.length) return "조회 결과가 없어 인사이트를 계산할 수 없습니다.";
+
+        const speedAvg = rows.reduce((a,r)=>a+r.speed,0)/rows.length;
+        const speedMax = Math.max(...rows.map(r=>r.speed));
+        const topType = groupCount(rows, r=>r.type)[0];
+        const topOwner = groupCount(rows, r=>r.owner)[0];
+
+        const fastRatio = rows.filter(r=>r.speed>240).length / rows.length * 100;
+
+        return [
+            `평균 속도는 <b>${speedAvg.toFixed(1)} m/min</b>, 최대 속도는 <b>${speedMax} m/min</b> 입니다.`,
+            `가장 많은 기종은 <b>${topType[0]}</b> (총 ${topType[1]}건) 입니다.`,
+            `담당자 기준으로는 <b>${topOwner[0]}</b>가 ${topOwner[1]}건으로 가장 많습니다.`,
+            `고속(>240 m/min) 비중은 <b>${fastRatio.toFixed(1)}%</b> 입니다.`
+        ].join("<br/>");
+    }
+
+    function renderDashboard(rows, titleSuffix="(현재 조회결과)") {
+        destroyCharts();
+
+        // KPI(모달 내부)
+        const total = rows.length;
+        const speeds = rows.map(r=>r.speed);
+        const avg = total ? (speeds.reduce((a,b)=>a+b,0)/total) : 0;
+        const max = total ? Math.max(...speeds) : 0;
+        const brandCnt = uniq(rows.map(r=>r.brand)).length;
+        const typeCnt = uniq(rows.map(r=>r.type)).length;
+
+        $("#dashKpis").html(`
+      <div class="col-6 col-lg-3"><div class="kpi"><p class="val">${fmtNum(total)}</p><p class="lbl">분석 대상 건수 ${titleSuffix}</p></div></div>
+      <div class="col-6 col-lg-3"><div class="kpi"><p class="val">${total?avg.toFixed(1):"-"}</p><p class="lbl">평균 속도</p></div></div>
+      <div class="col-6 col-lg-3"><div class="kpi"><p class="val">${total?fmtNum(max):"-"}</p><p class="lbl">최대 속도</p></div></div>
+      <div class="col-6 col-lg-3"><div class="kpi"><p class="val">${fmtNum(brandCnt)}</p><p class="lbl">브랜드 수 / 기종 수 ${fmtNum(typeCnt)}</p></div></div>
+    `);
+
+        // 속도 구간 분포
+        const bins = ["≤120","121~180","181~240",">240"];
+        const binCounts = bins.map(b => rows.filter(r=>speedBin(r.speed)===b).length);
+
+        chSpeed = new Chart(document.getElementById("chartSpeedBins"), {
+            type: "bar",
+            data: { labels: bins, datasets: [{ label: "건수", data: binCounts }] },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+
+        // 브랜드 도넛
+        const brandPairs = groupCount(rows, r=>r.brand);
+        chBrand = new Chart(document.getElementById("chartBrandDonut"), {
+            type: "doughnut",
+            data: {
+                labels: brandPairs.map(x=>x[0]),
+                datasets: [{ data: brandPairs.map(x=>x[1]) }]
+            },
+            options: { plugins: { legend: { position: "bottom" } } }
+        });
+
+        // 기종 TOP
+        const typePairs = groupCount(rows, r=>r.type).slice(0, 6);
+        chType = new Chart(document.getElementById("chartTypeTop"), {
+            type: "bar",
+            data: {
+                labels: typePairs.map(x=>x[0]),
+                datasets: [{ label: "건수", data: typePairs.map(x=>x[1]) }]
+            },
+            options: {
+                indexAxis: "y",
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+
+        // 담당자별
+        const ownerPairs = groupCount(rows, r=>r.owner).slice(0, 8);
+        chOwner = new Chart(document.getElementById("chartOwner"), {
+            type: "bar",
+            data: {
+                labels: ownerPairs.map(x=>x[0]),
+                datasets: [{ label: "건수", data: ownerPairs.map(x=>x[1]) }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+
+        // 인사이트 텍스트
+        $("#insightBox").html(`<b>인사이트</b><br/>${buildInsights(rows)}`);
+    }
+
+    // =========================
+    // 6) CSV Export (간단)
+    // =========================
+    function exportCsv(rows) {
+        const header = ["엘리베이터 호기번호","속도","기종","브랜드","담당자"];
+        const lines = [header.join(",")].concat(rows.map(r => [r.ho, r.speed, r.type, r.brand, r.owner].join(",")));
+        const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8;"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "products.csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // =========================
+    // 7) 이벤트 바인딩
+    // =========================
+    $(document).ready(function() {
+        renderTable(sampleData);
+
+        $("#btnSearch").on("click", applyFilters);
+        $("#btnReset").on("click", function() {
+            $("#fHo,#fType,#fBrand,#fOwner").val("");
+            $("#fSpeed").val("");
+            renderTable(sampleData);
+        });
+
+        $("#btnAnalyzeAll").on("click", function() {
+            renderDashboard(currentRows, "(현재 조회결과)");
+            new bootstrap.Modal(document.getElementById("analyzeModal")).show();
+        });
+
+        $("#btnAnalyzeSelected").on("click", function() {
+            if (!selectedRow) {
+                alert("먼저 테이블에서 행을 선택하세요.");
+                return;
+            }
+            // 선택행의 '담당자/기종/브랜드'와 유사한 데이터만 묶어서 분석(예시)
+            const rows = currentRows.filter(r =>
+                r.owner === selectedRow.owner || r.type === selectedRow.type || r.brand === selectedRow.brand
+            );
+            renderDashboard(rows, `(선택행 기준: ${selectedRow.ho})`);
+            new bootstrap.Modal(document.getElementById("analyzeModal")).show();
+        });
+
+        $("#btnExportCsv").on("click", function() {
+            exportCsv(currentRows);
+        });
+
+        // 모달 닫힐 때 차트 정리
+        $("#analyzeModal").on("hidden.bs.modal", destroyCharts);
+    });
+</script>
+
+<script src="./dist/js/adminlte.min.js"></script>
+</body>
+</html>
