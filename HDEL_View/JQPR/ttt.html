@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="icon" type="image/png" href="/resources/favicon.ico" />
+
+    <title>JQPR 현황</title>
+
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="./dist/plugins/fontawesome-free/css/all.min.css">
+
+    <!-- DataTables -->
+    <link rel="stylesheet" href="./dist/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="./dist/plugins/datatables-responsive/css/responsive.bootstrap4.min.css">
+    <link rel="stylesheet" href="./dist/plugins/datatables-buttons/css/buttons.bootstrap4.min.css">
+
+    <link rel="stylesheet" href="./dist/plugins/select2/css/select2.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="./dist/css/adminlte.min.css">
+
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
+
+
+    <style>
+        :root {
+            --he-primary: #00a651;          /* 현대엘리베이터 메인 그린 느낌 */
+            --he-primary-dark: #008044;
+            --he-primary-light: #e6f7ef;
+            --he-gray-bg: #f5f7fa;
+            --he-text-main: #212529;
+            --he-text-muted: #6c757d;
+            --he-border: #dde2e8;
+        }
+
+        /* 전체 배경 톤 */
+        body {
+            background-color: var(--he-gray-bg);
+        }
+
+        /* 모듈러 도면 조회 헤더 */
+        .module-header {
+            margin-bottom: 1rem;
+        }
+
+        .module-header-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--he-text-main);
+        }
+
+        .module-header-subtitle {
+            font-size: 0.9rem;
+            color: var(--he-text-muted);
+        }
+
+        /* 상단 요약 카드 */
+        .module-stat-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 1rem 1.1rem;
+            border: 1px solid var(--he-border);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .module-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .module-stat-label {
+            font-size: 0.8rem;
+            color: var(--he-text-muted);
+        }
+
+        .module-stat-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--he-primary-dark);
+        }
+
+        .module-stat-desc {
+            font-size: 0.75rem;
+            color: var(--he-text-muted);
+        }
+
+        /* 조회 조건 박스 */
+        .module-search-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            border: 1px solid var(--he-border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            padding: 1.25rem 1.25rem 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .module-search-title {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .module-search-title i {
+            color: var(--he-primary);
+        }
+
+        .module-search-help {
+            font-size: 0.75rem;
+            color: var(--he-text-muted);
+        }
+
+        /* DataTable 컨테이너 */
+        .module-table-wrap {
+            background-color: #ffffff;
+            border-radius: 12px;
+            border: 1px solid var(--he-border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            overflow: hidden;
+        }
+
+        .module-table-header {
+            background: linear-gradient(90deg, var(--he-primary-dark), var(--he-primary));
+            color: #ffffff;
+            padding: 0.6rem 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .module-table-header-title {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .module-table-header-actions button {
+            font-size: 0.75rem;
+        }
+
+        /* 공통 버튼 */
+        .btn-he-primary {
+            background-color: var(--he-primary);
+            border-color: var(--he-primary);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .btn-he-primary:hover {
+            background-color: var(--he-primary-dark);
+            border-color: var(--he-primary-dark);
+            color: #ffffff;
+        }
+
+        .btn-he-outline {
+            border-color: var(--he-primary);
+            color: var(--he-primary);
+            font-weight: 500;
+            background-color: #ffffff;
+        }
+
+        .btn-he-outline:hover {
+            background-color: var(--he-primary-light);
+            border-color: var(--he-primary-dark);
+            color: var(--he-primary-dark);
+        }
+
+        /* 폼 컨트롤 */
+        .module-search-card .form-label {
+            font-size: 0.8rem;
+            margin-bottom: 0.15rem;
+            color: var(--he-text-main);
+            font-weight: 500;
+        }
+
+        .module-search-card .form-control,
+        .module-search-card .select2-selection--single {
+            font-size: 0.8rem;
+            border-radius: 6px;
+        }
+
+        /* 작은 도움말 */
+        .module-search-hint {
+            border-top: 1px dashed var(--he-border);
+            margin-top: 0.75rem;
+            padding-top: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--he-text-muted);
+        }
+
+        /* 카드 안 작은 배지 */
+        .module-badge {
+            border-radius: 999px;
+            padding: 0.15rem 0.5rem;
+            font-size: 0.7rem;
+            border: 1px solid var(--he-primary);
+            color: var(--he-primary-dark);
+            background-color: var(--he-primary-light);
+        }
+
+        /* 테이블 */
+        #modDrawingTable thead th {
+            background-color: #f0f4f7;
+            border-bottom: 1px solid var(--he-border);
+            font-size: 0.78rem;
+            font-weight: 600;
+            vertical-align: middle;
+        }
+
+        #modDrawingTable tbody td {
+            font-size: 0.78rem;
+            vertical-align: middle;
+        }
+
+        #modDrawingTable tbody tr:hover {
+            background-color: #f9fcff;
+        }
+
+        /* 상태 칩 */
+        .badge-status {
+            border-radius: 999px;
+            padding: 0.1rem 0.55rem;
+            font-size: 0.7rem;
+        }
+
+        .badge-status-released {
+            background-color: #e6f7ef;
+            color: var(--he-primary-dark);
+        }
+
+        .badge-status-wip {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-status-ecn {
+            background-color: #e7f1ff;
+            color: #0c4da2;
+        }
+
+        .badge-status-obsolete {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+
+        /* 반응형 - 모바일에서 여백/정렬 조정 */
+        @media (max-width: 767.98px) {
+            .module-header-title {
+                font-size: 1.2rem;
+            }
+
+            .module-search-card {
+                padding: 1rem 0.9rem 0.8rem;
+            }
+
+            .module-table-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.4rem;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body class="hold-transition sidebar-mini text-sm" style="zoom:100%;">
+
+<div class="wrapper">
+
+    <!-- Navbar -->
+    <!-- <nav class="main-header navbar navbar-expand navbar-white navbar-light"> -->
+    <nav class="main-header navbar navbar-expand">
+        <!-- Left navbar links -->
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" data-widget="fullscreen" href="#" role="button">
+                    <i class="fas fa-expand-arrows-alt"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+
+    <!-- <jsp:include page="../dashboard/dashboardLayoutSideBar.jsp" flush="true">
+         <jsp:param name="menuType" value="dashboard" />
+     </jsp:include>
+ -->
+
+    <div class="content-wrapper">
+
+        <section class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1><i class="fas fa-building me-3"></i>JQPR 시스템</h1>
+                        <p class="mb-0">엘리베이터 설치 현장 비용 관리 시스템</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+
+                            <div class="custom-control custom-switch custom-switch-off-danger custom-switch-on-success">
+                                <input type="checkbox" class="custom-control-input" id="darkModeToggle">
+                                <label class="custom-control-label" for="darkModeToggle">🌓 다크모드</label>
+                            </div>
+                        </ol>
+                    </div>
+                </div>
+            </div><!-- /.container-fluid -->
+
+            <div class="col-md-12">
+                <div class="callout callout-danger">
+                    📢 도움말 <br>
+                    <font color="red">- 집계 기준:  중국법인 자재 제외, 최신 릴리즈, 엘리베이터 자재(BlockNo 1,2,3) </font><br>
+
+                    📝 사용 예시 <br>
+                    - 자재번호 201153* 입력 시, 자재번호에 '201153'로 시작하는 모든 자재 조회하여 Excel 출력<br>
+                    - *100325G02* 입력 시, 자재번호에 '100325G02' 포함된 모든 자재 출력 <br>
+                </div>
+            </div>
+        </section>
+
+
+        <div class="container-fluid">
+            <div class="row module-header align-items-center mb-3">
+                <div class="col-12 col-md-8">
+                    <div class="d-flex align-items-center mb-1">
+                        <i class="bi bi-grid-3x3-gap-fill me-2 text-success"></i>
+                        <span class="module-header-title">모듈러시스템 도면 조회</span>
+                    </div>
+                    <p class="module-header-subtitle mb-1">
+                        모듈러 프로젝트의 2D/3D 도면을 생산거점·상태별로 빠르게 조회하고 관리하는 화면입니다.
+                    </p>
+                    <span class="module-badge">
+            <i class="bi bi-pc-display-horizontal me-1"></i>PC · Tablet · Mobile 반응형
+        </span>
+                </div>
+                <div class="col-12 col-md-4 mt-2 mt-md-0 text-md-end">
+                    <button type="button" class="btn btn-he-outline btn-sm me-1">
+                        <i class="bi bi-question-circle me-1"></i>가이드
+                    </button>
+                    <button type="button" class="btn btn-he-primary btn-sm">
+                        <i class="bi bi-star me-1"></i>즐겨찾기 등록
+                    </button>
+                </div>
+            </div>
+
+            <!-- 상단 요약 카드 -->
+            <div class="row g-2 mb-3">
+                <div class="col-12 col-md-4">
+                    <div class="module-stat-card">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div>
+                                <div class="module-stat-label">전체 도면 수</div>
+                                <div class="module-stat-number" id="modTotalCount">0</div>
+                            </div>
+                            <i class="bi bi-file-earmark-text fs-3 text-muted"></i>
+                        </div>
+                        <div class="module-stat-desc">
+                            모듈러 프로젝트에 등록된 총 도면 개수입니다.
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="module-stat-card">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div>
+                                <div class="module-stat-label">금일 변경 도면</div>
+                                <div class="module-stat-number" id="modTodayChangedCount">0</div>
+                            </div>
+                            <i class="bi bi-arrow-repeat fs-3 text-muted"></i>
+                        </div>
+                        <div class="module-stat-desc">
+                            오늘 기준으로 수정/등록된 도면 수입니다.
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="module-stat-card">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div>
+                                <div class="module-stat-label">3D 뷰어 지원 도면</div>
+                                <div class="module-stat-number" id="modViewerCount">0</div>
+                            </div>
+                            <i class="bi bi-cube fs-3 text-muted"></i>
+                        </div>
+                        <div class="module-stat-desc">
+                            웹 3D 뷰어로 바로 확인 가능한 도면 수입니다.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 모바일용 검색조건 토글 버튼 -->
+            <div class="d-md-none mb-2">
+                <button class="btn btn-outline-secondary w-100 btn-sm" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#modSearchArea"
+                        aria-expanded="true" aria-controls="modSearchArea">
+                    <i class="bi bi-funnel me-1"></i> 조회 조건 열기/닫기
+                </button>
+            </div>
+
+            <!-- 조회 조건 영역 -->
+            <div id="modSearchArea" class="collapse show">
+                <div class="module-search-card">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="module-search-title">
+                            <i class="bi bi-funnel"></i>
+                            <span>도면 조회 조건</span>
+                        </div>
+                        <div class="d-none d-md-block">
+                            <button type="button" id="modBtnReset" class="btn btn-outline-secondary btn-sm me-1">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>초기화
+                            </button>
+                            <button type="button" id="modBtnSearch" class="btn btn-he-primary btn-sm">
+                                <i class="bi bi-search me-1"></i>조회
+                            </button>
+                        </div>
+                    </div>
+
+                    <form id="modSearchForm">
+                        <div class="row g-2">
+                            <!-- 1열 -->
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label">프로젝트 번호</label>
+                                <input type="text" class="form-control form-control-sm"
+                                       id="modProjectNo" name="projectNo"
+                                       placeholder="예: MP2025-001">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label">모듈 코드</label>
+                                <input type="text" class="form-control form-control-sm"
+                                       id="modModuleCode" name="moduleCode"
+                                       placeholder="예: MOD-CORE-01, *CORE*">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label">도면 번호</label>
+                                <input type="text" class="form-control form-control-sm"
+                                       id="modDrawingNo" name="drawingNo"
+                                       placeholder="예: 201153*, *100325G02*">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label">도면 명</label>
+                                <input type="text" class="form-control form-control-sm"
+                                       id="modDrawingName" name="drawingName"
+                                       placeholder="예: T-BOX 모듈 프레임">
+                            </div>
+
+                            <!-- 2열 -->
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label">모듈 타입</label>
+                                <select class="form-control form-control-sm select2"
+                                        id="modModuleType" name="moduleType" style="width: 100%;">
+                                    <option value="">전체</option>
+                                    <option value="CORE">코어 모듈</option>
+                                    <option value="UNIT">유닛 모듈</option>
+                                    <option value="SHAFT">승강로 모듈</option>
+                                    <option value="ETC">기타</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label">생산거점</label>
+                                <select class="form-control form-control-sm select2"
+                                        id="modPlant" name="plant" style="width: 100%;">
+                                    <option value="">전체</option>
+                                    <option value="KR00">국내(KR00)</option>
+                                    <option value="KC01">국내+상해(KC01)</option>
+                                    <option value="KC02">국내+상해 모듈러(KC02)</option>
+                                    <option value="IN_HYBRID01">국내_전기+인도_기계(IN_HYBRID01)</option>
+                                    <option value="HD_HD">US-[기계]HD_[전기]HD(HD_HD)</option>
+                                    <option value="GAL_INNOV">US-[기계]GAL_[전기]INNOV(GAL_INNOV)</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label">도면 상태</label>
+                                <select class="form-control form-control-sm select2"
+                                        id="modDrawingStatus" name="drawingStatus" style="width: 100%;">
+                                    <option value="">전체</option>
+                                    <option value="RELEASED">최신 릴리즈</option>
+                                    <option value="WIP">작성 중(WIP)</option>
+                                    <option value="ECN">변경 진행 중(ECN)</option>
+                                    <option value="OBSOLETE">사용 중지</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label">3D 뷰어 지원</label>
+                                <select class="form-control form-control-sm"
+                                        id="modViewerYn" name="viewerYn">
+                                    <option value="">전체</option>
+                                    <option value="Y">지원(Y)</option>
+                                    <option value="N">미지원(N)</option>
+                                </select>
+                            </div>
+
+                            <!-- 3열 -->
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label">최종 수정일(From)</label>
+                                <input type="date" class="form-control form-control-sm"
+                                       id="modModifiedFrom" name="modifiedFrom">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label">최종 수정일(To)</label>
+                                <input type="date" class="form-control form-control-sm"
+                                       id="modModifiedTo" name="modifiedTo">
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label">옵션</label>
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <div class="form-check form-check-inline mb-0">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="modLatestRevOnly" name="latestRevOnly" checked>
+                                        <label class="form-check-label" for="modLatestRevOnly">
+                                            최신 Revision만
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-inline mb-0">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="modIncludeDeleted" name="includeDeleted">
+                                        <label class="form-check-label" for="modIncludeDeleted">
+                                            삭제 도면 포함
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 모바일용 버튼(아래쪽) -->
+                            <div class="col-12 d-md-none mt-1">
+                                <div class="d-grid gap-1">
+                                    <button type="button" id="modBtnSearch_m" class="btn btn-he-primary btn-sm">
+                                        <i class="bi bi-search me-1"></i>조회
+                                    </button>
+                                    <button type="button" id="modBtnReset_m" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>초기화
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="module-search-hint">
+                            <div class="module-search-help mb-1">
+                                📝 <strong>검색 예시</strong>
+                            </div>
+                            <ul class="mb-0 ps-3">
+                                <li>도면번호 <code>201153*</code> 입력 → <strong>201153로 시작</strong>하는 도면 전체 조회</li>
+                                <li>도면번호 <code>*100325G02*</code> 입력 → <strong>100325G02 포함</strong> 도면 조회</li>
+                                <li>모듈코드 <code>*CORE*</code> 입력 → 코드에 <strong>CORE 포함</strong> 모듈 조회</li>
+                            </ul>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 결과 영역 -->
+            <div class="row mt-2">
+                <div class="col-12">
+                    <div class="module-table-wrap">
+                        <div class="module-table-header">
+                            <div class="module-table-header-title">
+                                <i class="bi bi-list-check"></i>
+                                <span>도면 조회 결과</span>
+                                <span class="badge bg-light text-dark ms-1" id="modResultCountBadge">0건</span>
+                            </div>
+                            <div class="module-table-header-actions">
+                                <button type="button" id="modBtnExportExcel"
+                                        class="btn btn-sm btn-outline-light">
+                                    <i class="bi bi-file-earmark-excel me-1"></i>Excel
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="modDrawingTable"
+                                   class="table table-sm table-hover mb-0">
+                                <thead>
+                                <tr>
+                                    <th style="width: 40px;">#</th>
+                                    <th>프로젝트</th>
+                                    <th>모듈 코드</th>
+                                    <th>도면 번호</th>
+                                    <th>Rev</th>
+                                    <th>도면 명</th>
+                                    <th>모듈 타입</th>
+                                    <th>생산거점</th>
+                                    <th>상태</th>
+                                    <th>최종 수정일</th>
+                                    <th style="width: 110px;">작업</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <!-- DataTables로 바인딩 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+
+
+        <footer class="main-footer">
+            <div class="float-right d-none d-sm-block">
+                <b>Version</b> 1.0.0
+            </div>
+            <strong>Copyright &copy; 2025 <a href="#">수배로직설계팀-김영환 M</a>.</strong> All rights reserved.
+        </footer>
+
+        <aside class="control-sidebar control-sidebar-dark">
+        </aside>
+
+    </div>
+
+
+</div>
+
+</body>
+
+<script src="./dist/js/jquery-3.7.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script src="./javascript/commonUtil.js"></script>
+<script src="./javascript/jqpr.js"></script>
+<script src="./javascript/StringUtil.js"></script>
+
+
+<!-- AdminLTE App -->
+<script src="./dist/js/adminlte.min.js"></script>
+
+
+<!-- Bootstrap 4 -->
+<%--<script src="./dist/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>--%>
+<!-- DataTables  & Plugins -->
+<script src="./dist/plugins/datatables/jquery.dataTables.min.js"></script>
+<script src="./dist/plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
+<script src="./dist/plugins/datatables-responsive/js/dataTables.responsive.min.js"></script>
+<script src="./dist/plugins/datatables-responsive/js/responsive.bootstrap4.min.js"></script>
+
+
+<script src="./dist/plugins/select2/js/select2.full.min.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/dataTables.buttons.min.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/buttons.bootstrap4.min.js"></script>
+<script src="./dist/plugins/jszip/jszip.min.js"></script>
+<script src="./dist/plugins/pdfmake/pdfmake.min.js"></script>
+<script src="./dist/plugins/pdfmake/vfs_fonts.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/buttons.html5.min.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/buttons.print.min.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/buttons.colVis.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+
+
+
+    }) // end document ready
+</script>
+
+</html>

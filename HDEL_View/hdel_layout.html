@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="icon" type="image/png" href="/resources/favicon.ico" />
+
+    <title>JQPR 현황</title>
+
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="./dist/plugins/fontawesome-free/css/all.min.css">
+
+    <!-- DataTables -->
+    <link rel="stylesheet" href="./dist/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="./dist/plugins/datatables-responsive/css/responsive.bootstrap4.min.css">
+    <link rel="stylesheet" href="./dist/plugins/datatables-buttons/css/buttons.bootstrap4.min.css">
+
+    <link rel="stylesheet" href="./dist/plugins/select2/css/select2.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="./dist/css/adminlte.min.css">
+
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
+
+
+    <style>
+        :root {
+            --hyundai-blue: #003876;
+            --hyundai-light-blue: #0066cc;
+            --hyundai-gray: #f8f9fa;
+            --hyundai-dark-gray: #6c757d;
+            --hyundai-red: #dc3545;
+            --hyundai-green: #28a745;
+        }
+
+        body {
+            background-color: var(--hyundai-gray);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--hyundai-blue) 0%, var(--hyundai-light-blue) 100%);
+            color: white;
+            padding: 1.5rem 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 2rem;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--hyundai-light-blue);
+            transition: transform 0.3s ease;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--hyundai-blue);
+            margin: 0;
+        }
+
+        .stats-label {
+            color: var(--hyundai-dark-gray);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .data-table {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .table-header {
+            background: var(--hyundai-blue);
+            color: white;
+            padding: 1rem;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .table th {
+            background: var(--hyundai-light-blue);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 1rem 0.75rem;
+        }
+
+        .table td {
+            padding: 1rem 0.75rem;
+            vertical-align: middle;
+            border-color: #e9ecef;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8f9ff;
+        }
+
+        .btn-hyundai {
+            background: var(--hyundai-blue);
+            border-color: var(--hyundai-blue);
+            color: white;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+        }
+
+        .btn-hyundai:hover {
+            background: var(--hyundai-light-blue);
+            border-color: var(--hyundai-light-blue);
+            color: white;
+        }
+
+        .cost-high {
+            color: var(--hyundai-red);
+            font-weight: 600;
+        }
+
+        .cost-medium {
+            color: #ffc107;
+            font-weight: 600;
+        }
+
+        .cost-low {
+            color: var(--hyundai-green);
+            font-weight: 600;
+        }
+
+        .search-box {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .modal-header {
+            background: var(--hyundai-blue);
+            color: white;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .form-control:focus {
+            border-color: var(--hyundai-light-blue);
+            box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+        }
+
+        .pagination .page-link {
+            color: var(--hyundai-blue);
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: var(--hyundai-blue);
+            border-color: var(--hyundai-blue);
+        }
+
+
+        .truncate-text {
+            display: block;
+            max-width: 300px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+
+        /* td 자체에 적용하거나, td 안에 div/span을 넣고 적용 */
+        td.truncated {
+            /* max-width는 td 자체에 적용하기 어려울 수 있으므로, 내부 요소에 적용하는 것이 좋음 */
+        }
+
+        /* 커스텀 툴팁을 위한 CSS */
+        .custom-tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.4;
+            max-width: 300px;
+            white-space: pre-wrap; /* 줄바꿈(\n) 유지 */
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+
+</head>
+
+
+<body class="hold-transition sidebar-mini text-sm" style="zoom:100%;">
+
+    <div class="wrapper">
+
+        <!-- Navbar -->
+        <!-- <nav class="main-header navbar navbar-expand navbar-white navbar-light"> -->
+        <nav class="main-header navbar navbar-expand">
+            <!-- Left navbar links -->
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" data-widget="fullscreen" href="#" role="button">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+
+       <!-- <jsp:include page="../dashboard/dashboardLayoutSideBar.jsp" flush="true">
+            <jsp:param name="menuType" value="dashboard" />
+        </jsp:include>
+    -->
+
+        <div class="content-wrapper">
+
+            <section class="content-header">
+                <div class="container-fluid">
+                    <div class="row mb-2">
+                        <div class="col-sm-6">
+                            <h1><i class="fas fa-building me-3"></i>JQPR 시스템</h1>
+                            <p class="mb-0">엘리베이터 설치 현장 비용 관리 시스템</p>
+                        </div>
+                        <div class="col-sm-6">
+                            <ol class="breadcrumb float-sm-right">
+
+                                <div class="custom-control custom-switch custom-switch-off-danger custom-switch-on-success">
+                                    <input type="checkbox" class="custom-control-input" id="darkModeToggle">
+                                    <label class="custom-control-label" for="darkModeToggle">🌓 다크모드</label>
+                                </div>
+                            </ol>
+                        </div>
+                    </div>
+                </div><!-- /.container-fluid -->
+
+                <div class="col-md-12">
+                    <div class="callout callout-danger">
+                        📢 도움말 <br>
+                        <font color="red">- 집계 기준:  중국법인 자재 제외, 최신 릴리즈, 엘리베이터 자재(BlockNo 1,2,3) </font><br>
+
+                        📝 사용 예시 <br>
+                        - 자재번호 201153* 입력 시, 자재번호에 '201153'로 시작하는 모든 자재 조회하여 Excel 출력<br>
+                        - *100325G02* 입력 시, 자재번호에 '100325G02' 포함된 모든 자재 출력 <br>
+                    </div>
+                </div>
+            </section>
+
+
+            <div class="container-fluid">
+                <!--내용-->
+
+            </div>
+
+
+            <footer class="main-footer">
+                <div class="float-right d-none d-sm-block">
+                    <b>Version</b> 1.0.0
+                </div>
+                <strong>Copyright &copy; 2025 <a href="#">수배로직설계팀-김영환 M</a>.</strong> All rights reserved.
+            </footer>
+
+            <aside class="control-sidebar control-sidebar-dark">
+            </aside>
+
+        </div>
+
+
+    </div>
+
+</body>
+
+<script src="./dist/js/jquery-3.7.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script src="./javascript/commonUtil.js"></script>
+<script src="./javascript/jqpr.js"></script>
+<script src="./javascript/StringUtil.js"></script>
+
+
+<!-- AdminLTE App -->
+<script src="./dist/js/adminlte.min.js"></script>
+
+
+<!-- Bootstrap 4 -->
+<%--<script src="./dist/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>--%>
+<!-- DataTables  & Plugins -->
+<script src="./dist/plugins/datatables/jquery.dataTables.min.js"></script>
+<script src="./dist/plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
+<script src="./dist/plugins/datatables-responsive/js/dataTables.responsive.min.js"></script>
+<script src="./dist/plugins/datatables-responsive/js/responsive.bootstrap4.min.js"></script>
+
+
+<script src="./dist/plugins/select2/js/select2.full.min.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/dataTables.buttons.min.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/buttons.bootstrap4.min.js"></script>
+<script src="./dist/plugins/jszip/jszip.min.js"></script>
+<script src="./dist/plugins/pdfmake/pdfmake.min.js"></script>
+<script src="./dist/plugins/pdfmake/vfs_fonts.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/buttons.html5.min.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/buttons.print.min.js"></script>
+<script src="./dist/plugins/datatables-buttons/js/buttons.colVis.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+
+
+
+    }) // end document ready
+</script>
+
+</html>
