@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>설계 임직원 교육 포털</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-light: #dbeafe;
+            --bg: #f3f4f6;
+            --sidebar-bg: #111827;
+            --sidebar-text: #9ca3af;
+            --sidebar-active: #e5e7eb;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --text-main: #111827;
+            --text-sub: #6b7280;
+            --danger: #ef4444;
+            --success: #16a34a;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ===== Sidebar ===== */
+        .sidebar {
+            width: 240px;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 16px;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 28px;
+        }
+
+        .sidebar-logo-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #1d4ed8, #22c55e);
+        }
+
+        .sidebar-logo-text {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f9fafb;
+        }
+
+        .sidebar-section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 16px 4px 8px;
+            color: #6b7280;
+        }
+
+        .nav-list {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 4px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .nav-link span.icon {
+            display: inline-flex;
+            width: 20px;
+            justify-content: center;
+        }
+
+        .nav-link.active {
+            background: rgba(37, 99, 235, 0.12);
+            color: var(--sidebar-active);
+        }
+
+        .nav-link:hover {
+            background: rgba(55, 65, 81, 0.6);
+            color: #e5e7eb;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            font-size: 12px;
+            color: #4b5563;
+            padding-top: 12px;
+            border-top: 1px solid #1f2933;
+        }
+
+        /* ===== Content ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            height: 58px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+
+        .topbar-left h1 {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .topbar-left span {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .badge {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-sub);
+        }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        /* ===== Main Area ===== */
+        .main {
+            padding: 20px 24px 32px;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .page-subtitle {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-bottom: 16px;
+        }
+
+        .alert-banner {
+            background: linear-gradient(90deg, #2563eb, #22c55e);
+            color: #f9fafb;
+            border-radius: 14px;
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .alert-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .alert-desc {
+            font-size: 12px;
+            opacity: 0.92;
+        }
+
+        .alert-tag {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(249, 250, 251, 0.6);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: none;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #ffffff;
+            color: #111827;
+        }
+
+        .btn-outline-light {
+            background: transparent;
+            border: 1px solid rgba(249, 250, 251, 0.6);
+            color: #f9fafb;
+        }
+
+        /* ===== Cards Row ===== */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 14px 14px 12px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .card-title {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .card-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .card-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        .card-tag.success {
+            background: rgba(22, 163, 74, 0.1);
+            color: var(--success);
+        }
+
+        .card-tag.warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .card-tag.danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .card-footer-text {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        /* ===== Main / Side columns ===== */
+        .columns {
+            display: grid;
+            grid-template-columns: 2.1fr 1.2fr;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            padding: 14px 14px 10px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .panel-subtitle {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
+            padding: 4px 8px;
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        .chip-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: var(--success);
+        }
+
+        .course-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .course-item {
+            padding: 8px 8px 6px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .course-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .course-title {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .course-meta {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+
+        .course-progress-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 6px;
+            border-radius: 999px;
+            background: #e5e7eb;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2563eb, #22c55e);
+        }
+
+        .progress-label {
+            font-size: 11px;
+            color: var(--text-sub);
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .panel-section-title {
+            font-size: 12px;
+            margin-top: 8px;
+            margin-bottom: 4px;
+            color: var(--text-sub);
+        }
+
+        .notice-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .notice-item {
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+        }
+
+        .notice-title {
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            max-width: 170px;
+        }
+
+        .notice-date {
+            font-size: 11px;
+            color: var(--text-sub);
+            white-space: nowrap;
+        }
+
+        .quick-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .btn-quick {
+            flex: 1 1 45%;
+            font-size: 12px;
+            padding: 6px 8px;
+            border-radius: 9px;
+            border: 1px solid var(--border-color);
+            background: #f9fafb;
+            cursor: pointer;
+        }
+
+        .btn-quick:hover {
+            background: #eef2ff;
+            border-color: #c7d2fe;
+        }
+
+        /* ===== Table Panel ===== */
+        .table-wrapper {
+            margin-top: 4px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        thead {
+            background: #f9fafb;
+        }
+
+        th, td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-sub);
+        }
+
+        tbody tr:hover {
+            background: #f3f4ff;
+        }
+
+        .tag {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .tag.gray {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .tag.red {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 960px) {
+            .sidebar {
+                display: none;
+            }
+
+            .topbar {
+                padding: 0 16px;
+            }
+
+            .main {
+                padding: 16px;
+            }
+
+            .grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .columns {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .alert-banner {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <!-- ===== Sidebar ===== -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-icon"></div>
+            <div class="sidebar-logo-text">설계 교육 포털</div>
+        </div>
+
+        <div>
+            <div class="sidebar-section-title">메인</div>
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#">
+                        <span class="icon">📊</span>
+                        <span>대시보드</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <span class="icon">📚</span>
+                        <span>교육 과정</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <span class="icon">🧑‍💻</span>
+                        <span>내 학습 현황</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-section-title">콘텐츠</div>
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <span class="icon">📁</span>
+                        <span>자료실 (도면/PLM)</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <span class="icon">📝</span>
+                        <span>퀴즈/평가</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-section-title">관리자</div>
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <span class="icon">⚙️</span>
+                        <span>교육 관리</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <span class="icon">👥</span>
+                        <span>수강자 관리</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            <div>오늘도 안전 설계 👷‍♂️</div>
+            <div style="font-size:11px; margin-top:2px;">v1.0 · Internal Only</div>
+        </div>
+    </aside>
+
+    <!-- ===== Content ===== -->
+    <div class="content">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <h1>설계 교육 대시보드</h1>
+                <span>신입/경력 설계자를 위한 실무 중심 교육 현황</span>
+            </div>
+            <div class="topbar-right">
+                <div class="badge">교육 담당자 모드</div>
+                <div class="user-info">
+                    <div class="user-avatar">KY</div>
+                    <div>
+                        <div class="user-name">김영환</div>
+                        <div class="user-role">PLM · 설계 교육 담당</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main -->
+        <main class="main">
+            <div class="page-title">오늘의 교육 현황</div>
+            <div class="page-subtitle">
+                신입 설계 인원 약 70명의 교육 진행 상황과 주요 공지를 한눈에 확인하세요.
+            </div>
+
+            <!-- Banner -->
+            <section class="alert-banner">
+                <div>
+                    <div class="alert-title">[신입 설계 교육 1기] 이번 주까지 기본 과정 80% 이상 수강 필요</div>
+                    <div class="alert-desc">
+                        PLM · BOM · 도면 기초 과정을 이번 주(금)까지 완료해야 OJT 배정이 가능합니다.
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span class="alert-tag">교육 기수: 2025-1기 · 설계</span>
+                    <button class="btn btn-primary">진행 현황 보기</button>
+                    <button class="btn btn-outline-light">공지 등록</button>
+                </div>
+            </section>
+
+            <!-- Cards -->
+            <section class="grid">
+                <article class="card">
+                    <div class="card-title">전체 교육 과정</div>
+                    <div class="card-value">12개</div>
+                    <div class="card-footer-text">PLM · BOM · 도면 · 변경관리 · 품질 등</div>
+                </article>
+
+                <article class="card">
+                    <div class="card-title">진행 중인 교육</div>
+                    <div class="card-value">4개</div>
+                    <div class="card-footer-text">
+                        <span class="card-tag.success card-tag">신입 필수 과정 집중 운영 중</span>
+                    </div>
+                </article>
+
+                <article class="card">
+                    <div class="card-title">교육 대상 인원</div>
+                    <div class="card-value">70명</div>
+                    <div class="card-footer-text">신입/경력 설계 인원 기준</div>
+                </article>
+
+                <article class="card">
+                    <div class="card-title">평균 수강률</div>
+                    <div class="card-value">63%</div>
+                    <div class="card-footer-text">
+                        <span class="card-tag.warning card-tag">금주 목표: 80%</span>
+                    </div>
+                </article>
+            </section>
+
+            <!-- Main Columns -->
+            <section class="columns">
+                <!-- Left: 진행 중인 교육 -->
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">진행 중인 교육 과정</div>
+                            <div class="panel-subtitle">설계 직무 필수 교육 중심으로 구성된 과정입니다.</div>
+                        </div>
+                        <div class="chip">
+                            <span class="chip-dot"></span>
+                            <span>실시간 진행 모니터링</span>
+                        </div>
+                    </div>
+
+                    <ul class="course-list">
+                        <li class="course-item">
+                            <div class="course-top">
+                                <div>
+                                    <div class="course-title">PLM & BOM 기본 교육</div>
+                                    <div class="course-meta">필수 · 예상 수강시간 3h · 담당: 김영환</div>
+                                </div>
+                                <span class="tag">기초</span>
+                            </div>
+                            <div class="course-progress-row">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 72%;"></div>
+                                </div>
+                                <div class="progress-label">72%</div>
+                            </div>
+                        </li>
+
+                        <li class="course-item">
+                            <div class="course-top">
+                                <div>
+                                    <div class="course-title">도면 규격 및 설계 표준</div>
+                                    <div class="course-meta">필수 · 예상 수강시간 2h · 담당: 홍길동</div>
+                                </div>
+                                <span class="tag gray">도면</span>
+                            </div>
+                            <div class="course-progress-row">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 58%;"></div>
+                                </div>
+                                <div class="progress-label">58%</div>
+                            </div>
+                        </li>
+
+                        <li class="course-item">
+                            <div class="course-top">
+                                <div>
+                                    <div class="course-title">변경관리(ECO) 실무</div>
+                                    <div class="course-meta">선택 · 예상 수강시간 1.5h · 담당: 이설계</div>
+                                </div>
+                                <span class="tag red">변경관리</span>
+                            </div>
+                            <div class="course-progress-row">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 41%;"></div>
+                                </div>
+                                <div class="progress-label">41%</div>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <div style="display:flex; justify-content:flex-end; margin-top:4px;">
+                        <button class="btn" style="font-size:12px; padding:6px 10px; border:1px solid var(--border-color); border-radius:999px; background:#f9fafb;">
+                            전체 교육 목록 보기
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Right: 공지 + 빠른메뉴 -->
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">이번 주 공지 / 빠른 메뉴</div>
+                            <div class="panel-subtitle">신입 설계자에게 꼭 필요한 안내 사항을 정리합니다.</div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section-title">공지사항</div>
+                    <ul class="notice-list">
+                        <li class="notice-item">
+                            <span class="notice-title">[필독] 2025-1기 OJT 배정 기준 안내</span>
+                            <span class="notice-date">2025-12-26</span>
+                        </li>
+                        <li class="notice-item">
+                            <span class="notice-title">PLM 기본 교육 수료 기한 연장 안내</span>
+                            <span class="notice-date">2025-12-24</span>
+                        </li>
+                        <li class="notice-item">
+                            <span class="notice-title">설계 표준 도면 샘플 업데이트</span>
+                            <span class="notice-date">2025-12-20</span>
+                        </li>
+                    </ul>
+
+                    <div class="panel-section-title">빠른 메뉴</div>
+                    <div class="quick-buttons">
+                        <button class="btn-quick">신입 필수 교육 바로가기</button>
+                        <button class="btn-quick">내 교육 현황 보기</button>
+                        <button class="btn-quick">PLM 매뉴얼 다운로드</button>
+                        <button class="btn-quick">문의/피드백 남기기</button>
+                    </div>
+                </section>
+            </section>
+
+            <!-- 일정 / 수강관리 -->
+            <section class="panel">
+                <div class="panel-header">
+                    <div>
+                        <div class="panel-title">교육 일정 및 수강 관리</div>
+                        <div class="panel-subtitle">다가오는 교육 일정과 수강 대상자를 관리할 수 있습니다.</div>
+                    </div>
+                    <button class="btn" style="font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid var(--border-color); background:#f9fafb;">
+                        전체 일정 관리
+                    </button>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>일자</th>
+                            <th>교육명</th>
+                            <th>대상</th>
+                            <th>방식</th>
+                            <th class="text-right">신청 / 정원</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td>2025-01-05</td>
+                            <td>PLM & BOM 기본 교육 (1차)</td>
+                            <td>신입 설계 1기</td>
+                            <td><span class="tag">집체 + 온라인</span></td>
+                            <td class="text-right">28 / 30명</td>
+                            <td class="text-right">
+                                <button class="btn" style="font-size:11px; padding:4px 8px; border-radius:999px; border:1px solid var(--border-color); background:#ffffff;">
+                                    상세
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2025-01-07</td>
+                            <td>도면 규격 및 설계 표준 (기초)</td>
+                            <td>전체 설계</td>
+                            <td><span class="tag gray">온라인</span></td>
+                            <td class="text-right">52 / 70명</td>
+                            <td class="text-right">
+                                <button class="btn" style="font-size:11px; padding:4px 8px; border-radius:999px; border:1px solid var(--border-color); background:#ffffff;">
+                                    상세
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2025-01-10</td>
+                            <td>변경관리(ECO) 실무 Case Study</td>
+                            <td>선택 참가</td>
+                            <td><span class="tag red">오프라인</span></td>
+                            <td class="text-right">15 / 25명</td>
+                            <td class="text-right">
+                                <button class="btn" style="font-size:11px; padding:4px 8px; border-radius:999px; border:1px solid var(--border-color); background:#ffffff;">
+                                    상세
+                                </button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>
