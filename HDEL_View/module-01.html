@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>모듈러시스템팀 도면 조회</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- 폰트 (사내망에서 안되면 삭제해도 동작) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --hd-primary: #005a8c;   /* 현대 느낌 나는 딥블루 */
+            --hd-accent: #00a49a;   /* 포인트 티엘 */
+            --hd-bg: #f5f7fb;
+            --hd-card-bg: #ffffff;
+            --hd-border: #e5e7eb;
+            --hd-text: #111827;
+            --hd-muted: #6b7280;
+            --hd-radius-lg: 18px;
+            --hd-shadow-soft: 0 14px 35px rgba(15, 23, 42, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: radial-gradient(circle at top left, #e0f2fe 0, #f5f7fb 36%, #ffffff 80%);
+            color: var(--hd-text);
+        }
+
+        .app-shell {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 헤더 */
+        .hd-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            backdrop-filter: blur(12px);
+            background: rgba(255,255,255,0.86);
+            border-bottom: 1px solid rgba(148,163,184,0.25);
+        }
+
+        .hd-header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .hd-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hd-logo-mark {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--hd-primary), var(--hd-accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: .02em;
+        }
+
+        .hd-brand-text-main {
+            font-weight: 700;
+            font-size: 15px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--hd-primary);
+        }
+
+        .hd-brand-text-sub {
+            font-size: 11px;
+            color: var(--hd-muted);
+        }
+
+        .hd-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--hd-muted);
+        }
+
+        .hd-badge {
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(148,163,184,0.7);
+            font-size: 11px;
+        }
+
+        /* 메인 레이아웃 */
+        .app-main {
+            flex: 1;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 18px 16px 32px;
+        }
+
+        /* 히어로 섹션 */
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        .hero-main {
+            padding: 18px 20px;
+            border-radius: var(--hd-radius-lg);
+            background: linear-gradient(135deg, rgba(0,90,140,0.9), rgba(0,164,154,0.9));
+            color: #e5f6ff;
+            box-shadow: var(--hd-shadow-soft);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-main::after {
+            /* 엘리베이터 틀 느낌의 장식 */
+            content: "";
+            position: absolute;
+            right: -40px;
+            top: -40px;
+            width: 180px;
+            height: 180px;
+            border-radius: 40px;
+            border: 1px solid rgba(255,255,255,0.18);
+            box-shadow: 0 0 0 1px rgba(15,23,42,0.12);
+            opacity: .7;
+        }
+
+        .hero-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .hero-subtitle {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-bottom: 16px;
+        }
+
+        .hero-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .hero-tag {
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(15,23,42,0.25);
+            font-size: 11px;
+        }
+
+        .hero-meta {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+
+        .hero-meta strong {
+            font-weight: 600;
+        }
+
+        .hero-side {
+            padding: 14px 16px;
+            border-radius: var(--hd-radius-lg);
+            background: rgba(255,255,255,0.96);
+            border: 1px solid rgba(148,163,184,0.3);
+            box-shadow: 0 10px 30px rgba(15,23,42,0.08);
+            font-size: 12px;
+            color: var(--hd-muted);
+        }
+
+        .hero-side-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--hd-primary);
+            margin-bottom: 10px;
+        }
+
+        .hero-side-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 6px;
+        }
+
+        .hero-side-list li {
+            padding: 3px 0;
+        }
+
+        /* 검색 카드 */
+        .card {
+            border-radius: var(--hd-radius-lg);
+            background: var(--hd-card-bg);
+            border: 1px solid rgba(148,163,184,0.25);
+            box-shadow: 0 10px 28px rgba(15,23,42,0.08);
+            padding: 16px 16px 18px;
+            margin-bottom: 18px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            gap: 8px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--hd-primary);
+        }
+
+        .card-subtitle {
+            font-size: 11px;
+            color: var(--hd-muted);
+        }
+
+        .pill {
+            padding: 3px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(148,163,184,0.45);
+            font-size: 11px;
+            color: var(--hd-muted);
+        }
+
+        /* 폼 */
+        .search-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px 12px;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .form-field label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--hd-muted);
+        }
+
+        .form-control,
+        .form-select {
+            width: 100%;
+            padding: 7px 10px;
+            border-radius: 10px;
+            border: 1px solid var(--hd-border);
+            font-size: 12px;
+            outline: none;
+            transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+            background-color: #ffffff;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: rgba(0,164,154,0.9);
+            box-shadow: 0 0 0 1px rgba(0,164,154,0.35);
+            background-color: #f9feff;
+        }
+
+        .search-actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            background: #e5e7eb;
+            color: #111827;
+            transition: background .15s ease, color .15s ease, box-shadow .15s ease, transform .08s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--hd-primary), var(--hd-accent));
+            color: #ffffff;
+            box-shadow: 0 10px 22px rgba(0,90,140,0.35);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 26px rgba(0,90,140,0.4);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border-color: rgba(148,163,184,0.7);
+            color: var(--hd-muted);
+        }
+
+        .btn-ghost:hover {
+            background: #f3f4f6;
+        }
+
+        .search-hint {
+            font-size: 11px;
+            color: var(--hd-muted);
+        }
+
+        /* 결과 카드 */
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .results-count strong {
+            color: var(--hd-primary);
+        }
+
+        .results-tools {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toggle-group {
+            display: inline-flex;
+            border-radius: 999px;
+            background: #f3f4f6;
+            padding: 2px;
+        }
+
+        .toggle-btn {
+            border: none;
+            background: transparent;
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            cursor: pointer;
+            color: var(--hd-muted);
+        }
+
+        .toggle-btn.active {
+            background: #ffffff;
+            color: var(--hd-primary);
+            box-shadow: 0 1px 4px rgba(15,23,42,0.2);
+        }
+
+        .badge-soft {
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #ecfeff;
+            color: var(--hd-accent);
+            font-size: 11px;
+        }
+
+        /* 테이블 */
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 14px;
+            border: 1px solid var(--hd-border);
+            background: #ffffff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 720px;
+        }
+
+        thead {
+            background: #f9fafb;
+        }
+
+        th, td {
+            padding: 8px 10px;
+            font-size: 12px;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--hd-muted);
+            border-bottom: 1px solid var(--hd-border);
+        }
+
+        tbody tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        tbody tr:hover {
+            background: #eff6ff;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .chip {
+            padding: 2px 7px;
+            border-radius: 999px;
+            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .chip-green {
+            background: #ecfdf3;
+            color: #15803d;
+        }
+
+        .chip-sky {
+            background: #e0f2fe;
+            color: #075985;
+        }
+
+        .chip-gray {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .link {
+            color: var(--hd-primary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 12px;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 24px 12px;
+            font-size: 12px;
+            color: var(--hd-muted);
+        }
+
+        .no-data span {
+            display: block;
+            margin-top: 4px;
+            font-size: 11px;
+        }
+
+        /* 푸터 */
+        .hd-footer {
+            border-top: 1px solid rgba(148,163,184,0.25);
+            padding: 10px 16px 14px;
+            font-size: 11px;
+            color: var(--hd-muted);
+        }
+
+        .hd-footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        /* 반응형 */
+        @media (max-width: 960px) {
+            .hero {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .hero-main {
+                order: 1;
+            }
+
+            .hero-side {
+                order: 2;
+            }
+
+            .search-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hd-header-inner {
+                padding-inline: 12px;
+            }
+
+            .app-container {
+                padding: 12px;
+            }
+
+            .hero-main {
+                padding: 14px 14px;
+            }
+
+            .card {
+                padding: 14px 12px 16px;
+            }
+
+            .search-grid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .results-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .hd-brand-text-sub {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <!-- HEADER -->
+    <header class="hd-header">
+        <div class="hd-header-inner">
+            <div class="hd-brand">
+                <div class="hd-logo-mark">H</div>
+                <div>
+                    <div class="hd-brand-text-main">HYUNDAI ELEVATOR</div>
+                    <div class="hd-brand-text-sub">Modular System · Drawing Viewer</div>
+                </div>
+            </div>
+            <div class="hd-header-right">
+                <span class="hd-badge">모듈러시스템팀 전용</span>
+                <span>v1.0 · Internal</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-main">
+        <div class="app-container">
+            <!-- HERO SECTION -->
+            <section class="hero">
+                <div class="hero-main">
+                    <div class="hero-title">모듈러 도면 통합 조회</div>
+                    <div class="hero-subtitle">
+                        모듈러 프로젝트별 도면을 한 화면에서 조회하고, 버전·상태를 직관적으로 비교할 수 있는 전용 시스템입니다.
+                    </div>
+                    <div class="hero-tags">
+                        <div class="hero-tag">도면 버전관리</div>
+                        <div class="hero-tag">모듈 타입 비교</div>
+                        <div class="hero-tag">PLM / Vault 연계 전제</div>
+                    </div>
+                    <div class="hero-meta">
+                        오늘 할 일 · <strong>도면번호 & 프로젝트</strong>만 입력하면
+                        현재 설계 상태를 빠르게 확인할 수 있습니다.
+                    </div>
+                </div>
+                <aside class="hero-side">
+                    <div class="hero-side-title">조회 TIP</div>
+                    <ul class="hero-side-list">
+                        <li>· 프로젝트명, 도면번호 중 하나만 입력해도 조회 가능합니다.</li>
+                        <li>· 모듈 타입(예: 모듈러 샤프트, 모듈러 기계실)을 필터링하면 속도가 더 빨라집니다.</li>
+                        <li>· 도면 상태가 “릴리즈”인 항목만 별도 필터링 가능합니다.</li>
+                    </ul>
+                    <div class="search-hint">
+                        ※ 실제 데이터 연동은 PLM / Vault 팀과 협의 후
+                        <strong>API 연계</strong>로 구현하면 됩니다.
+                    </div>
+                </aside>
+            </section>
+
+            <!-- 검색 영역 -->
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">도면 검색 조건</div>
+                        <div class="card-subtitle">모듈러 도면을 조회할 조건을 입력하세요.</div>
+                    </div>
+                    <div class="pill">조회 기준 · 도면기준 + 프로젝트 기준</div>
+                </div>
+
+                <div class="search-grid">
+                    <div class="form-field">
+                        <label for="drawingNo">도면번호</label>
+                        <input id="drawingNo" class="form-control" type="text" placeholder="예: MS-A-DRW-00123">
+                    </div>
+                    <div class="form-field">
+                        <label for="projectName">프로젝트명</label>
+                        <input id="projectName" class="form-control" type="text" placeholder="예: ○○ 모듈러 주상복합">
+                    </div>
+                    <div class="form-field">
+                        <label for="moduleType">모듈 타입</label>
+                        <select id="moduleType" class="form-select">
+                            <option value="">전체</option>
+                            <option>샤프트 모듈</option>
+                            <option>기계실 모듈</option>
+                            <option>피트 모듈</option>
+                            <option>로비·출입구 모듈</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label for="floorRange">층수 범위</label>
+                        <input id="floorRange" class="form-control" type="text" placeholder="예: B2~25F">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="status">도면 상태</label>
+                        <select id="status" class="form-select">
+                            <option value="">전체</option>
+                            <option>작업중</option>
+                            <option>검토중</option>
+                            <option>릴리즈</option>
+                            <option>폐기</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label for="version">버전</label>
+                        <input id="version" class="form-control" type="text" placeholder="예: V01, V02">
+                    </div>
+                    <div class="form-field">
+                        <label for="designer">설계 담당자</label>
+                        <input id="designer" class="form-control" type="text" placeholder="사번 또는 이름 일부">
+                    </div>
+                    <div class="form-field">
+                        <label>수정일 범위</label>
+                        <div style="display:flex; gap:6px;">
+                            <input id="dateFrom" class="form-control" type="date">
+                            <input id="dateTo" class="form-control" type="date">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="search-actions">
+                    <div class="search-hint">
+                        ※ 최소 1개 이상 조건 입력 후 조회를 권장합니다. (도면번호 또는 프로젝트명)
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button type="button" class="btn btn-ghost" id="btnReset">초기화</button>
+                        <button type="button" class="btn btn-primary" id="btnSearch">도면 조회</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 결과 영역 -->
+            <section class="card">
+                <div class="results-header">
+                    <div class="results-count">
+                        조회 결과 <strong id="resultCount">3</strong>건
+                        <span class="badge-soft" id="resultSummary">릴리즈 2건 · 작업중 1건</span>
+                    </div>
+                    <div class="results-tools">
+                        <span class="search-hint">정렬: 최근 수정일 ↓</span>
+                        <div class="toggle-group">
+                            <button class="toggle-btn active" type="button">테이블</button>
+                            <button class="toggle-btn" type="button">카드 (추후)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-wrapper" id="tableWrapper">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>도면번호</th>
+                            <th>프로젝트명</th>
+                            <th>모듈 타입</th>
+                            <th>층수</th>
+                            <th>버전</th>
+                            <th>설계 담당</th>
+                            <th>수정일</th>
+                            <th>상태</th>
+                            <th class="text-right">뷰어</th>
+                        </tr>
+                        </thead>
+                        <tbody id="resultBody">
+                        <tr>
+                            <td><a href="#" class="link">MS-A-DRW-00123</a></td>
+                            <td>○○ 모듈러 주상복합</td>
+                            <td>샤프트 모듈</td>
+                            <td>B2~25F</td>
+                            <td>V03</td>
+                            <td>홍길동</td>
+                            <td>2025-12-20</td>
+                            <td><span class="chip chip-green">릴리즈</span></td>
+                            <td class="text-right"><a href="#" class="link">3D 뷰어</a></td>
+                        </tr>
+                        <tr>
+                            <td><a href="#" class="link">MS-A-DRW-00123</a></td>
+                            <td>○○ 모듈러 주상복합</td>
+                            <td>샤프트 모듈</td>
+                            <td>B2~25F</td>
+                            <td>V02</td>
+                            <td>홍길동</td>
+                            <td>2025-12-15</td>
+                            <td><span class="chip chip-gray">이전 버전</span></td>
+                            <td class="text-right"><a href="#" class="link">PDF</a></td>
+                        </tr>
+                        <tr>
+                            <td><a href="#" class="link">MS-MR-DRW-00045</a></td>
+                            <td>△△ 모듈러 물류센터</td>
+                            <td>기계실 모듈</td>
+                            <td>10F~R/F</td>
+                            <td>V01</td>
+                            <td>이설계</td>
+                            <td>2025-12-18</td>
+                            <td><span class="chip chip-sky">작업중</span></td>
+                            <td class="text-right"><a href="#" class="link">2D 도면</a></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="no-data" id="noData" style="display:none;">
+                    조건에 맞는 도면이 없습니다.
+                    <span>검색 조건을 완화하거나, 프로젝트명을 다시 확인해 주세요.</span>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="hd-footer">
+        <div class="hd-footer-inner">
+            <div>© HYUNDAI ELEVATOR · Modular System Team · Internal Only</div>
+            <div>문의: 모듈러시스템팀 / PLM·Vault 운영 담당</div>
+        </div>
+    </footer>
+</div>
+
+<script>
+    // 간단한 데모용 JS (실제 구현시 Ajax 연동 부분에 API 호출 연결)
+    document.getElementById("btnSearch").addEventListener("click", function () {
+        const drawingNo = document.getElementById("drawingNo").value.trim();
+        const projectName = document.getElementById("projectName").value.trim();
+
+        const resultBody = document.getElementById("resultBody");
+        const tableWrapper = document.getElementById("tableWrapper");
+        const noData = document.getElementById("noData");
+        const resultCount = document.getElementById("resultCount");
+        const resultSummary = document.getElementById("resultSummary");
+
+        // 데모: 아무 조건도 없이 검색하면 "조건 완화" 메시지 노출
+        if (!drawingNo && !projectName) {
+            resultBody.innerHTML = "";
+            tableWrapper.style.display = "none";
+            noData.style.display = "block";
+            resultCount.textContent = "0";
+            resultSummary.textContent = "조건을 입력해 주세요";
+            return;
+        }
+
+        // TODO: 여기에 실제 조회 로직 연동
+        // 지금은 샘플 1건만 보여주는 방식
+        resultBody.innerHTML = `
+            <tr>
+                <td><a href="#" class="link">MS-A-DRW-00123</a></td>
+                <td>${projectName || "샘플 모듈러 프로젝트"}</td>
+                <td>샤프트 모듈</td>
+                <td>B2~25F</td>
+                <td>V03</td>
+                <td>홍길동</td>
+                <td>2025-12-20</td>
+                <td><span class="chip chip-green">릴리즈</span></td>
+                <td class="text-right"><a href="#" class="link">3D 뷰어</a></td>
+            </tr>
+        `;
+        resultCount.textContent = "1";
+        resultSummary.textContent = "릴리즈 1건";
+        tableWrapper.style.display = "block";
+        noData.style.display = "none";
+    });
+
+    document.getElementById("btnReset").addEventListener("click", function () {
+        document.querySelectorAll(".form-control, .form-select").forEach(function (el) {
+            if (el.tagName === "SELECT") {
+                el.selectedIndex = 0;
+            } else {
+                el.value = "";
+            }
+        });
+
+        // 초기 샘플 상태 복원 대신, 조회 결과를 비워두는 방식
+        document.getElementById("resultBody").innerHTML = "";
+        document.getElementById("tableWrapper").style.display = "none";
+        document.getElementById("noData").style.display = "block";
+        document.getElementById("resultCount").textContent = "0";
+        document.getElementById("resultSummary").textContent = "조건을 입력해 주세요";
+    });
+</script>
+</body>
+</html>
