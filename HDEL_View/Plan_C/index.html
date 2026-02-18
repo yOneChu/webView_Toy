@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Parts Price Change Dashboard</title>
+
+    <!-- Tailwind (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    boxShadow: {
+                        soft: '0 10px 30px rgba(0,0,0,0.08)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Chart.js (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <style>
+        /* Apple-ish glass & subtle noise */
+        .glass {
+            background: rgba(255,255,255,0.72);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+        .dark .glass {
+            background: rgba(17,24,39,0.62);
+        }
+        .noise {
+            position: relative;
+            overflow: hidden;
+        }
+        .noise:before {
+            content:"";
+            position:absolute;
+            inset:0;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.08'/%3E%3C/svg%3E");
+            mix-blend-mode: overlay;
+            pointer-events:none;
+        }
+        .truncate-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
+<!-- Top gradient -->
+<div class="fixed inset-0 -z-10">
+    <div class="absolute -top-40 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full blur-3xl opacity-60
+                bg-gradient-to-r from-indigo-200 via-sky-200 to-emerald-200 dark:from-indigo-900 dark:via-sky-900 dark:to-emerald-900"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-white/70 to-white dark:from-gray-950/60 dark:to-gray-950"></div>
+</div>
+
+<div class="mx-auto max-w-7xl px-4 py-8 md:px-6 lg:px-8">
+    <!-- Header -->
+    <header class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">
+                자재 단가 변경 대시보드
+            </h1>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                브랜드/품목별 “이전→현” 자재번호·단가 변동을 한 눈에.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="exportBtn"
+                    class="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-soft hover:opacity-90 dark:bg-white dark:text-gray-900">
+                CSV 내보내기
+            </button>
+
+            <button id="themeBtn"
+                    class="rounded-xl border border-gray-200 bg-white/60 px-4 py-2 text-sm font-medium shadow-soft hover:bg-white
+                 dark:border-gray-800 dark:bg-gray-900/40 dark:hover:bg-gray-900">
+                다크모드
+            </button>
+        </div>
+    </header>
+
+    <!-- Controls -->
+    <section class="mt-6 grid grid-cols-1 gap-3 md:grid-cols-12">
+        <div class="md:col-span-6">
+            <div class="glass noise rounded-2xl border border-gray-200 p-4 shadow-soft dark:border-gray-800">
+                <div class="flex items-center gap-3">
+                    <div class="flex-1">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-300">검색</label>
+                        <input id="searchInput" type="text" placeholder="brand, partName, 자재번호로 검색…"
+                               class="mt-1 w-full rounded-xl border border-gray-200 bg-white/70 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-900/10
+                       dark:border-gray-800 dark:bg-gray-900/40 dark:focus:ring-white/10" />
+                    </div>
+                    <div class="w-44">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-300">브랜드</label>
+                        <select id="brandSelect"
+                                class="mt-1 w-full rounded-xl border border-gray-200 bg-white/70 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-900/10
+                       dark:border-gray-800 dark:bg-gray-900/40 dark:focus:ring-white/10">
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                    <button data-chip="all" class="chip rounded-full border px-3 py-1 text-xs font-medium">전체</button>
+                    <button data-chip="increase" class="chip rounded-full border px-3 py-1 text-xs font-medium">단가 상승</button>
+                    <button data-chip="decrease" class="chip rounded-full border px-3 py-1 text-xs font-medium">단가 하락</button>
+                    <button data-chip="same" class="chip rounded-full border px-3 py-1 text-xs font-medium">변동 없음</button>
+                    <button data-chip="changedPartNo" class="chip rounded-full border px-3 py-1 text-xs font-medium">자재번호 변경</button>
+                </div>
+
+                <div class="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+                    <div>
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-300">정렬</label>
+                        <select id="sortSelect"
+                                class="mt-1 w-full rounded-xl border border-gray-200 bg-white/70 px-3 py-2 text-sm outline-none
+                       dark:border-gray-800 dark:bg-gray-900/40">
+                            <option value="deltaDesc">변경률(%) ↓</option>
+                            <option value="deltaAsc">변경률(%) ↑</option>
+                            <option value="currDesc">현 단가 ↓</option>
+                            <option value="currAsc">현 단가 ↑</option>
+                            <option value="brandAsc">brand A→Z</option>
+                            <option value="indexAsc">index ↑</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-300">페이지 크기</label>
+                        <select id="pageSizeSelect"
+                                class="mt-1 w-full rounded-xl border border-gray-200 bg-white/70 px-3 py-2 text-sm outline-none
+                       dark:border-gray-800 dark:bg-gray-900/40">
+                            <option>10</option>
+                            <option selected>15</option>
+                            <option>25</option>
+                            <option>50</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 flex items-end gap-2">
+                        <button id="resetBtn"
+                                class="w-full rounded-xl border border-gray-200 bg-white/70 px-3 py-2 text-sm font-medium shadow-soft hover:bg-white
+                       dark:border-gray-800 dark:bg-gray-900/40 dark:hover:bg-gray-900">
+                            필터 초기화
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="md:col-span-6 grid grid-cols-2 gap-3">
+            <div class="glass noise rounded-2xl border border-gray-200 p-4 shadow-soft dark:border-gray-800">
+                <div class="text-xs font-medium text-gray-600 dark:text-gray-300">총 건수</div>
+                <div id="kpiTotal" class="mt-2 text-2xl font-semibold">-</div>
+                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">현재 필터 기준</div>
+            </div>
+
+            <div class="glass noise rounded-2xl border border-gray-200 p-4 shadow-soft dark:border-gray-800">
+                <div class="text-xs font-medium text-gray-600 dark:text-gray-300">자재번호 변경</div>
+                <div id="kpiPartNoChanged" class="mt-2 text-2xl font-semibold">-</div>
+                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">이전≠현</div>
+            </div>
+
+            <div class="glass noise rounded-2xl border border-gray-200 p-4 shadow-soft dark:border-gray-800">
+                <div class="text-xs font-medium text-gray-600 dark:text-gray-300">단가 상승</div>
+                <div id="kpiUp" class="mt-2 text-2xl font-semibold">-</div>
+                <div id="kpiUpSum" class="mt-1 text-xs text-gray-500 dark:text-gray-400">총 증가액 -</div>
+            </div>
+
+            <div class="glass noise rounded-2xl border border-gray-200 p-4 shadow-soft dark:border-gray-800">
+                <div class="text-xs font-medium text-gray-600 dark:text-gray-300">단가 하락</div>
+                <div id="kpiDown" class="mt-2 text-2xl font-semibold">-</div>
+                <div id="kpiDownSum" class="mt-1 text-xs text-gray-500 dark:text-gray-400">총 감소액 -</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="mt-6 grid grid-cols-1 gap-3 md:grid-cols-12">
+        <div class="md:col-span-7">
+            <div class="glass noise rounded-2xl border border-gray-200 p-4 shadow-soft dark:border-gray-800">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-semibold">브랜드별 평균 변경률(%)</h2>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">필터 반영</span>
+                </div>
+                <div class="mt-3">
+                    <canvas id="barChart" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="md:col-span-5">
+            <div class="glass noise rounded-2xl border border-gray-200 p-4 shadow-soft dark:border-gray-800">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-semibold">변경 유형 비율</h2>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">상승/하락/동일</span>
+                </div>
+                <div class="mt-3">
+                    <canvas id="donutChart" height="140"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Table -->
+    <section class="mt-6">
+        <div class="glass noise rounded-2xl border border-gray-200 shadow-soft dark:border-gray-800">
+            <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+                <h2 class="text-sm font-semibold">상세 목록</h2>
+                <div class="text-xs text-gray-500 dark:text-gray-400">
+                    <span id="rangeText">-</span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                    <thead class="bg-white/40 text-xs text-gray-600 dark:bg-gray-900/30 dark:text-gray-300">
+                    <tr>
+                        <th class="px-4 py-3 font-medium">index</th>
+                        <th class="px-4 py-3 font-medium">brand</th>
+                        <th class="px-4 py-3 font-medium">partName</th>
+                        <th class="px-4 py-3 font-medium">이전 자재번호</th>
+                        <th class="px-4 py-3 font-medium">현 자재번호</th>
+                        <th class="px-4 py-3 font-medium text-right">이전 단가</th>
+                        <th class="px-4 py-3 font-medium text-right">현 단가</th>
+                        <th class="px-4 py-3 font-medium text-right">변경률</th>
+                        <th class="px-4 py-3 font-medium">상태</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-gray-200 dark:divide-gray-800"></tbody>
+                </table>
+            </div>
+
+            <div class="flex flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-between">
+                <div class="text-xs text-gray-500 dark:text-gray-400">
+                    Tip: 컬럼 클릭 정렬까지 넣으려면 “head 클릭 이벤트”만 추가하면 됩니다.
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="prevBtn"
+                            class="rounded-xl border border-gray-200 bg-white/70 px-3 py-2 text-sm font-medium shadow-soft hover:bg-white
+                     dark:border-gray-800 dark:bg-gray-900/40 dark:hover:bg-gray-900">
+                        이전
+                    </button>
+                    <div id="pageText" class="min-w-[120px] text-center text-sm text-gray-600 dark:text-gray-300">-</div>
+                    <button id="nextBtn"
+                            class="rounded-xl border border-gray-200 bg-white/70 px-3 py-2 text-sm font-medium shadow-soft hover:bg-white
+                     dark:border-gray-800 dark:bg-gray-900/40 dark:hover:bg-gray-900">
+                        다음
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="mt-8 text-center text-xs text-gray-500 dark:text-gray-400">
+        © Sample Dashboard • Tailwind + Chart.js
+    </footer>
+</div>
+
+<script>
+    // -----------------------------
+    // Sample data (replace with API/DB later)
+    // -----------------------------
+    const rawData = [
+        { index: 1, brand: "A", partName: "ROLLER GUIDE ASSY", prevPartNo: "P-10001", prevPrice: 12000, currPartNo: "P-10001", currPrice: 12500 },
+        { index: 2, brand: "A", partName: "CAR DOOR PANEL", prevPartNo: "P-10022", prevPrice: 54000, currPartNo: "P-10090", currPrice: 51000 },
+        { index: 3, brand: "B", partName: "GOVERNOR UNIT", prevPartNo: "B-20410", prevPrice: 180000, currPartNo: "B-20410", currPrice: 180000 },
+        { index: 4, brand: "C", partName: "BRAKE COIL", prevPartNo: "C-33010", prevPrice: 7600, currPartNo: "C-33011", currPrice: 8200 },
+        { index: 5, brand: "B", partName: "RAIL CLIP", prevPartNo: "B-11200", prevPrice: 3200, currPartNo: "B-11200", currPrice: 2900 },
+        { index: 6, brand: "A", partName: "COUNTERWEIGHT FRAME", prevPartNo: "P-10110", prevPrice: 210000, currPartNo: "P-10110", currPrice: 225000 },
+        { index: 7, brand: "C", partName: "LIMIT SWITCH", prevPartNo: "C-90100", prevPrice: 15000, currPartNo: "C-90100", currPrice: 14500 },
+        { index: 8, brand: "B", partName: "SAFETY GEAR", prevPartNo: "B-77880", prevPrice: 98000, currPartNo: "B-77881", currPrice: 104000 },
+        { index: 9, brand: "D", partName: "BUFFER SPRING", prevPartNo: "D-41000", prevPrice: 66000, currPartNo: "D-41000", currPrice: 64000 },
+        { index: 10, brand: "D", partName: "ENCODER BRACKET", prevPartNo: "D-12001", prevPrice: 5200, currPartNo: "D-12001", currPrice: 5200 },
+        { index: 11, brand: "A", partName: "COP PANEL", prevPartNo: "P-19991", prevPrice: 86000, currPartNo: "P-19992", currPrice: 89000 },
+        { index: 12, brand: "C", partName: "SHEAVE", prevPartNo: "C-55000", prevPrice: 130000, currPartNo: "C-55000", currPrice: 119000 },
+        { index: 13, brand: "B", partName: "DOOR OPERATOR", prevPartNo: "B-88000", prevPrice: 250000, currPartNo: "B-88000", currPrice: 265000 },
+        { index: 14, brand: "A", partName: "CABLE HARNESS", prevPartNo: "P-45000", prevPrice: 18000, currPartNo: "P-45010", currPrice: 17500 },
+        { index: 15, brand: "C", partName: "CAR LIGHT", prevPartNo: "C-77100", prevPrice: 9500, currPartNo: "C-77100", currPrice: 9800 },
+        // 더 넣어도 됨
+    ].map(x => ({
+        ...x,
+        delta: (x.currPrice - x.prevPrice),
+        deltaPct: x.prevPrice === 0 ? 0 : ((x.currPrice - x.prevPrice) / x.prevPrice) * 100,
+        changedPartNo: x.prevPartNo !== x.currPartNo
+    }));
+
+    // -----------------------------
+    // State
+    // -----------------------------
+    const state = {
+        search: "",
+        brand: "ALL",
+        chip: "all",
+        sort: "deltaDesc",
+        page: 1,
+        pageSize: 15,
+    };
+
+    // -----------------------------
+    // Helpers
+    // -----------------------------
+    const fmtWon = (n) => new Intl.NumberFormat('ko-KR').format(n);
+    const fmtPct = (n) => `${(Math.round(n * 10) / 10).toFixed(1)}%`;
+
+    function badgeForRow(row) {
+        if (row.delta > 0) return { text: "상승", cls: "bg-black text-white dark:bg-white dark:text-gray-900" };
+        if (row.delta < 0) return { text: "하락", cls: "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100" };
+        return { text: "동일", cls: "bg-white/70 text-gray-900 border border-gray-200 dark:bg-gray-900/40 dark:text-gray-100 dark:border-gray-800" };
+    }
+
+    function changePill(row) {
+        const up = row.delta > 0;
+        const down = row.delta < 0;
+        const base = "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium";
+        if (up) return `${base} bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100`;
+        if (down) return `${base} bg-rose-100 text-rose-900 dark:bg-rose-900/40 dark:text-rose-100`;
+        return `${base} bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200`;
+    }
+
+    function applyFilters(data) {
+        let d = [...data];
+
+        // brand
+        if (state.brand !== "ALL") d = d.filter(x => x.brand === state.brand);
+
+        // chip filters
+        if (state.chip === "increase") d = d.filter(x => x.delta > 0);
+        if (state.chip === "decrease") d = d.filter(x => x.delta < 0);
+        if (state.chip === "same") d = d.filter(x => x.delta === 0);
+        if (state.chip === "changedPartNo") d = d.filter(x => x.changedPartNo);
+
+        // search
+        const q = state.search.trim().toLowerCase();
+        if (q) {
+            d = d.filter(x =>
+                String(x.index).includes(q) ||
+                x.brand.toLowerCase().includes(q) ||
+                x.partName.toLowerCase().includes(q) ||
+                x.prevPartNo.toLowerCase().includes(q) ||
+                x.currPartNo.toLowerCase().includes(q)
+            );
+        }
+
+        // sort
+        const s = state.sort;
+        const by = (a,b) => a<b ? -1 : a>b ? 1 : 0;
+
+        if (s === "deltaDesc") d.sort((a,b) => b.deltaPct - a.deltaPct);
+        if (s === "deltaAsc") d.sort((a,b) => a.deltaPct - b.deltaPct);
+        if (s === "currDesc") d.sort((a,b) => b.currPrice - a.currPrice);
+        if (s === "currAsc") d.sort((a,b) => a.currPrice - b.currPrice);
+        if (s === "brandAsc") d.sort((a,b) => by(a.brand, b.brand) || a.index - b.index);
+        if (s === "indexAsc") d.sort((a,b) => a.index - b.index);
+
+        return d;
+    }
+
+    function paginate(data) {
+        const total = data.length;
+        const pages = Math.max(1, Math.ceil(total / state.pageSize));
+        state.page = Math.min(state.page, pages);
+        const start = (state.page - 1) * state.pageSize;
+        const end = start + state.pageSize;
+        return { total, pages, slice: data.slice(start, end), start, end: Math.min(end, total) };
+    }
+
+    // -----------------------------
+    // Charts
+    // -----------------------------
+    let barChart, donutChart;
+
+    function buildCharts(filtered) {
+        // Brand avg deltaPct
+        const byBrand = {};
+        filtered.forEach(x => {
+            if (!byBrand[x.brand]) byBrand[x.brand] = { sum: 0, cnt: 0 };
+            byBrand[x.brand].sum += x.deltaPct;
+            byBrand[x.brand].cnt += 1;
+        });
+
+        const labels = Object.keys(byBrand).sort();
+        const values = labels.map(k => byBrand[k].cnt ? (byBrand[k].sum / byBrand[k].cnt) : 0);
+
+        // Types
+        const up = filtered.filter(x => x.delta > 0).length;
+        const down = filtered.filter(x => x.delta < 0).length;
+        const same = filtered.filter(x => x.delta === 0).length;
+
+        // Destroy previous
+        if (barChart) barChart.destroy();
+        if (donutChart) donutChart.destroy();
+
+        const ctxBar = document.getElementById('barChart');
+        barChart = new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{ label: '평균 변경률(%)', data: values }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        ticks: { callback: (v) => v + '%' }
+                    }
+                }
+            }
+        });
+
+        const ctxDonut = document.getElementById('donutChart');
+        donutChart = new Chart(ctxDonut, {
+            type: 'doughnut',
+            data: {
+                labels: ['상승', '하락', '동일'],
+                datasets: [{ data: [up, down, same] }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                },
+                cutout: '68%'
+            }
+        });
+    }
+
+    // -----------------------------
+    // Render
+    // -----------------------------
+    function render() {
+        const filtered = applyFilters(rawData);
+        const page = paginate(filtered);
+
+        // KPIs
+        document.getElementById('kpiTotal').textContent = fmtWon(filtered.length);
+        document.getElementById('kpiPartNoChanged').textContent = fmtWon(filtered.filter(x => x.changedPartNo).length);
+        document.getElementById('kpiUp').textContent = fmtWon(filtered.filter(x => x.delta > 0).length);
+        document.getElementById('kpiDown').textContent = fmtWon(filtered.filter(x => x.delta < 0).length);
+
+        const upSum = filtered.filter(x => x.delta > 0).reduce((a,c)=>a+c.delta,0);
+        const downSum = filtered.filter(x => x.delta < 0).reduce((a,c)=>a+c.delta,0); // negative
+        document.getElementById('kpiUpSum').textContent = `총 증가액 +${fmtWon(upSum)}`;
+        document.getElementById('kpiDownSum').textContent = `총 감소액 ${fmtWon(downSum)}`;
+
+        // Range + page text
+        document.getElementById('rangeText').textContent =
+            `${page.total === 0 ? 0 : page.start + 1}–${page.end} / ${page.total}`;
+        document.getElementById('pageText').textContent =
+            `페이지 ${state.page} / ${page.pages}`;
+
+        // Table rows
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = "";
+
+        page.slice.forEach(row => {
+            const badge = badgeForRow(row);
+
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-white/60 dark:hover:bg-gray-900/40";
+
+            tr.innerHTML = `
+          <td class="px-4 py-3 text-gray-600 dark:text-gray-300">${row.index}</td>
+          <td class="px-4 py-3">
+            <span class="inline-flex items-center rounded-full border border-gray-200 bg-white/70 px-2.5 py-1 text-xs font-medium
+                         dark:border-gray-800 dark:bg-gray-900/40">
+              ${row.brand}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            <div class="font-medium">${escapeHtml(row.partName)}</div>
+            <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate-2">
+              ${row.changedPartNo ? "자재번호 변경 감지" : "자재번호 유지"}
+            </div>
+          </td>
+          <td class="px-4 py-3">
+            <div class="text-sm font-medium">${row.prevPartNo}</div>
+          </td>
+          <td class="px-4 py-3">
+            <div class="text-sm font-medium ${row.changedPartNo ? "text-indigo-700 dark:text-indigo-300" : ""}">
+              ${row.currPartNo}
+            </div>
+          </td>
+          <td class="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-gray-200">${fmtWon(row.prevPrice)}</td>
+          <td class="px-4 py-3 text-right tabular-nums font-medium">${fmtWon(row.currPrice)}</td>
+          <td class="px-4 py-3 text-right">
+            <span class="${changePill(row)}">
+              ${row.delta === 0 ? "0.0%" : fmtPct(row.deltaPct)}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${badge.cls}">
+              ${badge.text}
+            </span>
+          </td>
+        `;
+            tbody.appendChild(tr);
+        });
+
+        // Buttons enabled
+        document.getElementById('prevBtn').disabled = (state.page <= 1);
+        document.getElementById('nextBtn').disabled = (state.page >= page.pages);
+        document.getElementById('prevBtn').classList.toggle('opacity-40', state.page <= 1);
+        document.getElementById('nextBtn').classList.toggle('opacity-40', state.page >= page.pages);
+
+        // Charts
+        buildCharts(filtered);
+
+        // Chips styling
+        document.querySelectorAll('.chip').forEach(btn => {
+            const active = btn.dataset.chip === state.chip;
+            btn.className = "chip rounded-full border px-3 py-1 text-xs font-medium transition " + (
+                active
+                    ? "border-gray-900 bg-gray-900 text-white dark:border-white dark:bg-white dark:text-gray-900"
+                    : "border-gray-200 bg-white/50 text-gray-700 hover:bg-white dark:border-gray-800 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-900"
+            );
+        });
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replaceAll('&','&amp;')
+            .replaceAll('<','&lt;')
+            .replaceAll('>','&gt;')
+            .replaceAll('"','&quot;')
+            .replaceAll("'","&#039;");
+    }
+
+    // -----------------------------
+    // Init controls
+    // -----------------------------
+    function init() {
+        // brand dropdown
+        const brandSelect = document.getElementById('brandSelect');
+        const brands = Array.from(new Set(rawData.map(x => x.brand))).sort();
+        brandSelect.innerHTML = `<option value="ALL">전체</option>` + brands.map(b => `<option value="${b}">${b}</option>`).join('');
+
+        // theme (persist)
+        const savedTheme = localStorage.getItem("theme") || "light";
+        if (savedTheme === "dark") document.documentElement.classList.add("dark");
+
+        document.getElementById('themeBtn').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem("theme", document.documentElement.classList.contains("dark") ? "dark" : "light");
+            render();
+        });
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            state.search = e.target.value;
+            state.page = 1;
+            render();
+        });
+
+        brandSelect.addEventListener('change', (e) => {
+            state.brand = e.target.value;
+            state.page = 1;
+            render();
+        });
+
+        document.querySelectorAll('.chip').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.chip = btn.dataset.chip;
+                state.page = 1;
+                render();
+            });
+        });
+
+        document.getElementById('sortSelect').addEventListener('change', (e) => {
+            state.sort = e.target.value;
+            state.page = 1;
+            render();
+        });
+
+        document.getElementById('pageSizeSelect').addEventListener('change', (e) => {
+            state.pageSize = parseInt(e.target.value, 10);
+            state.page = 1;
+            render();
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            state.page = Math.max(1, state.page - 1);
+            render();
+        });
+
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            state.page = state.page + 1;
+            render();
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            state.search = "";
+            state.brand = "ALL";
+            state.chip = "all";
+            state.sort = "deltaDesc";
+            state.page = 1;
+            state.pageSize = 15;
+
+            document.getElementById('searchInput').value = "";
+            document.getElementById('brandSelect').value = "ALL";
+            document.getElementById('sortSelect').value = "deltaDesc";
+            document.getElementById('pageSizeSelect').value = "15";
+            render();
+        });
+
+        // Export CSV
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            const filtered = applyFilters(rawData);
+            const header = ["index","brand","partName","이전 자재번호","이전 단가","현 자재번호","현 단가"];
+            const rows = filtered.map(r => [
+                r.index, r.brand, r.partName, r.prevPartNo, r.prevPrice, r.currPartNo, r.currPrice
+            ]);
+
+            const csv = [header, ...rows]
+                .map(line => line.map(v => `"${String(v).replaceAll('"','""')}"`).join(","))
+                .join("\n");
+
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `parts_dashboard_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        render();
+    }
+
+    init();
+</script>
+</body>
+</html>

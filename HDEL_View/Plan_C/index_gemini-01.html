@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Executive Performance Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Pretendard', sans-serif; background-color: #f8f9fa; margin: 20px; }
+    .dashboard-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    .chart-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 45%; min-width: 400px; }
+    .table-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { background-color: #6c757d; color: white; padding: 10px; font-size: 14px; border: 1px solid #dee2e6; }
+    td { padding: 10px; text-align: center; border: 1px solid #dee2e6; font-size: 13px; }
+    tr:nth-child(even) { background-color: #f2f2f2; }
+    h2 { color: #333; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+
+<h2>🚀 2026년 브랜드별 과제 실적 대시보드</h2>
+
+<div class="dashboard-container">
+  <div class="chart-card">
+    <canvas id="brandChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <canvas id="trendChart"></canvas>
+  </div>
+</div>
+
+<div class="table-card">
+  <table>
+    <thead>
+    <tr>
+      <th rowspan="2">NO</th>
+      <th rowspan="2">브랜드</th>
+      <th rowspan="2">자재번호</th>
+      <th rowspan="2">과제명</th>
+      <th rowspan="2">총 수량</th>
+      <th colspan="12">2026년 월별 실적</th>
+    </tr>
+    <tr>
+      <th>01</th><th>02</th><th>03</th><th>04</th><th>05</th><th>06</th>
+      <th>07</th><th>08</th><th>09</th><th>10</th><th>11</th><th>12</th>
+    </tr>
+    </thead>
+    <tbody id="data-table-body">
+    </tbody>
+  </table>
+</div>
+
+<script>
+  // 1. 샘플 데이터 (실제 DB 데이터로 대체 가능)
+  const projectData = [
+    { no: 1, brand: 'Hyundai', code: 'E-100', name: '초고속 엘리베이터 개발', total: 1200, monthly: [100, 120, 150, 80, 90, 110, 130, 140, 95, 85, 100, 100] },
+    { no: 2, brand: 'Inno', code: 'I-500', name: '지능형 제어반 교체', total: 850, monthly: [50, 60, 70, 80, 90, 100, 110, 80, 70, 60, 40, 40] },
+    { no: 3, brand: 'Global', code: 'G-200', name: '스마트 미러 설치', total: 2100, monthly: [150, 180, 200, 210, 220, 200, 190, 170, 160, 150, 140, 130] }
+  ];
+
+  // 2. 테이블 렌더링
+  const tableBody = document.getElementById('data-table-body');
+  projectData.forEach(item => {
+    let row = `<tr>
+                <td>${item.no}</td>
+                <td><strong>${item.brand}</strong></td>
+                <td>${item.code}</td>
+                <td style="text-align:left">${item.name}</td>
+                <td style="color:blue; font-weight:bold">${item.total.toLocaleString()}</td>
+                ${item.monthly.map(v => `<td>${v}</td>`).join('')}
+            </tr>`;
+    tableBody.innerHTML += row;
+  });
+
+  // 3. 브랜드별 비중 차트 (Doughnut)
+  new Chart(document.getElementById('brandChart'), {
+    type: 'doughnut',
+    data: {
+      labels: projectData.map(d => d.brand),
+      datasets: [{
+        label: '총 수량 비중',
+        data: projectData.map(d => d.total),
+        backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc'],
+        hoverOffset: 4
+      }]
+    },
+    options: {
+      plugins: { title: { display: true, text: '브랜드별 과제 점유율' } }
+    }
+  });
+
+  // 4. 월별 추이 차트 (Line)
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'],
+      datasets: projectData.map((d, i) => ({
+        label: d.brand,
+        data: d.monthly,
+        borderColor: ['#4e73df', '#1cc88a', '#36b9cc'][i],
+        tension: 0.3,
+        fill: false
+      }))
+    },
+    options: {
+      responsive: true,
+      plugins: { title: { display: true, text: '2026년 월별 실적 추이' } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+</script>
+</body>
+</html>

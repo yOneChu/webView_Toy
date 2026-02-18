@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>임원 대시보드 - 월별 실적 분석</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 16px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-label {
+            color: #718096;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .metric-value {
+            color: #2d3748;
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .metric-change {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .metric-change.positive {
+            color: #48bb78;
+        }
+
+        .metric-change.negative {
+            color: #f56565;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-title {
+            color: #2d3748;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .table-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #4a5568;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 13px;
+        }
+
+        tr:hover {
+            background: #f7fafc;
+        }
+
+        .trend-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .trend-up {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .trend-down {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="header">
+        <h1>📊 월별 실적 분석 대시보드</h1>
+        <p>2026년 브랜드별 과제 실적 현황 (실시간 업데이트)</p>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-label">총 수량</div>
+            <div class="metric-value" id="totalQuantity">0</div>
+            <div class="metric-change positive" id="totalChange">+0%</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">활성 과제</div>
+            <div class="metric-value" id="activeProjects">0</div>
+            <div class="metric-change positive">진행중</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">월평균 실적</div>
+            <div class="metric-value" id="avgMonthly">0</div>
+            <div class="metric-change" id="avgChange">+0%</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Top 브랜드</div>
+            <div class="metric-value" id="topBrand" style="font-size: 24px;">-</div>
+            <div class="metric-change positive" id="topBrandValue">0 units</div>
+        </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+        <!-- Monthly Trend Chart -->
+        <div class="chart-card full-width">
+            <div class="chart-title">📈 월별 실적 추이</div>
+            <canvas id="monthlyTrendChart"></canvas>
+        </div>
+
+        <!-- Brand Performance -->
+        <div class="chart-card">
+            <div class="chart-title">🏆 브랜드별 실적</div>
+            <canvas id="brandChart"></canvas>
+        </div>
+
+        <!-- Monthly Distribution -->
+        <div class="chart-card">
+            <div class="chart-title">📊 월별 분포</div>
+            <canvas id="monthlyDistChart"></canvas>
+        </div>
+
+        <!-- Project Status -->
+        <div class="chart-card">
+            <div class="chart-title">🎯 과제별 진행률</div>
+            <canvas id="projectChart"></canvas>
+        </div>
+
+        <!-- Trend Analysis -->
+        <div class="chart-card">
+            <div class="chart-title">📉 분기별 비교</div>
+            <canvas id="quarterChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Detailed Table -->
+    <div class="table-container">
+        <div class="chart-title">📋 상세 실적 현황</div>
+        <table id="detailTable">
+            <thead>
+            <tr class="bg-secondary">
+                <th rowspan="2">NO</th>
+                <th rowspan="2">브랜드</th>
+                <th rowspan="2">자재번호</th>
+                <th rowspan="2">과제명</th>
+                <th rowspan="2">총 수량</th>
+                <th colspan="12">2026년 월별실적</th>
+                <th rowspan="2">추세</th>
+            </tr>
+            <tr>
+                <th>01</th><th>02</th><th>03</th><th>04</th>
+                <th>05</th><th>06</th><th>07</th><th>08</th>
+                <th>09</th><th>10</th><th>11</th><th>12</th>
+            </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // 샘플 데이터 생성
+    const sampleData = [
+        {
+            no: 1,
+            index: 'PRJ-001',
+            brand: 'Samsung',
+            materialNo: 'MAT-2026-001',
+            projectName: '신제품 개발 프로젝트',
+            totalQty: 12500,
+            monthly: [1200, 1100, 950, 1050, 1300, 1150, 1000, 900, 1200, 1100, 1250, 1300]
+        },
+        {
+            no: 2,
+            index: 'PRJ-002',
+            brand: 'LG',
+            materialNo: 'MAT-2026-002',
+            projectName: '품질 개선 과제',
+            totalQty: 9800,
+            monthly: [850, 900, 750, 800, 950, 850, 700, 650, 900, 850, 800, 800]
+        },
+        {
+            no: 3,
+            index: 'PRJ-003',
+            brand: 'Hyundai',
+            materialNo: 'MAT-2026-003',
+            projectName: '생산성 향상 TF',
+            totalQty: 15200,
+            monthly: [1400, 1300, 1200, 1250, 1500, 1350, 1200, 1100, 1400, 1300, 1400, 1400]
+        },
+        {
+            no: 4,
+            index: 'PRJ-004',
+            brand: 'SK',
+            materialNo: 'MAT-2026-004',
+            projectName: '디지털 혁신 프로젝트',
+            totalQty: 8500,
+            monthly: [700, 750, 650, 700, 800, 750, 650, 600, 750, 700, 750, 700]
+        },
+        {
+            no: 5,
+            index: 'PRJ-005',
+            brand: 'Samsung',
+            materialNo: 'MAT-2026-005',
+            projectName: '공정 최적화',
+            totalQty: 11000,
+            monthly: [950, 900, 850, 900, 1050, 950, 850, 800, 950, 900, 950, 950]
+        }
+    ];
+
+    // 핵심 지표 계산
+    function updateMetrics() {
+        const totalQty = sampleData.reduce((sum, item) => sum + item.totalQty, 0);
+        const activeProjects = sampleData.length;
+        const avgMonthly = Math.round(totalQty / 12);
+
+        const brandTotals = {};
+        sampleData.forEach(item => {
+            brandTotals[item.brand] = (brandTotals[item.brand] || 0) + item.totalQty;
+        });
+        const topBrand = Object.keys(brandTotals).reduce((a, b) =>
+            brandTotals[a] > brandTotals[b] ? a : b
+        );
+
+        document.getElementById('totalQuantity').textContent = totalQty.toLocaleString();
+        document.getElementById('totalChange').textContent = '+12.5%';
+        document.getElementById('activeProjects').textContent = activeProjects;
+        document.getElementById('avgMonthly').textContent = avgMonthly.toLocaleString();
+        document.getElementById('avgChange').textContent = '+8.3%';
+        document.getElementById('topBrand').textContent = topBrand;
+        document.getElementById('topBrandValue').textContent = brandTotals[topBrand].toLocaleString() + ' units';
+    }
+
+    // 월별 실적 추이 차트
+    function createMonthlyTrendChart() {
+        const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+        const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+
+        const datasets = sampleData.map((item, index) => {
+            const colors = ['#667eea', '#f56565', '#48bb78', '#ed8936', '#9f7aea'];
+            return {
+                label: item.brand + ' - ' + item.projectName,
+                data: item.monthly,
+                borderColor: colors[index % colors.length],
+                backgroundColor: colors[index % colors.length] + '20',
+                tension: 0.4,
+                fill: true
+            };
+        });
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value => value.toLocaleString()
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 브랜드별 실적 차트
+    function createBrandChart() {
+        const ctx = document.getElementById('brandChart').getContext('2d');
+        const brandData = {};
+        sampleData.forEach(item => {
+            brandData[item.brand] = (brandData[item.brand] || 0) + item.totalQty;
+        });
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(brandData),
+                datasets: [{
+                    data: Object.values(brandData),
+                    backgroundColor: ['#667eea', '#f56565', '#48bb78', '#ed8936', '#9f7aea'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { padding: 15 }
+                    }
+                }
+            }
+        });
+    }
+
+    // 월별 분포 차트
+    function createMonthlyDistChart() {
+        const ctx = document.getElementById('monthlyDistChart').getContext('2d');
+        const monthlyTotals = Array(12).fill(0);
+        sampleData.forEach(item => {
+            item.monthly.forEach((val, idx) => {
+                monthlyTotals[idx] += val;
+            });
+        });
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
+                datasets: [{
+                    label: '월별 총 실적',
+                    data: monthlyTotals,
+                    backgroundColor: '#667eea',
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value => value.toLocaleString()
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 과제별 진행률 차트
+    function createProjectChart() {
+        const ctx = document.getElementById('projectChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: sampleData.map(item => item.projectName.substring(0, 15) + '...'),
+                datasets: [{
+                    label: '총 수량',
+                    data: sampleData.map(item => item.totalQty),
+                    backgroundColor: '#48bb78',
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value => value.toLocaleString()
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 분기별 비교 차트
+    function createQuarterChart() {
+        const ctx = document.getElementById('quarterChart').getContext('2d');
+        const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+        const quarterData = sampleData.map(item => {
+            return {
+                label: item.brand,
+                data: [
+                    item.monthly.slice(0, 3).reduce((a, b) => a + b, 0),
+                    item.monthly.slice(3, 6).reduce((a, b) => a + b, 0),
+                    item.monthly.slice(6, 9).reduce((a, b) => a + b, 0),
+                    item.monthly.slice(9, 12).reduce((a, b) => a + b, 0)
+                ]
+            };
+        });
+
+        const colors = ['#667eea', '#f56565', '#48bb78', '#ed8936', '#9f7aea'];
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: quarters,
+                datasets: quarterData.map((item, idx) => ({
+                    label: item.label,
+                    data: item.data,
+                    backgroundColor: colors[idx % colors.length]
+                }))
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { padding: 15 }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value => value.toLocaleString()
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 테이블 생성
+    function createTable() {
+        const tbody = document.getElementById('tableBody');
+        sampleData.forEach(item => {
+            const trend = item.monthly[11] > item.monthly[0] ? 'up' : 'down';
+            const trendText = trend === 'up' ? '↑ 상승' : '↓ 하락';
+            const row = `
+                    <tr>
+                        <td>${item.no}</td>
+                        <td><strong>${item.brand}</strong></td>
+                        <td>${item.materialNo}</td>
+                        <td>${item.projectName}</td>
+                        <td><strong>${item.totalQty.toLocaleString()}</strong></td>
+                        ${item.monthly.map(val => `<td>${val.toLocaleString()}</td>`).join('')}
+                        <td><span class="trend-indicator trend-${trend}">${trendText}</span></td>
+                    </tr>
+                `;
+            tbody.innerHTML += row;
+        });
+    }
+
+    // 초기화
+    updateMetrics();
+    createMonthlyTrendChart();
+    createBrandChart();
+    createMonthlyDistChart();
+    createProjectChart();
+    createQuarterChart();
+    createTable();
+</script>
+</body>
+</html>

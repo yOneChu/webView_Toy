@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Document</title>
+</head>
+<body>
+<h2>부품 조회 테스트</h2>
+
+<input type="text" id="partNo" placeholder="부품번호 입력">
+<button onclick="findPart()">조회</button>
+
+<pre id="resultArea"></pre>
+
+<script>
+    function findPart() {
+
+        const partNo = document.getElementById("partNo").value;
+        const resultArea = document.getElementById("resultArea");
+
+        resultArea.textContent = "조회 중...";
+
+        fetch("https://vault.hdel.co.kr:8070/api/findPartOneWithPartNo?partNo=29000016G010A&key=subae", {
+            method: "GET"
+        })
+            .then(response => {
+
+                if (!response.ok) {
+                    throw new Error("HTTP error! status = " + response.status);
+                }
+
+                return response.json();
+            })
+            .then(data => {
+                resultArea.textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(err => {
+                resultArea.textContent = "에러 발생: " + err;
+            });
+    }
+</script>
+</body>
+</html>

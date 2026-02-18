@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/typed.js@2.0.16/dist/typed.umd.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .gradient-text { background: linear-gradient(90deg, #60a5fa, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
+</head>
+<body class="bg-[#0f172a] text-slate-200 leading-relaxed antialiased">
+
+<nav class="fixed top-0 w-full z-50 glass py-4">
+    <div class="max-w-5xl mx-auto px-6 flex justify-between items-center">
+        <span class="text-xl font-bold gradient-text underline decoration-indigo-500/30">DEV.PORTFOLIO</span>
+        <div class="space-x-8 text-sm font-medium">
+            <a href="#about" class="hover:text-blue-400 transition">About</a>
+            <a href="#skills" class="hover:text-blue-400 transition">Skills</a>
+            <a href="#projects" class="hover:text-blue-400 transition">Projects</a>
+        </div>
+    </div>
+</nav>
+
+<section class="min-h-screen flex flex-col justify-center items-center px-6 pt-20">
+    <div class="max-w-3xl text-center">
+        <h2 class="text-blue-400 font-mono mb-4">Hello, World! I am</h2>
+        <h1 class="text-5xl md:text-7xl font-bold text-white mb-6">
+            <span id="typed"></span>
+        </h1>
+        <p class="text-slate-400 text-lg mb-10 leading-relaxed">
+            현대엘리베이터 기계 설계부서에서 근무하며 설계와 백엔드 개발을 동시에 수행합니다.
+            비즈니스 프로세스 관리와 업무 기획을 통해 효율적인 시스템을 구축하는 것에 가치를 둡니다.
+        </p>
+        <div class="flex justify-center gap-4">
+            <a href="#projects" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold transition">View My Work</a>
+            <a href="mailto:your-email@example.com" class="px-8 py-3 glass hover:bg-white/10 rounded-full font-semibold transition">Contact Me</a>
+        </div>
+    </div>
+</section>
+
+<section id="about" class="py-24 px-6">
+    <div class="max-w-5xl mx-auto">
+        <h3 class="text-3xl font-bold mb-12 flex items-center gap-3">
+            <i data-lucide="user" class="text-blue-400"></i> About Me
+        </h3>
+        <div class="grid md:grid-cols-2 gap-12">
+            <div class="space-y-6 text-slate-400">
+                <p>
+                    단순한 코더를 넘어, 실제 산업 현장의 문제를 IT 기술로 해결하는 **하이브리드 개발자**입니다.
+                    기계 설계 프로세스에 대한 깊은 이해를 바탕으로 실질적인 업무 효율을 높이는 백엔드 시스템을 설계합니다.
+                </p>
+                <p>
+                    최근에는 머신러닝을 업무 현장에 도입하기 위해 Python을 학습하며 데이터 기반의 설계 자동화를 연구하고 있습니다.
+                </p>
+            </div>
+            <div class="glass p-8 rounded-2xl space-y-4">
+                <div class="flex justify-between border-b border-white/10 pb-2">
+                    <span class="text-slate-300 font-semibold">Position</span>
+                    <span>Mechanical Designer & Developer</span>
+                </div>
+                <div class="flex justify-between border-b border-white/10 pb-2">
+                    <span class="text-slate-300 font-semibold">Company</span>
+                    <span>Hyundai Elevator</span>
+                </div>
+                <div class="flex justify-between border-b border-white/10 pb-2">
+                    <span class="text-slate-300 font-semibold">Focus</span>
+                    <span>Backend & Process Optimization</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="skills" class="py-24 px-6 bg-slate-900/50">
+    <div class="max-w-5xl mx-auto">
+        <h3 class="text-3xl font-bold mb-12 flex items-center gap-3">
+            <i data-lucide="code-2" class="text-purple-400"></i> Tech Stack
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div class="glass p-6 rounded-xl">
+                <div class="text-white font-bold mb-2">Backend</div>
+                <p class="text-sm text-slate-400">Java / Spring Boot / JPA</p>
+            </div>
+            <div class="glass p-6 rounded-xl">
+                <div class="text-white font-bold mb-2">Frontend</div>
+                <p class="text-sm text-slate-400">JavaScript / HTML / CSS</p>
+            </div>
+            <div class="glass p-6 rounded-xl">
+                <div class="text-white font-bold mb-2">Data / ML</div>
+                <p class="text-sm text-slate-400">Python / Machine Learning</p>
+            </div>
+            <div class="glass p-6 rounded-xl">
+                <div class="text-white font-bold mb-2">Domain</div>
+                <p class="text-sm text-slate-400">Mechanical Design / Planning</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="projects" class="py-24 px-6">
+    <div class="max-w-5xl mx-auto">
+        <h3 class="text-3xl font-bold mb-12 flex items-center gap-3">
+            <i data-lucide="briefcase" class="text-green-400"></i> Work & Projects
+        </h3>
+        <div class="grid md:grid-cols-2 gap-8">
+            <div class="group relative overflow-hidden rounded-2xl glass transition hover:border-blue-500/50">
+                <div class="p-8">
+                    <h4 class="text-xl font-bold text-white mb-3 group-hover:text-blue-400 transition">설계 자동화 시스템 구축</h4>
+                    <p class="text-slate-400 text-sm mb-4">반복적인 기계 설계 업무를 자동화하기 위해 Java 기반 백엔드 시스템을 개발하여 업무 효율을 40% 이상 개선했습니다.</p>
+                    <div class="flex gap-2">
+                        <span class="text-[10px] px-2 py-1 glass rounded text-blue-300">Spring Boot</span>
+                        <span class="text-[10px] px-2 py-1 glass rounded text-blue-300">JPA</span>
+                    </div>
+                </div>
+            </div>
+            <div class="group relative overflow-hidden rounded-2xl glass transition hover:border-blue-500/50">
+                <div class="p-8">
+                    <h4 class="text-xl font-bold text-white mb-3 group-hover:text-blue-400 transition">데이터 대시보드 개발</h4>
+                    <p class="text-slate-400 text-sm mb-4">설계 프로세스 데이터를 시각화하여 경영진의 의사결정을 돕는 HTML/JS 기반 대시보드를 구축했습니다.</p>
+                    <div class="flex gap-2">
+                        <span class="text-[10px] px-2 py-1 glass rounded text-blue-300">JavaScript</span>
+                        <span class="text-[10px] px-2 py-1 glass rounded text-blue-300">Chart.js</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="py-12 border-t border-white/5 text-center text-slate-500 text-sm">
+    <p>© 2026 Developer Portfolio. All rights reserved.</p>
+</footer>
+
+<script>
+    // Lucide 아이콘 초기화
+    lucide.createIcons();
+
+    // Typed.js 타이핑 효과
+    new Typed('#typed', {
+        strings: ['Backend Developer', 'Mechanical Designer', 'Process Planner'],
+        typeSpeed: 60,
+        backSpeed: 40,
+        loop: true
+    });
+</script>
+</body>
+</html>

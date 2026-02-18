@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>월별실적 대시보드 (2026)</title>
+
+    <!-- Tailwind (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- ECharts (Heatmap) -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+
+    <style>
+        /* 테이블 고정 헤더 + 스크롤 */
+        .table-wrap { max-height: 420px; overflow: auto; }
+        thead th { position: sticky; top: 0; z-index: 10; }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+<header class="px-6 py-5 border-b bg-white sticky top-0 z-20">
+    <div class="flex items-center justify-between gap-4">
+        <div>
+            <h1 class="text-xl font-bold">월별실적 대시보드 (2026)</h1>
+            <p class="text-sm text-slate-500">과제/브랜드/자재별 실적을 임원 관점에서 요약·비교</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <select id="brandFilter" class="px-3 py-2 border rounded-lg bg-white text-sm">
+                <option value="">브랜드(전체)</option>
+            </select>
+            <select id="taskFilter" class="px-3 py-2 border rounded-lg bg-white text-sm">
+                <option value="">과제(전체)</option>
+            </select>
+            <input id="searchBox" class="px-3 py-2 border rounded-lg bg-white text-sm w-56"
+                   placeholder="자재번호/과제명 검색" />
+            <button id="resetBtn" class="px-3 py-2 rounded-lg bg-slate-900 text-white text-sm">초기화</button>
+        </div>
+    </div>
+</header>
+
+<main class="px-6 py-6 space-y-6">
+    <!-- KPI Cards -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl shadow-sm border p-4">
+            <div class="text-sm text-slate-500">총 수량(필터 반영)</div>
+            <div id="kpiTotal" class="text-2xl font-bold mt-1">-</div>
+            <div id="kpiTotalSub" class="text-xs text-slate-400 mt-1">연간 합계</div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border p-4">
+            <div class="text-sm text-slate-500">활성 과제 수</div>
+            <div id="kpiTaskCnt" class="text-2xl font-bold mt-1">-</div>
+            <div class="text-xs text-slate-400 mt-1">필터 결과 기준</div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border p-4">
+            <div class="text-sm text-slate-500">Top 브랜드</div>
+            <div id="kpiTopBrand" class="text-2xl font-bold mt-1">-</div>
+            <div id="kpiTopBrandSub" class="text-xs text-slate-400 mt-1">기여도(%)</div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border p-4">
+            <div class="text-sm text-slate-500">최고 실적 월</div>
+            <div id="kpiPeakMonth" class="text-2xl font-bold mt-1">-</div>
+            <div id="kpiPeakMonthSub" class="text-xs text-slate-400 mt-1">월 합계</div>
+        </div>
+    </section>
+
+    <!-- Charts Row 1 -->
+    <section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="bg-white rounded-2xl shadow-sm border p-4">
+            <div class="flex items-baseline justify-between">
+                <h2 class="font-semibold">월별 총 실적 추이</h2>
+                <span class="text-xs text-slate-500">전사/필터 결과 기준</span>
+            </div>
+            <div class="mt-3">
+                <canvas id="chartMonthlyTotal" height="120"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border p-4">
+            <div class="flex items-baseline justify-between">
+                <h2 class="font-semibold">과제별 월 기여도(누적)</h2>
+                <span class="text-xs text-slate-500">상위 6개 과제 + 기타</span>
+            </div>
+            <div class="mt-3">
+                <canvas id="chartTaskStacked" height="120"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- Charts Row 2 -->
+    <section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="bg-white rounded-2xl shadow-sm border p-4">
+            <div class="flex items-baseline justify-between">
+                <h2 class="font-semibold">월 × 과제 Heatmap</h2>
+                <span class="text-xs text-slate-500">“언제/어떤 과제가 치고 올라왔는지”</span>
+            </div>
+            <div id="heatmap" class="mt-3" style="width:100%; height:320px;"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border p-4">
+            <div class="flex items-baseline justify-between">
+                <h2 class="font-semibold">Top 자재 Pareto</h2>
+                <span class="text-xs text-slate-500">상위 10개 자재 + 누적 비중</span>
+            </div>
+            <div class="mt-3">
+                <canvas id="chartPareto" height="140"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- Data Table -->
+    <section class="bg-white rounded-2xl shadow-sm border">
+        <div class="p-4 border-b flex items-baseline justify-between">
+            <h2 class="font-semibold">원본 데이터 (필터/검색 반영)</h2>
+            <div class="text-xs text-slate-500">
+                팁: 헤더 고정, 스크롤 가능
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="min-w-full text-sm">
+                <thead class="bg-slate-100">
+                <tr>
+                    <th class="px-3 py-2 text-center font-bold">NO</th>
+                    <th class="px-3 py-2 text-center font-bold">INDEX</th>
+                    <th class="px-3 py-2 text-center font-bold">브랜드</th>
+                    <th class="px-3 py-2 text-center font-bold">자재번호</th>
+                    <th class="px-3 py-2 text-center font-bold">과제명</th>
+                    <th class="px-3 py-2 text-center font-bold">총 수량</th>
+                    <th class="px-3 py-2 text-center font-bold">01</th>
+                    <th class="px-3 py-2 text-center font-bold">02</th>
+                    <th class="px-3 py-2 text-center font-bold">03</th>
+                    <th class="px-3 py-2 text-center font-bold">04</th>
+                    <th class="px-3 py-2 text-center font-bold">05</th>
+                    <th class="px-3 py-2 text-center font-bold">06</th>
+                    <th class="px-3 py-2 text-center font-bold">07</th>
+                    <th class="px-3 py-2 text-center font-bold">08</th>
+                    <th class="px-3 py-2 text-center font-bold">09</th>
+                    <th class="px-3 py-2 text-center font-bold">10</th>
+                    <th class="px-3 py-2 text-center font-bold">11</th>
+                    <th class="px-3 py-2 text-center font-bold">12</th>
+                </tr>
+                </thead>
+                <tbody id="tbody" class="divide-y"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script>
+    // ========= 1) 샘플 데이터 (원하시면 실제 데이터 구조로 바꿔드릴게요) =========
+    // rows: { no, index, brand, matNo, task, months[12] }
+    const sample = [
+        { no: 1, index: "A-001", brand: "HDEL", matNo: "MAT-10001", task: "PLAN-C 7-2-2-3", months: [12,18,22,14,9,11,20,17,10,8,6,7] },
+        { no: 2, index: "A-002", brand: "HDEL", matNo: "MAT-10002", task: "PLAN-C 7-2-2-3", months: [5,7,9,6,4,3,8,11,7,6,5,4] },
+        { no: 3, index: "B-003", brand: "GLOBAL", matNo: "MAT-20011", task: "원가절감-부품공용화", months: [3,2,4,6,10,12,14,10,8,7,4,3] },
+        { no: 4, index: "B-004", brand: "GLOBAL", matNo: "MAT-20012", task: "원가절감-부품공용화", months: [1,1,2,2,5,8,9,7,5,4,2,1] },
+        { no: 5, index: "C-005", brand: "CHINA", matNo: "MAT-30021", task: "품질개선-인증오류저감", months: [0,0,1,1,2,3,4,6,7,9,10,12] },
+        { no: 6, index: "D-006", brand: "HDEL", matNo: "MAT-10110", task: "생산성-전산화자동화", months: [6,9,11,12,15,19,21,24,18,14,10,9] },
+        { no: 7, index: "E-007", brand: "GLOBAL", matNo: "MAT-20100", task: "생산성-전산화자동화", months: [2,3,5,6,7,8,8,9,7,6,4,3] },
+        { no: 8, index: "F-008", brand: "CHINA", matNo: "MAT-30111", task: "현장개선-불량감소", months: [4,5,6,7,6,5,4,3,3,4,5,6] },
+    ];
+
+    const monthsLabel = ["01","02","03","04","05","06","07","08","09","10","11","12"];
+
+    // ========= 2) 유틸 =========
+    const sum = arr => arr.reduce((a,b)=>a+b,0);
+    const fmt = n => (n ?? 0).toLocaleString("ko-KR");
+
+    function computeTotal(row) {
+        return sum(row.months);
+    }
+
+    // ========= 3) 상태/필터 =========
+    const state = {
+        brand: "",
+        task: "",
+        q: ""
+    };
+
+    const brandFilter = document.getElementById("brandFilter");
+    const taskFilter  = document.getElementById("taskFilter");
+    const searchBox   = document.getElementById("searchBox");
+    const resetBtn    = document.getElementById("resetBtn");
+
+    function initFilters(data) {
+        const brands = Array.from(new Set(data.map(d=>d.brand))).sort();
+        const tasks  = Array.from(new Set(data.map(d=>d.task))).sort();
+
+        for (const b of brands) {
+            const opt = document.createElement("option");
+            opt.value = b; opt.textContent = b;
+            brandFilter.appendChild(opt);
+        }
+        for (const t of tasks) {
+            const opt = document.createElement("option");
+            opt.value = t; opt.textContent = t;
+            taskFilter.appendChild(opt);
+        }
+    }
+
+    function applyFilters(data) {
+        const q = state.q.trim().toLowerCase();
+        return data.filter(d => {
+            if (state.brand && d.brand !== state.brand) return false;
+            if (state.task && d.task !== state.task) return false;
+            if (q) {
+                const hay = `${d.matNo} ${d.task} ${d.index}`.toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+            return true;
+        });
+    }
+
+    // ========= 4) 테이블 렌더 =========
+    const tbody = document.getElementById("tbody");
+
+    function renderTable(rows) {
+        tbody.innerHTML = "";
+        for (const r of rows) {
+            const tr = document.createElement("tr");
+            tr.className = "hover:bg-slate-50";
+            const total = computeTotal(r);
+
+            const cells = [
+                r.no, r.index, r.brand, r.matNo, r.task, total,
+                ...r.months
+            ];
+
+            cells.forEach((c, idx) => {
+                const td = document.createElement("td");
+                td.className = "px-3 py-2 text-center whitespace-nowrap";
+                if (idx === 4) td.className = "px-3 py-2 text-left"; // 과제명 left
+                if (idx === 3) td.className = "px-3 py-2 text-left"; // 자재번호 left
+                if (idx === 5) td.className = "px-3 py-2 text-right font-semibold"; // 총수량 right
+                if (idx >= 6) td.className = "px-3 py-2 text-right";
+                td.textContent = (typeof c === "number") ? fmt(c) : c;
+                tr.appendChild(td);
+            });
+
+            tbody.appendChild(tr);
+        }
+    }
+
+    // ========= 5) KPI 계산 =========
+    function renderKpis(rows) {
+        const totalAll = sum(rows.map(computeTotal));
+        document.getElementById("kpiTotal").textContent = fmt(totalAll);
+
+        const taskCnt = new Set(rows.map(r=>r.task)).size;
+        document.getElementById("kpiTaskCnt").textContent = fmt(taskCnt);
+
+        // Top 브랜드
+        const byBrand = {};
+        rows.forEach(r => byBrand[r.brand] = (byBrand[r.brand] ?? 0) + computeTotal(r));
+        const brandPairs = Object.entries(byBrand).sort((a,b)=>b[1]-a[1]);
+        const topBrand = brandPairs[0]?.[0] ?? "-";
+        const topBrandVal = brandPairs[0]?.[1] ?? 0;
+        const ratio = totalAll ? (topBrandVal / totalAll * 100) : 0;
+
+        document.getElementById("kpiTopBrand").textContent = topBrand;
+        document.getElementById("kpiTopBrandSub").textContent = `기여도 ${ratio.toFixed(1)}%`;
+
+        // 최고 월
+        const monthSums = monthsLabel.map((_, i) => sum(rows.map(r => r.months[i] ?? 0)));
+        let peakIdx = 0;
+        monthSums.forEach((v,i)=>{ if(v>monthSums[peakIdx]) peakIdx=i; });
+
+        document.getElementById("kpiPeakMonth").textContent = monthsLabel[peakIdx];
+        document.getElementById("kpiPeakMonthSub").textContent = `월 합계 ${fmt(monthSums[peakIdx])}`;
+    }
+
+    // ========= 6) 차트들 =========
+    let chartMonthlyTotal, chartTaskStacked, chartPareto;
+    let heat;
+
+    function buildMonthlyTotal(rows) {
+        const series = monthsLabel.map((_, i) => sum(rows.map(r => r.months[i] ?? 0)));
+
+        if (chartMonthlyTotal) chartMonthlyTotal.destroy();
+        chartMonthlyTotal = new Chart(document.getElementById("chartMonthlyTotal"), {
+            type: "line",
+            data: {
+                labels: monthsLabel,
+                datasets: [{
+                    label: "월 합계",
+                    data: series,
+                    tension: 0.25,
+                    pointRadius: 3,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: { label: ctx => ` ${fmt(ctx.raw)} ` }
+                    }
+                },
+                scales: {
+                    y: { ticks: { callback: v => fmt(v) } }
+                }
+            }
+        });
+    }
+
+    // 과제별 누적 막대: 상위 6개 과제 + 기타
+    function buildTaskStacked(rows) {
+        const byTaskTotal = {};
+        rows.forEach(r => byTaskTotal[r.task] = (byTaskTotal[r.task] ?? 0) + computeTotal(r));
+        const topTasks = Object.entries(byTaskTotal).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+        const main = topTasks.slice(0, 6);
+        const tasksForChart = [...main, "기타"];
+
+        const dataMap = {};
+        tasksForChart.forEach(t => dataMap[t] = Array(12).fill(0));
+
+        rows.forEach(r => {
+            const key = main.includes(r.task) ? r.task : "기타";
+            r.months.forEach((v, i) => dataMap[key][i] += (v ?? 0));
+        });
+
+        const datasets = tasksForChart.map(t => ({
+            label: t,
+            data: dataMap[t],
+            borderWidth: 1
+        }));
+
+        if (chartTaskStacked) chartTaskStacked.destroy();
+        chartTaskStacked = new Chart(document.getElementById("chartTaskStacked"), {
+            type: "bar",
+            data: { labels: monthsLabel, datasets },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: "bottom", labels: { boxWidth: 10 } },
+                    tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` } }
+                },
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, ticks: { callback: v => fmt(v) } }
+                }
+            }
+        });
+    }
+
+    // Pareto: Top 자재 10개 + 누적 %
+    function buildPareto(rows) {
+        const byMat = {};
+        rows.forEach(r => byMat[r.matNo] = (byMat[r.matNo] ?? 0) + computeTotal(r));
+        const pairs = Object.entries(byMat).sort((a,b)=>b[1]-a[1]).slice(0, 10);
+
+        const labels = pairs.map(p=>p[0]);
+        const vals   = pairs.map(p=>p[1]);
+        const total = sum(Object.values(byMat));
+        let cum = 0;
+        const cumPct = vals.map(v => {
+            cum += v;
+            return total ? (cum / total * 100) : 0;
+        });
+
+        if (chartPareto) chartPareto.destroy();
+        chartPareto = new Chart(document.getElementById("chartPareto"), {
+            data: {
+                labels,
+                datasets: [
+                    { type: "bar", label: "수량", data: vals, yAxisID: "y" },
+                    { type: "line", label: "누적%", data: cumPct, yAxisID: "y1", tension: 0.25, pointRadius: 2, borderWidth: 2 }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: "bottom", labels: { boxWidth: 10 } },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                if (ctx.dataset.yAxisID === "y1") return ` ${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%`;
+                                return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { position: "left", ticks: { callback: v => fmt(v) } },
+                    y1: { position: "right", min: 0, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: v => `${v}%` } }
+                }
+            }
+        });
+    }
+
+    // Heatmap (월 × 과제) : 상위 8개 과제 + 기타 (너무 많으면 해석 어려움)
+    function buildHeatmap(rows) {
+        const byTask = {};
+        rows.forEach(r => byTask[r.task] = (byTask[r.task] ?? 0) + computeTotal(r));
+        const top = Object.entries(byTask).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+        const main = top.slice(0, 8);
+        const tasks = [...main, "기타"];
+
+        const grid = tasks.map(_ => Array(12).fill(0));
+        rows.forEach(r => {
+            const y = main.includes(r.task) ? tasks.indexOf(r.task) : tasks.indexOf("기타");
+            r.months.forEach((v, x) => grid[y][x] += (v ?? 0));
+        });
+
+        const heatData = [];
+        for (let y=0; y<tasks.length; y++) {
+            for (let x=0; x<12; x++) {
+                heatData.push([x, y, grid[y][x]]);
+            }
+        }
+
+        const maxVal = Math.max(...heatData.map(d => d[2] ?? 0), 0);
+
+        if (!heat) heat = echarts.init(document.getElementById("heatmap"));
+        heat.setOption({
+            tooltip: {
+                formatter: (p) => {
+                    const [x,y,v] = p.data;
+                    return `<b>${tasks[y]}</b><br/>월: ${monthsLabel[x]}<br/>수량: ${fmt(v)}`;
+                }
+            },
+            grid: { left: 120, right: 30, top: 20, bottom: 40 },
+            xAxis: { type: "category", data: monthsLabel, splitArea: { show: true } },
+            yAxis: { type: "category", data: tasks, splitArea: { show: true } },
+            visualMap: {
+                min: 0, max: Math.max(1, maxVal),
+                calculable: true,
+                orient: "horizontal",
+                left: "center",
+                bottom: 0
+            },
+            series: [{
+                name: "Heat",
+                type: "heatmap",
+                data: heatData,
+                emphasis: { itemStyle: { shadowBlur: 10 } }
+            }]
+        }, true);
+        window.addEventListener("resize", () => heat.resize());
+    }
+
+    // ========= 7) 전체 리렌더 =========
+    function renderAll() {
+        const rows = applyFilters(sample);
+        renderTable(rows);
+        renderKpis(rows);
+        buildMonthlyTotal(rows);
+        buildTaskStacked(rows);
+        buildHeatmap(rows);
+        buildPareto(rows);
+    }
+
+    // ========= 8) 이벤트 =========
+    brandFilter.addEventListener("change", (e) => { state.brand = e.target.value; renderAll(); });
+    taskFilter.addEventListener("change", (e) => { state.task = e.target.value; renderAll(); });
+    searchBox.addEventListener("input", (e) => { state.q = e.target.value; renderAll(); });
+
+    resetBtn.addEventListener("click", () => {
+        state.brand = ""; state.task = ""; state.q = "";
+        brandFilter.value = ""; taskFilter.value = ""; searchBox.value = "";
+        renderAll();
+    });
+
+    // ========= 9) 부팅 =========
+    initFilters(sample);
+    renderAll();
+</script>
+</body>
+</html>

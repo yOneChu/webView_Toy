@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Executive Strategic Dashboard 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6; }
+        body { font-family: 'Pretendard', sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: var(--primary); }
+        .dashboard-header { display: flex; gap: 20px; margin-bottom: 30px; }
+        .kpi-card { background: white; padding: 20px; border-radius: 15px; flex: 1; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; }
+        .kpi-card h3 { margin: 0; font-size: 0.9rem; color: #7f8c8d; }
+        .kpi-card p { font-size: 1.8rem; font-weight: bold; margin: 10px 0 0; color: var(--accent); }
+
+        .chart-row { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 30px; }
+        .chart-container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+
+        .table-container { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { background: #f8f9fa; padding: 12px; border: 1px solid #eee; }
+        td { padding: 10px; border: 1px solid #eee; text-align: center; }
+        .bg-secondary { background-color: #6c757d; color: white; }
+    </style>
+</head>
+<body>
+
+<h2 style="margin-bottom: 25px;">🏢 2026년 경영 실적 요약 대시보드</h2>
+
+<div class="dashboard-header">
+    <div class="kpi-card">
+        <h3>총 과제 수</h3>
+        <p id="total-projects">0</p>
+    </div>
+    <div class="kpi-card">
+        <h3>누적 총 수량</h3>
+        <p id="total-qty">0</p>
+    </div>
+    <div class="kpi-card">
+        <h3>총 단가 합계 (₩)</h3>
+        <p id="total-amount">0</p>
+    </div>
+</div>
+
+<div class="chart-row">
+    <div class="chart-container">
+        <canvas id="brandDonutChart"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="monthlyComboChart"></canvas>
+    </div>
+</div>
+
+<div class="table-container">
+    <table id="data-table">
+        <thead>
+        <tr class="bg-secondary">
+            <th rowspan="3">NO</th>
+            <th rowspan="3">브랜드</th>
+            <th rowspan="3">자재번호</th>
+            <th rowspan="3">과제명</th>
+            <th rowspan="3">총 수량</th>
+            <th rowspan="3">단가 합계</th>
+            <th colspan="12">2026년 월별 실적</th>
+        </tr>
+        <tr class="bg-secondary">
+            <th colspan="12">월별 추이</th>
+        </tr>
+        <tr class="bg-secondary">
+            <th>01</th><th>02</th><th>03</th><th>04</th><th>05</th><th>06</th>
+            <th>07</th><th>08</th><th>09</th><th>10</th><th>11</th><th>12</th>
+        </tr>
+        </thead>
+        <tbody id="table-body">
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // 1. 데이터 정의 (실제 서버 API에서 받아온 데이터 구조라고 가정)
+    const rawData = [
+        { no: 1, index: 'A-1', brand: 'Hyundai', code: 'HE-101', title: '고속기 리뉴얼', totalQty: 450, totalPrice: 54000000, monthly: [30, 40, 50, 20, 30, 60, 40, 30, 50, 40, 30, 30] },
+        { no: 2, index: 'B-3', brand: 'Inno', code: 'IN-505', title: '제어반 모듈화', totalQty: 820, totalPrice: 125000000, monthly: [70, 80, 60, 90, 100, 50, 40, 80, 70, 60, 60, 60] },
+        { no: 3, brand: 'Global', code: 'GL-202', title: '스마트 미러 패키지', totalQty: 310, totalPrice: 89000000, monthly: [20, 25, 30, 20, 25, 30, 40, 30, 20, 30, 20, 30] }
+    ];
+
+    // 2. 테이블 렌더링 및 KPI 계산
+    let totalQty = 0;
+    let totalAmount = 0;
+    const tableBody = document.getElementById('table-body');
+
+    rawData.forEach(item => {
+        totalQty += item.totalQty;
+        totalAmount += item.totalPrice;
+
+        const row = `<tr>
+                <td>${item.no}</td>
+                <td><strong>${item.brand}</strong></td>
+                <td>${item.code}</td>
+                <td style="text-align:left">${item.title}</td>
+                <td>${item.totalQty.toLocaleString()}</td>
+                <td>₩${item.totalPrice.toLocaleString()}</td>
+                ${item.monthly.map(m => `<td>${m}</td>`).join('')}
+            </tr>`;
+        tableBody.innerHTML += row;
+    });
+
+    document.getElementById('total-projects').innerText = rawData.length;
+    document.getElementById('total-qty').innerText = totalQty.toLocaleString();
+    document.getElementById('total-amount').innerText = `₩ ${totalAmount.toLocaleString()}`;
+
+    // 3. 그래프 구현 - 브랜드별 비중 (Doughnut)
+    new Chart(document.getElementById('brandDonutChart'), {
+        type: 'doughnut',
+        data: {
+            labels: rawData.map(d => d.brand),
+            datasets: [{
+                data: rawData.map(d => d.totalQty),
+                backgroundColor: ['#3498db', '#1abc9c', '#9b59b6'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            plugins: { title: { display: true, text: '브랜드별 수량 점유율', font: {size: 16} } }
+        }
+    });
+
+    // 4. 그래프 구현 - 월별 추이 (Combo Chart)
+    const monthlySum = new Array(12).fill(0);
+    rawData.forEach(item => {
+        item.monthly.forEach((val, idx) => monthlySum[idx] += val);
+    });
+
+    new Chart(document.getElementById('monthlyComboChart'), {
+        type: 'bar',
+        data: {
+            labels: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'],
+            datasets: [{
+                label: '월별 총 수량',
+                data: monthlySum,
+                backgroundColor: 'rgba(52, 152, 219, 0.6)',
+                order: 2
+            }, {
+                label: '성장 추세',
+                data: monthlySum.map(v => v * 1.1), // 예시용 추세선
+                borderColor: '#e74c3c',
+                type: 'line',
+                fill: false,
+                tension: 0.4,
+                order: 1
+            }]
+        },
+        options: {
+            plugins: { title: { display: true, text: '2026년 전체 실적 추이 분석', font: {size: 16} } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="ko" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OOO | Developer Portfolio</title>
+    <meta name="description" content="OOO 개발자 이력서/포트폴리오" />
+
+    <!-- Tailwind (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    boxShadow: { soft: "0 10px 30px rgba(0,0,0,.08)" }
+                }
+            }
+        }
+    </script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <!-- AOS (Animate On Scroll) -->
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css" />
+    <script defer src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+
+    <style>
+        /* 부드러운 그라디언트 배경 + 노이즈 느낌 */
+        .bg-mesh {
+            background:
+                    radial-gradient(800px circle at 20% 10%, rgba(59,130,246,.18), transparent 40%),
+                    radial-gradient(900px circle at 80% 20%, rgba(168,85,247,.16), transparent 40%),
+                    radial-gradient(900px circle at 50% 90%, rgba(16,185,129,.12), transparent 45%);
+        }
+        .noise:before{
+            content:"";
+            position:absolute; inset:0;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.08'/%3E%3C/svg%3E");
+            pointer-events:none;
+            mix-blend-mode:overlay;
+        }
+        /* 모달 스크롤 잠금 */
+        .no-scroll { overflow: hidden; }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+<!-- Top Nav -->
+<header class="sticky top-0 z-50 backdrop-blur bg-white/70 dark:bg-slate-950/60 border-b border-slate-200/70 dark:border-slate-800/70">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <a href="#home" class="font-extrabold tracking-tight text-lg">
+            <span class="text-slate-900 dark:text-white">OOO</span>
+            <span class="text-blue-600">.dev</span>
+        </a>
+
+        <nav class="hidden md:flex items-center gap-6 text-sm font-semibold">
+            <a class="navlink opacity-70 hover:opacity-100" href="#about">About</a>
+            <a class="navlink opacity-70 hover:opacity-100" href="#skills">Skills</a>
+            <a class="navlink opacity-70 hover:opacity-100" href="#archiving">Archiving</a>
+            <a class="navlink opacity-70 hover:opacity-100" href="#projects">Projects</a>
+            <a class="navlink opacity-70 hover:opacity-100" href="#career">Career</a>
+        </nav>
+
+        <div class="flex items-center gap-2">
+            <button id="themeBtn" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:shadow-soft transition"
+                    aria-label="toggle theme">
+                <i class="fa-solid fa-moon dark:hidden"></i>
+                <i class="fa-solid fa-sun hidden dark:inline"></i>
+            </button>
+
+            <button id="mobileBtn" class="md:hidden px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800"
+                    aria-label="open menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="mobileMenu" class="md:hidden hidden border-t border-slate-200/70 dark:border-slate-800/70 bg-white/70 dark:bg-slate-950/60">
+        <div class="max-w-6xl mx-auto px-4 py-3 grid gap-2 text-sm font-semibold">
+            <a class="py-2" href="#about">About</a>
+            <a class="py-2" href="#skills">Skills</a>
+            <a class="py-2" href="#archiving">Archiving</a>
+            <a class="py-2" href="#projects">Projects</a>
+            <a class="py-2" href="#career">Career</a>
+        </div>
+    </div>
+</header>
+
+<!-- Hero -->
+<main id="home" class="relative bg-mesh">
+    <section class="relative noise">
+        <div class="max-w-6xl mx-auto px-4 py-16 md:py-24">
+            <div class="grid md:grid-cols-12 gap-10 items-center">
+                <div class="md:col-span-7" data-aos="fade-up">
+                    <p class="inline-flex items-center gap-2 text-sm font-bold px-3 py-1 rounded-full bg-white/70 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800/70">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        구직 상태 / 재직 중 등 상태 문구
+                    </p>
+
+                    <h1 class="mt-5 text-4xl md:text-6xl font-black leading-tight tracking-tight">
+                        본질에 집중하는<br/>
+                        <span class="text-blue-600">개발자 OOO</span> 입니다.
+                    </h1>
+
+                    <p class="mt-5 text-lg md:text-xl text-slate-700 dark:text-slate-300 leading-relaxed">
+                        임팩트 있는 제품을 만들기 위해 <b>문제 정의 → 설계 → 구현 → 운영</b>까지 끝까지 가져가는 개발을 지향합니다.
+                        (여기 문장 2~3줄로 “나”를 정의)
+                    </p>
+
+                    <div class="mt-7 flex flex-wrap gap-3">
+                        <a id="ctaResume" class="px-5 py-3 rounded-2xl bg-blue-600 text-white font-bold hover:opacity-95 shadow-soft transition" href="#projects">
+                            프로젝트 보기 <i class="fa-solid fa-arrow-down ml-2"></i>
+                        </a>
+                        <a id="ctaContact" class="px-5 py-3 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800/70 font-bold hover:shadow-soft transition" href="#about">
+                            더 알아보기
+                        </a>
+                    </div>
+
+                    <div id="quickLinks" class="mt-8 flex flex-wrap gap-3 text-sm"></div>
+                </div>
+
+                <div class="md:col-span-5" data-aos="fade-left">
+                    <div class="rounded-3xl bg-white/70 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800/70 shadow-soft p-6">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center text-white text-2xl font-black">
+                                O
+                            </div>
+                            <div>
+                                <p class="font-extrabold text-lg" id="cardName">OOO</p>
+                                <p class="text-sm text-slate-600 dark:text-slate-300" id="cardRole">Backend / Full-stack Developer</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 grid gap-3 text-sm">
+                            <div class="flex items-center justify-between">
+                                <span class="text-slate-500 dark:text-slate-400"><i class="fa-regular fa-envelope mr-2"></i>Email</span>
+                                <a id="cardEmail" class="font-bold hover:text-blue-600" href="mailto:you@example.com">you@example.com</a>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-slate-500 dark:text-slate-400"><i class="fa-solid fa-location-dot mr-2"></i>Location</span>
+                                <span id="cardLocation" class="font-bold">Seoul, KR</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-slate-500 dark:text-slate-400"><i class="fa-solid fa-link mr-2"></i>Links</span>
+                                <span class="font-bold" id="cardLinksMini"></span>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 rounded-2xl bg-slate-900 text-slate-100 p-4 text-xs overflow-auto">
+                            <div class="opacity-70 mb-2"># TL;DR (3줄 요약)</div>
+                            <ul id="tldr" class="list-disc pl-5 space-y-1"></ul>
+                        </div>
+                    </div>
+
+                    <p class="mt-4 text-xs text-slate-500 dark:text-slate-400">
+                        * 사진 넣고 싶으면 위 카드에 img 태그 추가하면 돼요.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sections -->
+    <section id="about" class="max-w-6xl mx-auto px-4 py-14 md:py-20">
+        <div class="flex items-end justify-between gap-4">
+            <div>
+                <h2 class="text-2xl md:text-3xl font-black">ABOUT ME</h2>
+                <p class="mt-2 text-slate-600 dark:text-slate-300">소개 / 기본정보 / 강점</p>
+            </div>
+            <a class="text-sm font-bold text-blue-600 hover:underline" href="#home">TOP ↑</a>
+        </div>
+
+        <div class="mt-8 grid md:grid-cols-12 gap-6">
+            <div class="md:col-span-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-soft p-6" data-aos="fade-up">
+                <h3 class="font-extrabold text-lg">저는 이런 개발자입니다</h3>
+                <p id="aboutText" class="mt-3 text-slate-700 dark:text-slate-300 leading-relaxed"></p>
+
+                <div class="mt-5 flex flex-wrap gap-2" id="aboutBadges"></div>
+            </div>
+
+            <div class="md:col-span-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-soft p-6" data-aos="fade-up" data-aos-delay="50">
+                <h3 class="font-extrabold text-lg">기본 정보</h3>
+                <div class="mt-4 grid gap-3 text-sm" id="aboutInfo"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="skills" class="max-w-6xl mx-auto px-4 py-14 md:py-20">
+        <div class="flex items-end justify-between gap-4">
+            <div>
+                <h2 class="text-2xl md:text-3xl font-black">SKILLS</h2>
+                <p class="mt-2 text-slate-600 dark:text-slate-300">카테고리별로 정리</p>
+            </div>
+            <a class="text-sm font-bold text-blue-600 hover:underline" href="#home">TOP ↑</a>
+        </div>
+
+        <div id="skillsGrid" class="mt-8 grid md:grid-cols-2 gap-6"></div>
+    </section>
+
+    <section id="archiving" class="max-w-6xl mx-auto px-4 py-14 md:py-20">
+        <div class="flex items-end justify-between gap-4">
+            <div>
+                <h2 class="text-2xl md:text-3xl font-black">ARCHIVING</h2>
+                <p class="mt-2 text-slate-600 dark:text-slate-300">깃헙/블로그/노션/이력서 PDF 등</p>
+            </div>
+            <a class="text-sm font-bold text-blue-600 hover:underline" href="#home">TOP ↑</a>
+        </div>
+
+        <div id="archivingGrid" class="mt-8 grid md:grid-cols-2 gap-6"></div>
+    </section>
+
+    <section id="projects" class="max-w-6xl mx-auto px-4 py-14 md:py-20">
+        <div class="flex items-end justify-between gap-4">
+            <div>
+                <h2 class="text-2xl md:text-3xl font-black">PROJECTS</h2>
+                <p class="mt-2 text-slate-600 dark:text-slate-300">클릭하면 상세(모달)로 보여줍니다</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="filterAll" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-sm font-bold">전체</button>
+                <button id="filterMajor" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-sm font-bold">주요만</button>
+            </div>
+        </div>
+
+        <div id="projectsGrid" class="mt-8 grid md:grid-cols-2 gap-6"></div>
+    </section>
+
+    <section id="career" class="max-w-6xl mx-auto px-4 py-14 md:py-20">
+        <div class="flex items-end justify-between gap-4">
+            <div>
+                <h2 class="text-2xl md:text-3xl font-black">CAREER</h2>
+                <p class="mt-2 text-slate-600 dark:text-slate-300">회사/역할/임팩트 중심</p>
+            </div>
+            <a class="text-sm font-bold text-blue-600 hover:underline" href="#home">TOP ↑</a>
+        </div>
+
+        <div id="careerList" class="mt-8 grid gap-6"></div>
+    </section>
+
+    <footer class="border-t border-slate-200 dark:border-slate-800 py-10">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+                © <span id="year"></span> OOO. Built with HTML + Tailwind + Vanilla JS.
+            </p>
+            <div class="text-sm text-slate-500 dark:text-slate-400">
+                <span>Last updated: </span><span id="lastUpdated"></span>
+            </div>
+        </div>
+    </footer>
+</main>
+
+<!-- Project Modal -->
+<div id="modal" class="fixed inset-0 hidden z-[999]">
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="absolute inset-0 flex items-end md:items-center justify-center p-4">
+        <div class="w-full max-w-3xl rounded-3xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-soft overflow-hidden">
+            <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-4">
+                <div>
+                    <h3 id="modalTitle" class="text-xl font-black"></h3>
+                    <p id="modalMeta" class="mt-1 text-sm text-slate-600 dark:text-slate-300"></p>
+                </div>
+                <button id="modalClose" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4 max-h-[70vh] overflow-auto">
+                <div class="flex flex-wrap gap-2" id="modalTags"></div>
+                <div>
+                    <h4 class="font-extrabold">요약</h4>
+                    <p id="modalSummary" class="mt-2 text-slate-700 dark:text-slate-300 leading-relaxed"></p>
+                </div>
+                <div>
+                    <h4 class="font-extrabold">내가 한 일</h4>
+                    <ul id="modalBullets" class="mt-2 list-disc pl-5 space-y-1 text-slate-700 dark:text-slate-300"></ul>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <a id="modalLink" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold hover:opacity-95" target="_blank" rel="noreferrer">
+                        바로가기 <i class="fa-solid fa-up-right-from-square ml-2"></i>
+                    </a>
+                    <a id="modalRepo" class="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 font-bold" target="_blank" rel="noreferrer">
+                        Repo <i class="fa-brands fa-github ml-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /** ===========================
+     *  0) 여기만 수정하면 내 포트폴리오로 변신
+     *  =========================== */
+    const PROFILE = {
+        name: "홍길동",
+        role: "Backend / Full-stack Developer",
+        location: "Seoul, KR",
+        email: "you@example.com",
+        quickLinks: [
+            { label: "GitHub", icon: "fa-brands fa-github", href: "https://github.com/yourid" },
+            { label: "Blog", icon: "fa-solid fa-pen-nib", href: "https://your-blog.com" },
+            { label: "LinkedIn", icon: "fa-brands fa-linkedin", href: "https://linkedin.com/in/yourid" },
+        ],
+        tldr: [
+            "Spring Boot / JPA 기반 백엔드 개발에 강점",
+            "성능/안정성(캐시, 인덱스, 관측)까지 챙기는 습관",
+            "제품 임팩트를 KPI로 설명하는 개발자"
+        ],
+        about: {
+            text:
+                "문제를 ‘기능’이 아니라 ‘사용자 가치’로 정의하고, 가장 단순한 구조로 빠르게 검증하는 걸 좋아합니다. " +
+                "성능/장애/운영까지 고려한 설계를 선호하며, 팀이 유지보수하기 쉬운 코드(테스트, 문서, 규약)를 지향합니다.",
+            badges: ["문제정의", "아키텍처", "성능개선", "운영/관측", "협업/리딩"],
+            info: [
+                { k: "이름", v: "홍길동" },
+                { k: "연락처", v: "010-0000-0000" },
+                { k: "이메일", v: "you@example.com" },
+                { k: "학력", v: "OO대학교 컴퓨터공학" },
+                { k: "관심", v: "LLM, 데이터 엔지니어링, 클린아키텍처" },
+            ]
+        },
+        skills: [
+            {
+                title: "Language",
+                icon: "fa-solid fa-code",
+                items: ["Java", "Kotlin", "Python", "JavaScript/TypeScript", "SQL"]
+            },
+            {
+                title: "Backend",
+                icon: "fa-solid fa-server",
+                items: ["Spring Boot", "JPA/Hibernate", "REST/GraphQL", "Redis", "Kafka/RabbitMQ"]
+            },
+            {
+                title: "DevOps",
+                icon: "fa-solid fa-cloud",
+                items: ["Docker", "AWS (EC2/RDS/ECS)", "CI/CD (GitHub Actions)", "Nginx", "Observability (Prometheus/Grafana)"]
+            },
+            {
+                title: "Frontend (협업/서브)",
+                icon: "fa-solid fa-desktop",
+                items: ["React", "Next.js", "Tailwind", "Vite"]
+            }
+        ],
+        archiving: [
+            {
+                title: "GitHub",
+                desc: "소스 코드 / 사이드 프로젝트 / 알고리즘",
+                href: "https://github.com/yourid",
+                icon: "fa-brands fa-github"
+            },
+            {
+                title: "Blog",
+                desc: "트러블슈팅 / 학습 기록 / 회고",
+                href: "https://your-blog.com",
+                icon: "fa-solid fa-pen-nib"
+            }
+        ],
+        projects: [
+            {
+                major: true,
+                title: "OO 서비스 API 플랫폼",
+                period: "2025.06 - 2025.12",
+                summary: "트래픽 증가에 대응하기 위해 캐시/비동기/DB 튜닝을 적용한 API 플랫폼 개선 프로젝트.",
+                bullets: [
+                    "Redis 캐시 도입으로 P95 응답시간 40%↓, DB 부하 30%↓",
+                    "핵심 쿼리 인덱스 재설계 및 N+1 제거",
+                    "구간별 모니터링 대시보드/알람 구성"
+                ],
+                tags: ["Spring Boot", "Redis", "MySQL", "AWS"],
+                link: "https://example.com",
+                repo: "https://github.com/yourid/project1"
+            },
+            {
+                major: true,
+                title: "사이드: 포트폴리오 웹",
+                period: "2026.01",
+                summary: "이력서/프로젝트를 한 페이지로 정리한 반응형 포트폴리오.",
+                bullets: [
+                    "정적 페이지(SEO 고려) + 모달 상세 UX",
+                    "데이터를 JS 오브젝트로 분리해 유지보수 쉽게 구성"
+                ],
+                tags: ["HTML", "Tailwind", "Vanilla JS"],
+                link: "https://example.com",
+                repo: "https://github.com/yourid/portfolio"
+            },
+            {
+                major: false,
+                title: "사이드: 자동화 스크립트",
+                period: "2025.03",
+                summary: "반복 업무를 줄이기 위한 Python 자동화 도구.",
+                bullets: ["배치 작업 자동화", "리포트 생성/슬랙 알림"],
+                tags: ["Python"],
+                link: "https://example.com",
+                repo: "https://github.com/yourid/automation"
+            }
+        ],
+        career: [
+            {
+                company: "OOO Corp",
+                logoText: "OO",
+                period: "2024.01 - 현재",
+                tagline: "제품 임팩트를 만드는 팀",
+                roles: [
+                    {
+                        title: "Backend Engineer",
+                        period: "2024.01 - 현재",
+                        bullets: [
+                            "결제/정산 도메인 API 개발 및 안정화",
+                            "관측/알림 체계 구축으로 장애 대응 시간 단축",
+                            "레거시 모듈 분리 및 테스트 커버리지 개선"
+                        ]
+                    }
+                ]
+            },
+            {
+                company: "AAA Startup",
+                logoText: "AA",
+                period: "2021.07 - 2023.12",
+                tagline: "0→1 제품 개발",
+                roles: [
+                    {
+                        title: "Full-stack Engineer",
+                        period: "2021.07 - 2023.12",
+                        bullets: [
+                            "핵심 기능 설계/개발/운영",
+                            "성능 병목 분석 및 DB/캐시 개선"
+                        ]
+                    }
+                ]
+            }
+        ],
+        lastUpdated: "2026-02-18"
+    };
+
+    /** ===========================
+     *  1) UI 유틸
+     *  =========================== */
+    const $ = (sel, el=document) => el.querySelector(sel);
+    const $$ = (sel, el=document) => [...el.querySelectorAll(sel)];
+
+    function el(tag, cls="", html="") {
+        const n = document.createElement(tag);
+        if (cls) n.className = cls;
+        if (html) n.innerHTML = html;
+        return n;
+    }
+
+    function badge(text) {
+        return `<span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">${text}</span>`;
+    }
+
+    function setActiveNavByHash(hash) {
+        $$(".navlink").forEach(a => {
+            const on = a.getAttribute("href") === hash;
+            a.classList.toggle("opacity-100", on);
+            a.classList.toggle("opacity-70", !on);
+            a.classList.toggle("text-blue-600", on);
+        });
+    }
+
+    /** ===========================
+     *  2) 렌더링
+     *  =========================== */
+    function renderProfile() {
+        document.title = `${PROFILE.name} | Developer Portfolio`;
+        $("#cardName").textContent = PROFILE.name;
+        $("#cardRole").textContent = PROFILE.role;
+        $("#cardEmail").textContent = PROFILE.email;
+        $("#cardEmail").href = `mailto:${PROFILE.email}`;
+        $("#cardLocation").textContent = PROFILE.location;
+
+        // quick links
+        const q = $("#quickLinks");
+        q.innerHTML = PROFILE.quickLinks.map(l => `
+    <a class="px-4 py-2 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800/70 text-sm font-bold hover:shadow-soft transition"
+       href="${l.href}" target="_blank" rel="noreferrer">
+      <i class="${l.icon} mr-2"></i>${l.label}
+    </a>
+  `).join("");
+
+        $("#cardLinksMini").innerHTML = PROFILE.quickLinks
+            .slice(0,2)
+            .map(l => `<a class="hover:text-blue-600" href="${l.href}" target="_blank" rel="noreferrer">${l.label}</a>`)
+            .join(" · ");
+
+        // TL;DR
+        $("#tldr").innerHTML = PROFILE.tldr.map(x => `<li>${x}</li>`).join("");
+
+        // About
+        $("#aboutText").textContent = PROFILE.about.text;
+        $("#aboutBadges").innerHTML = PROFILE.about.badges.map(badge).join("");
+
+        // Info
+        const info = $("#aboutInfo");
+        info.innerHTML = "";
+        PROFILE.about.info.forEach(row => {
+            const item = el("div", "flex items-center justify-between gap-4 text-sm");
+            item.innerHTML = `
+      <span class="text-slate-500 dark:text-slate-400 font-semibold">${row.k}</span>
+      <span class="font-bold text-right">${row.v}</span>
+    `;
+            info.appendChild(item);
+        });
+
+        // Skills
+        const sg = $("#skillsGrid");
+        sg.innerHTML = "";
+        PROFILE.skills.forEach((cat, idx) => {
+            const card = el("div",
+                "rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-soft p-6",
+                `
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <i class="${cat.icon}"></i>
+          </div>
+          <h3 class="font-extrabold text-lg">${cat.title}</h3>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-2">
+          ${cat.items.map(badge).join("")}
+        </div>
+      `
+            );
+            card.setAttribute("data-aos", "fade-up");
+            card.setAttribute("data-aos-delay", String(idx * 50));
+            sg.appendChild(card);
+        });
+
+        // Archiving
+        const ag = $("#archivingGrid");
+        ag.innerHTML = "";
+        PROFILE.archiving.forEach((a, idx) => {
+            const card = el("a",
+                "block rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-soft p-6 hover:-translate-y-0.5 hover:shadow transition",
+                `
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <i class="${a.icon}"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-lg">${a.title}</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">${a.desc}</p>
+          </div>
+        </div>
+        <p class="mt-4 text-sm font-bold text-blue-600">
+          방문하기 <i class="fa-solid fa-up-right-from-square ml-2"></i>
+        </p>
+      `
+            );
+            card.href = a.href;
+            card.target = "_blank";
+            card.rel = "noreferrer";
+            card.setAttribute("data-aos", "fade-up");
+            card.setAttribute("data-aos-delay", String(idx * 50));
+            ag.appendChild(card);
+        });
+
+        // Projects (default all)
+        renderProjects(false);
+
+        // Career
+        const cl = $("#careerList");
+        cl.innerHTML = "";
+        PROFILE.career.forEach((c, idx) => {
+            const card = el("div",
+                "rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-soft p-6",
+                `
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white flex items-center justify-center font-black">
+              ${c.logoText || c.company[0]}
+            </div>
+            <div>
+              <h3 class="font-extrabold text-lg">${c.company}</h3>
+              <p class="text-sm text-slate-600 dark:text-slate-300">${c.period}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">"${c.tagline}"</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-5 grid gap-5">
+          ${c.roles.map(r => `
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+              <div class="flex items-center justify-between gap-3">
+                <p class="font-extrabold">${r.title}</p>
+                <p class="text-sm text-slate-600 dark:text-slate-300">${r.period}</p>
+              </div>
+              <ul class="mt-3 list-disc pl-5 space-y-1 text-slate-700 dark:text-slate-300">
+                ${r.bullets.map(b => `<li>${b}</li>`).join("")}
+              </ul>
+            </div>
+          `).join("")}
+        </div>
+      `
+            );
+            card.setAttribute("data-aos", "fade-up");
+            card.setAttribute("data-aos-delay", String(idx * 50));
+            cl.appendChild(card);
+        });
+
+        $("#year").textContent = new Date().getFullYear();
+        $("#lastUpdated").textContent = PROFILE.lastUpdated;
+    }
+
+    function renderProjects(majorOnly) {
+        const grid = $("#projectsGrid");
+        grid.innerHTML = "";
+        const list = PROFILE.projects.filter(p => majorOnly ? p.major : true);
+
+        list.forEach((p, idx) => {
+            const card = el("button",
+                "text-left rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-soft p-6 hover:-translate-y-0.5 hover:shadow transition",
+                `
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="font-black text-lg">${p.title}</h3>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">${p.period}${p.major ? " · <span class='text-emerald-600 font-bold'>Major</span>" : ""}</p>
+          </div>
+          <div class="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <i class="fa-solid fa-folder-open"></i>
+          </div>
+        </div>
+        <p class="mt-4 text-slate-700 dark:text-slate-300 leading-relaxed">${p.summary}</p>
+        <div class="mt-4 flex flex-wrap gap-2">${p.tags.map(badge).join("")}</div>
+        <p class="mt-5 text-sm font-bold text-blue-600">상세보기 <i class="fa-solid fa-arrow-right ml-2"></i></p>
+      `
+            );
+            card.type = "button";
+            card.setAttribute("data-aos", "fade-up");
+            card.setAttribute("data-aos-delay", String(idx * 50));
+            card.addEventListener("click", () => openModal(p));
+            grid.appendChild(card);
+        });
+    }
+
+    /** ===========================
+     *  3) 모달
+     *  =========================== */
+    function openModal(project) {
+        $("#modalTitle").textContent = project.title;
+        $("#modalMeta").innerHTML = `${project.period}${project.major ? " · <b class='text-emerald-600'>Major</b>" : ""}`;
+        $("#modalTags").innerHTML = project.tags.map(badge).join("");
+        $("#modalSummary").textContent = project.summary;
+        $("#modalBullets").innerHTML = project.bullets.map(b => `<li>${b}</li>`).join("");
+
+        const link = $("#modalLink");
+        link.href = project.link || "#";
+        link.classList.toggle("hidden", !project.link);
+
+        const repo = $("#modalRepo");
+        repo.href = project.repo || "#";
+        repo.classList.toggle("hidden", !project.repo);
+
+        $("#modal").classList.remove("hidden");
+        document.body.classList.add("no-scroll");
+    }
+
+    function closeModal() {
+        $("#modal").classList.add("hidden");
+        document.body.classList.remove("no-scroll");
+    }
+
+    /** ===========================
+     *  4) 스크롤스파이 / 테마 / 모바일 메뉴
+     *  =========================== */
+    function initScrollSpy() {
+        const sections = ["#about", "#skills", "#archiving", "#projects", "#career"]
+            .map(id => $(id))
+            .filter(Boolean);
+
+        const io = new IntersectionObserver((entries) => {
+            const visible = entries
+                .filter(e => e.isIntersecting)
+                .sort((a,b) => b.intersectionRatio - a.intersectionRatio)[0];
+            if (!visible) return;
+            setActiveNavByHash("#" + visible.target.id);
+            history.replaceState(null, "", "#" + visible.target.id);
+        }, { root: null, threshold: [0.15, 0.25, 0.35] });
+
+        sections.forEach(s => io.observe(s));
+    }
+
+    function initTheme() {
+        const saved = localStorage.getItem("theme");
+        if (saved === "dark") document.documentElement.classList.add("dark");
+        if (saved === "light") document.documentElement.classList.remove("dark");
+
+        $("#themeBtn").addEventListener("click", () => {
+            const isDark = document.documentElement.classList.toggle("dark");
+            localStorage.setItem("theme", isDark ? "dark" : "light");
+        });
+    }
+
+    function initMobileMenu() {
+        $("#mobileBtn").addEventListener("click", () => $("#mobileMenu").classList.toggle("hidden"));
+        $$("#mobileMenu a").forEach(a => a.addEventListener("click", () => $("#mobileMenu").classList.add("hidden")));
+    }
+
+    function initFilters() {
+        $("#filterAll").addEventListener("click", () => renderProjects(false));
+        $("#filterMajor").addEventListener("click", () => renderProjects(true));
+    }
+
+    function initModal() {
+        $("#modalClose").addEventListener("click", closeModal);
+        $("#modal").addEventListener("click", (e) => {
+            if (e.target === $("#modal").children[0]) closeModal(); // backdrop click
+        });
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && !$("#modal").classList.contains("hidden")) closeModal();
+        });
+    }
+
+    /** ===========================
+     *  5) 시작
+     *  =========================== */
+    document.addEventListener("DOMContentLoaded", () => {
+        AOS.init({ duration: 650, once: true });
+
+        renderProfile();
+        initTheme();
+        initMobileMenu();
+        initFilters();
+        initModal();
+        initScrollSpy();
+
+        // 초기 nav 상태
+        const h = location.hash || "#about";
+        setActiveNavByHash(h);
+    });
+</script>
+</body>
+</html>

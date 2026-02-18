@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Material Cost Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            apple: {
+              bg: '#F5F5F7',
+              card: '#FFFFFF',
+              text: '#1D1D1F',
+              gray: '#86868B',
+              blue: '#0066CC',
+              green: '#34C759', // Apple Success Green
+              red: '#FF3B30',   // Apple Error Red
+            }
+          },
+          boxShadow: {
+            'soft': '0 4px 20px rgba(0, 0, 0, 0.04)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #F5F5F7; }
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+  </style>
+</head>
+<body class="font-sans text-apple-text antialiased p-6 md:p-10">
+
+<header class="flex justify-between items-center mb-10">
+  <div>
+    <h2 class="text-sm font-semibold text-apple-gray uppercase tracking-wide">Procurement Analytics</h2>
+    <h1 class="text-4xl font-bold mt-1 tracking-tight">자재 단가 변동 현황</h1>
+  </div>
+  <div class="flex space-x-4">
+    <button class="px-5 py-2.5 bg-white rounded-full text-sm font-medium shadow-sm border border-gray-200 hover:bg-gray-50 transition">
+      데이터 내보내기
+    </button>
+    <button class="px-5 py-2.5 bg-black text-white rounded-full text-sm font-medium shadow-lg hover:bg-gray-800 transition">
+      보고서 생성
+    </button>
+  </div>
+</header>
+
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+  <div class="glass-panel rounded-3xl p-6 shadow-soft">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-sm font-medium text-apple-gray">총 원가 절감액</span>
+      <span class="p-2 bg-green-100 rounded-full text-apple-green">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                </span>
+    </div>
+    <div class="text-3xl font-bold" id="totalSavings">₩0</div>
+    <div class="mt-2 text-sm text-apple-green font-medium">+12.5% vs 지난 분기</div>
+  </div>
+
+  <div class="glass-panel rounded-3xl p-6 shadow-soft">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-sm font-medium text-apple-gray">변경 자재 수</span>
+      <span class="p-2 bg-blue-100 rounded-full text-apple-blue">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                </span>
+    </div>
+    <div class="text-3xl font-bold" id="totalItems">0 건</div>
+    <div class="mt-2 text-sm text-apple-gray">전체 검토 대상 중 완료</div>
+  </div>
+
+  <div class="glass-panel rounded-3xl p-6 shadow-soft">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-sm font-medium text-apple-gray">평균 절감율</span>
+      <span class="p-2 bg-orange-100 rounded-full text-orange-500">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg>
+                </span>
+    </div>
+    <div class="text-3xl font-bold" id="avgReduction">0%</div>
+    <div class="mt-2 text-sm text-apple-gray">목표치 5.0% 달성</div>
+  </div>
+</section>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+  <div class="lg:col-span-2 glass-panel rounded-3xl shadow-soft overflow-hidden flex flex-col">
+    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+      <h3 class="font-bold text-lg">자재 변경 세부 내역</h3>
+      <span class="text-xs font-semibold bg-gray-100 text-gray-500 px-3 py-1 rounded-full">Live Data</span>
+    </div>
+    <div class="overflow-x-auto flex-grow">
+      <table class="w-full text-left border-collapse">
+        <thead>
+        <tr class="text-xs font-semibold text-apple-gray border-b border-gray-100 bg-gray-50/50">
+          <th class="p-4 pl-6">Index</th>
+          <th class="p-4">Brand</th>
+          <th class="p-4">Part Name</th>
+          <th class="p-4">이전 단가</th>
+          <th class="p-4">현 단가</th>
+          <th class="p-4 pr-6 text-right">변동액 (Diff)</th>
+        </tr>
+        </thead>
+        <tbody id="materialTableBody" class="text-sm">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="glass-panel rounded-3xl shadow-soft p-6 flex flex-col">
+    <div class="mb-6">
+      <h3 class="font-bold text-lg">단가 비교 분석</h3>
+      <p class="text-sm text-apple-gray mt-1">주요 자재 Top 5 가격 변동</p>
+    </div>
+    <div class="relative flex-grow flex items-center justify-center h-64 lg:h-auto">
+      <canvas id="priceChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 1. Mock Data 생성 (요청하신 컬럼 기반)
+  const mockData = [
+    { index: 1, brand: 'H-Mec', partName: 'Main Controller PCB', oldPartNum: 'M-1001-A', oldPrice: 150000, newPartNum: 'M-1001-B', newPrice: 135000 },
+    { index: 2, brand: 'SteelCo', partName: 'Hydraulic Pump Unit', oldPartNum: 'H-2020-X', oldPrice: 450000, newPartNum: 'H-2020-Y', newPrice: 420000 },
+    { index: 3, brand: 'ElecSys', partName: 'Safety Sensor Module', oldPartNum: 'S-500-V1', oldPrice: 85000, newPartNum: 'S-500-V2', newPrice: 85000 },
+    { index: 4, brand: 'K-Metal', partName: 'Guide Rail Bracket', oldPartNum: 'G-300-A', oldPrice: 12000, newPartNum: 'G-300-C', newPrice: 10500 },
+    { index: 5, brand: 'InverterX', partName: 'VVVF Inverter 5kW', oldPartNum: 'I-7000-Old', oldPrice: 890000, newPartNum: 'I-7000-New', newPrice: 810000 },
+    { index: 6, brand: 'CabTech', partName: 'LED Ceiling Panel', oldPartNum: 'L-100-W', oldPrice: 45000, newPartNum: 'L-100-Warm', newPrice: 48000 }, // 가격 상승 예시
+    { index: 7, brand: 'BoltMaster', partName: 'High Tension Bolt Set', oldPartNum: 'B-50-X', oldPrice: 5000, newPartNum: 'B-50-Z', newPrice: 4500 }
+  ];
+
+  // 숫자 포맷팅 (화폐)
+  const formatCurrency = (value) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(value);
+
+  // 2. 초기화 및 렌더링
+  document.addEventListener('DOMContentLoaded', () => {
+    renderTable();
+    renderKPI();
+    renderChart();
+  });
+
+  // 테이블 렌더링 함수
+  function renderTable() {
+    const tbody = document.getElementById('materialTableBody');
+    let html = '';
+
+    mockData.forEach(item => {
+      const diff = item.oldPrice - item.newPrice;
+      const isSavings = diff > 0;
+      const isPriceUp = diff < 0; // 가격 상승
+
+      // Diff 텍스트 컬러 및 스타일 결정
+      let diffClass = "text-gray-400";
+      let diffText = "-";
+
+      if (isSavings) {
+        diffClass = "text-apple-green font-semibold";
+        diffText = `▼ ${formatCurrency(diff)}`;
+      } else if (isPriceUp) {
+        diffClass = "text-apple-red font-semibold";
+        diffText = `▲ ${formatCurrency(Math.abs(diff))}`;
+      }
+
+      html += `
+                    <tr class="hover:bg-gray-50 transition border-b border-gray-50 last:border-0">
+                        <td class="p-4 pl-6 text-gray-500 font-mono text-xs">#${String(item.index).padStart(3, '0')}</td>
+                        <td class="p-4">
+                            <span class="px-2.5 py-1 rounded-md bg-white border border-gray-200 text-xs font-semibold text-gray-700 shadow-sm">
+                                ${item.brand}
+                            </span>
+                        </td>
+                        <td class="p-4">
+                            <div class="font-semibold text-gray-900">${item.partName}</div>
+                            <div class="text-xs text-gray-400 flex gap-2 mt-0.5">
+                                <span>Old: ${item.oldPartNum}</span>
+                                <span>→</span>
+                                <span class="text-gray-600">New: ${item.newPartNum}</span>
+                            </div>
+                        </td>
+                        <td class="p-4 text-gray-500">${formatCurrency(item.oldPrice)}</td>
+                        <td class="p-4 font-medium text-gray-900">${formatCurrency(item.newPrice)}</td>
+                        <td class="p-4 pr-6 text-right ${diffClass}">${diffText}</td>
+                    </tr>
+                `;
+    });
+    tbody.innerHTML = html;
+  }
+
+  // KPI 계산 및 렌더링
+  function renderKPI() {
+    const totalSavings = mockData.reduce((acc, cur) => acc + (cur.oldPrice - cur.newPrice), 0);
+    const totalOldPrice = mockData.reduce((acc, cur) => acc + cur.oldPrice, 0);
+    const avgReductionRate = ((totalSavings / totalOldPrice) * 100).toFixed(1);
+
+    document.getElementById('totalSavings').innerText = formatCurrency(totalSavings);
+    document.getElementById('totalItems').innerText = `${mockData.length} 건`;
+    document.getElementById('avgReduction').innerText = `${avgReductionRate}%`;
+  }
+
+  // 차트 렌더링 (Chart.js)
+  function renderChart() {
+    const ctx = document.getElementById('priceChart').getContext('2d');
+
+    // 데이터 가공 (상위 5개만 추출)
+    const topItems = mockData.slice(0, 5);
+    const labels = topItems.map(item => item.partName.split(' ')[0]); // 이름 짧게
+    const oldPrices = topItems.map(item => item.oldPrice);
+    const newPrices = topItems.map(item => item.newPrice);
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: '이전 단가',
+            data: oldPrices,
+            backgroundColor: '#E5E5EA', // Apple Gray Light
+            borderRadius: 6,
+            barPercentage: 0.6,
+          },
+          {
+            label: '현 단가',
+            data: newPrices,
+            backgroundColor: '#007AFF', // Apple Blue
+            borderRadius: 6,
+            barPercentage: 0.6,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { usePointStyle: true, font: { family: 'Inter', size: 11 } } },
+          tooltip: {
+            backgroundColor: 'rgba(0,0,0, 0.8)',
+            padding: 12,
+            cornerRadius: 8,
+            titleFont: { family: 'Inter', size: 13 },
+            bodyFont: { family: 'Inter', size: 12 }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { display: true, borderDash: [4, 4], color: '#F2F2F7' },
+            ticks: { font: { size: 10 }, callback: function(value) { return '₩' + value/1000 + 'k'; } }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { font: { size: 11 } }
+          }
+        },
+        animation: {
+          duration: 1500,
+          easing: 'easeOutQuart'
+        }
+      }
+    });
+  }
+</script>
+</body>
+</html>
