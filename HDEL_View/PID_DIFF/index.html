@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>최근 vs 이전 데이터 비교</title>
+
+    <!-- Tabulator (MIT License) -->
+    <link href="https://unpkg.com/tabulator-tables@6.2.5/dist/css/tabulator.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/tabulator-tables@6.2.5/dist/js/tabulator.min.js"></script>
+
+    <style>
+        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif; margin: 16px; }
+        .wrap { display: grid; grid-template-rows: auto 1fr auto 1fr; gap: 10px; }
+        .title { font-weight: 700; }
+        .hint { color: #555; font-size: 13px; line-height: 1.4; }
+        .panel { border: 1px solid #ddd; border-radius: 10px; padding: 10px; background: #fff; }
+        .grid { border-radius: 10px; overflow: hidden; }
+
+        /* 변경 셀 강조 */
+        .cell-diff { font-weight: 700; }
+        .cell-missing { opacity: 0.6; font-style: italic; }
+
+        /* 상단/하단 구분 느낌 */
+        .recent-header { display:flex; align-items:center; justify-content:space-between; gap: 10px; }
+        .badge { font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid #ddd; background: #f7f7f7; }
+        .toolbar { display:flex; gap: 8px; flex-wrap: wrap; align-items:center; }
+        .toolbar input { padding: 6px 8px; border: 1px solid #ccc; border-radius: 8px; min-width: 240px; }
+        .toolbar button {
+            padding: 6px 10px; border: 1px solid #ccc; border-radius: 8px; background: #fff; cursor: pointer;
+        }
+        .toolbar button:hover { background: #f5f5f5; }
+
+        /* Tabulator row height 조금 편하게 */
+        .tabulator .tabulator-row { min-height: 34px; }
+    </style>
+</head>
+
+<body>
+<div class="wrap">
+    <div class="panel">
+        <div class="recent-header">
+            <div>
+                <div class="title">최근 데이터 (기준)</div>
+                <div class="hint">
+                    - ↑/↓ 로 행 이동, 클릭으로 선택<br>
+                    - 수평 스크롤이 아래(이전)와 동기화됩니다.<br>
+                    - 변경 셀은 굵게 표시됩니다.
+                </div>
+            </div>
+            <div class="toolbar">
+                <input id="searchBox" placeholder="LINE_ID 또는 값 검색 (최근 기준 필터)" />
+                <button id="clearBtn">필터 해제</button>
+                <span class="badge" id="statusBadge">준비</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="recentGrid" class="grid"></div>
+
+    <div class="panel">
+        <div class="title">이전 데이터</div>
+        <div class="hint">
+            - 최근에서 선택한 LINE_ID와 매칭되는 행으로 자동 이동합니다.<br>
+            - 매칭되는 LINE_ID가 없으면 “이전 없음”으로 표시됩니다.
+        </div>
+    </div>
+
+    <div id="prevGrid" class="grid"></div>
+</div>
+
+<script>
+    /*****************************************************************
+     * 1) 데이터 넣는 곳
+     * - 각 row는 반드시 LINE_ID(매칭키)를 포함한다고 가정
+     * - SPEC1~SPEC30, CON1~CON30 포함
+     *****************************************************************/
+    const recentData = makeMockData("R", 80); // TODO: 실제 최근 데이터로 교체
+    const prevData   = makeMockData("P", 75); // TODO: 실제 이전 데이터로 교체
+
+    // 예시: 일부 변경/누락 만들어보기
+    // (LINE_ID 기준으로 이전이 없는 행도 일부 생기게)
+    recentData[5].SPEC3 = "CHANGED";
+    recentData[5].CON10 = "999";
+    // 이전 데이터에서 LINE_0007 제거 (이전 없음 케이스)
+    const removeKey = "LINE_0007";
+    const idx = prevData.findIndex(r => r.LINE_ID === removeKey);
+    if (idx >= 0) prevData.splice(idx, 1);
+
+    /*****************************************************************
+     * 2) 컬럼 정의 생성 (SPEC1~30, CON1~30)
+     *****************************************************************/
+    const specCols = Array.from({length: 30}, (_, i) => {
+        const n = i + 1;
+        return { title: `SPEC${n}`, field: `SPEC${n}`, hozAlign: "left", headerHozAlign: "center", width: 120 };
+    });
+
+    const conCols = Array.from({length: 30}, (_, i) => {
+        const n = i + 1;
+        return { title: `CON${n}`, field: `CON${n}`, hozAlign: "left", headerHozAlign: "center", width: 120 };
+    });
+
+    // 공통 고정(Freeze) 컬럼
+    const baseCols = [
+        { title: "상태", field: "_MATCH_STATUS", width: 110, frozen: true, headerHozAlign: "center" },
+        { title: "변경수", field: "_DIFF_COUNT", width: 80, frozen: true, hozAlign: "right", headerHozAlign: "center" },
+        { title: "LINE_ID", field: "LINE_ID", width: 130, frozen: true, headerHozAlign: "center" },
+    ];
+
+    // 그룹 컬럼
+    const columns = [
+        ...baseCols,
+        { title: "SPEC", columns: specCols },
+        { title: "CON",  columns: conCols  },
+    ];
+
+    /*****************************************************************
+     * 3) 비교/매핑 준비
+     *****************************************************************/
+    const prevMap = new Map(prevData.map(r => [r.LINE_ID, r]));
+    const recentMap = new Map(recentData.map(r => [r.LINE_ID, r]));
+
+    const FIELDS_TO_COMPARE = [
+        ...Array.from({length: 30}, (_, i) => `SPEC${i+1}`),
+        ...Array.from({length: 30}, (_, i) => `CON${i+1}`),
+    ];
+
+    function computeRowDiff(recentRow, prevRow) {
+        // prevRow 없으면 전체를 "missing" 취급
+        if (!prevRow) return { status: "이전 없음", diffCount: FIELDS_TO_COMPARE.length, diffs: new Set(FIELDS_TO_COMPARE) };
+
+        let diffCount = 0;
+        const diffs = new Set();
+        for (const f of FIELDS_TO_COMPARE) {
+            const a = normalize(recentRow?.[f]);
+            const b = normalize(prevRow?.[f]);
+            if (a !== b) {
+                diffCount++;
+                diffs.add(f);
+            }
+        }
+        const status = diffCount === 0 ? "완전 동일" : "변경 있음";
+        return { status, diffCount, diffs };
+    }
+
+    function normalize(v) {
+        if (v === null || v === undefined) return "";
+        return String(v).trim();
+    }
+
+    // recent 기준으로 상태 계산해서 _MATCH_STATUS / _DIFF_COUNT 채우기
+    for (const r of recentData) {
+        const p = prevMap.get(r.LINE_ID);
+        const { status, diffCount } = computeRowDiff(r, p);
+        r._MATCH_STATUS = status;
+        r._DIFF_COUNT = diffCount;
+    }
+    // prev도 참고로 상태 표시(“최근 없음” 케이스 구분)
+    for (const p of prevData) {
+        const r = recentMap.get(p.LINE_ID);
+        if (!r) {
+            p._MATCH_STATUS = "최근 없음";
+            p._DIFF_COUNT = FIELDS_TO_COMPARE.length;
+        } else {
+            const { status, diffCount } = computeRowDiff(r, p); // 같은 기준으로 표기
+            p._MATCH_STATUS = status;
+            p._DIFF_COUNT = diffCount;
+        }
+    }
+
+    /*****************************************************************
+     * 4) 셀 formatter: 변경된 셀 강조
+     *****************************************************************/
+    function recentCellFormatter(cell) {
+        const field = cell.getField();
+        // 상태/라인 등 비교 컬럼은 제외
+        if (!FIELDS_TO_COMPARE.includes(field)) return cell.getValue();
+
+        const row = cell.getRow().getData();
+        const prevRow = prevMap.get(row.LINE_ID);
+        if (!prevRow) {
+            // 이전 행이 아예 없으면 모든 비교 필드를 missing으로 표시
+            return `<span class="cell-missing">${escapeHtml(cell.getValue())}</span>`;
+        }
+        const a = normalize(row[field]);
+        const b = normalize(prevRow[field]);
+        if (a !== b) {
+            return `<span class="cell-diff">${escapeHtml(cell.getValue())}</span>`;
+        }
+        return escapeHtml(cell.getValue());
+    }
+
+    function prevCellFormatter(cell) {
+        const field = cell.getField();
+        if (!FIELDS_TO_COMPARE.includes(field)) return cell.getValue();
+
+        const row = cell.getRow().getData();
+        const recentRow = recentMap.get(row.LINE_ID);
+        if (!recentRow) {
+            return `<span class="cell-missing">${escapeHtml(cell.getValue())}</span>`;
+        }
+        const a = normalize(recentRow[field]);
+        const b = normalize(row[field]);
+        if (a !== b) {
+            return `<span class="cell-diff">${escapeHtml(cell.getValue())}</span>`;
+        }
+        return escapeHtml(cell.getValue());
+    }
+
+    function escapeHtml(v) {
+        const s = v === null || v === undefined ? "" : String(v);
+        return s.replace(/[&<>"']/g, m => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[m]));
+    }
+
+    /*****************************************************************
+     * 5) Tabulator 생성 (최근/이전)
+     *****************************************************************/
+    const recentTable = new Tabulator("#recentGrid", {
+        data: recentData,
+        layout: "fitDataFill",
+        height: "360px",
+        selectable: 1,
+        columns: columns.map(c => injectFormatter(c, recentCellFormatter)),
+        columnDefaults: { resizable: true, headerSort: true },
+        initialSort: [{ column: "LINE_ID", dir: "asc" }],
+    });
+
+    const prevTable = new Tabulator("#prevGrid", {
+        data: prevData,
+        layout: "fitDataFill",
+        height: "360px",
+        selectable: 1,
+        columns: columns.map(c => injectFormatter(c, prevCellFormatter)),
+        columnDefaults: { resizable: true, headerSort: true },
+        initialSort: [{ column: "LINE_ID", dir: "asc" }],
+    });
+
+    // formatter를 모든 leaf 컬럼에 주입(그룹컬럼은 재귀)
+    function injectFormatter(col, formatter) {
+        if (col.columns) {
+            return { ...col, columns: col.columns.map(cc => injectFormatter(cc, formatter)) };
+        }
+        // base 컬럼에는 formatter 적용 안 해도 되지만, 적용해도 비교필드만 처리하니 OK
+        return { ...col, formatter };
+    }
+
+    /*****************************************************************
+     * 6) 최근 행 선택 -> 이전 동기화 + 배지 업데이트
+     *****************************************************************/
+    const badge = document.getElementById("statusBadge");
+
+    recentTable.on("rowClick", (_, row) => syncToPrev(row.getData()));
+    recentTable.on("rowSelected", row => syncToPrev(row.getData()));
+
+    function syncToPrev(recentRow) {
+        const key = recentRow.LINE_ID;
+        const prevRow = prevMap.get(key);
+
+        // 배지 표시
+        badge.textContent = `LINE_ID=${key} / ${recentRow._MATCH_STATUS} / 변경수=${recentRow._DIFF_COUNT}`;
+
+        // 이전에서 같은 LINE_ID 찾아서 선택/스크롤
+        prevTable.deselectRow();
+        if (!prevRow) return;
+
+        const rowComponent = prevTable.getRow(key);
+        // getRow는 index 기준일 때도 있으므로, safer: search by data
+        const found = prevTable.searchRows("LINE_ID", "=", key)[0];
+        if (found) {
+            found.select();
+            found.scrollTo();
+        }
+    }
+
+    /*****************************************************************
+     * 7) 키보드 ↑/↓ 로 최근 행 이동 (선택 동기화)
+     *****************************************************************/
+    document.addEventListener("keydown", (e) => {
+        if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+
+        // 입력창 포커스면 무시
+        const active = document.activeElement;
+        if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) return;
+
+        e.preventDefault();
+        moveSelection(e.key === "ArrowDown" ? 1 : -1);
+    });
+
+    async function moveSelection(delta) {
+        const selected = recentTable.getSelectedRows();
+        let idx = 0;
+
+        const rows = recentTable.getRows(true); // active rows
+        if (rows.length === 0) return;
+
+        if (selected.length > 0) {
+            const selectedRow = selected[0];
+            idx = rows.findIndex(r => r.getData().LINE_ID === selectedRow.getData().LINE_ID);
+            if (idx < 0) idx = 0;
+        }
+
+        const nextIdx = Math.min(rows.length - 1, Math.max(0, idx + delta));
+        recentTable.deselectRow();
+        rows[nextIdx].select();
+        rows[nextIdx].scrollTo();
+    }
+
+    /*****************************************************************
+     * 8) 수평 스크롤 동기화 (최근 <-> 이전)
+     *****************************************************************/
+    function getHolder(el) {
+        return el.querySelector(".tabulator-tableholder");
+    }
+    const recentHolder = getHolder(document.getElementById("recentGrid"));
+    const prevHolder   = getHolder(document.getElementById("prevGrid"));
+
+    let syncing = false;
+    recentHolder.addEventListener("scroll", () => {
+        if (syncing) return;
+        syncing = true;
+        prevHolder.scrollLeft = recentHolder.scrollLeft;
+        syncing = false;
+    }, { passive: true });
+
+    prevHolder.addEventListener("scroll", () => {
+        if (syncing) return;
+        syncing = true;
+        recentHolder.scrollLeft = prevHolder.scrollLeft;
+        syncing = false;
+    }, { passive: true });
+
+    /*****************************************************************
+     * 9) 검색/필터 (최근 기준)
+     *****************************************************************/
+    const searchBox = document.getElementById("searchBox");
+    document.getElementById("clearBtn").addEventListener("click", () => {
+        searchBox.value = "";
+        recentTable.clearFilter(true);
+        badge.textContent = "필터 해제";
+    });
+
+    let filterTimer = null;
+    searchBox.addEventListener("input", () => {
+        clearTimeout(filterTimer);
+        filterTimer = setTimeout(() => applySearch(searchBox.value), 150);
+    });
+
+    function applySearch(q) {
+        const query = normalize(q);
+        recentTable.clearFilter(true);
+
+        if (!query) {
+            badge.textContent = "준비";
+            return;
+        }
+
+        // LINE_ID 또는 어떤 필드든 포함 검색 (간단 구현)
+        recentTable.setFilter((data) => {
+            if (String(data.LINE_ID).includes(query)) return true;
+            for (const f of FIELDS_TO_COMPARE) {
+                if (normalize(data[f]).includes(query)) return true;
+            }
+            return false;
+        });
+
+        badge.textContent = `필터: "${query}"`;
+    }
+
+    /*****************************************************************
+     * 10) mock 데이터 생성 (테스트용)
+     *****************************************************************/
+    function makeMockData(prefix, count) {
+        const out = [];
+        for (let i = 1; i <= count; i++) {
+            const row = { LINE_ID: `LINE_${String(i).padStart(4, "0")}` };
+            for (let n = 1; n <= 30; n++) row[`SPEC${n}`] = `${prefix}-S${n}-${i}`;
+            for (let n = 1; n <= 30; n++) row[`CON${n}`]  = `${prefix}-C${n}-${i}`;
+            out.push(row);
+        }
+        return out;
+    }
+
+    /*****************************************************************
+     * 11) 초기 선택 (첫 행)
+     *****************************************************************/
+    recentTable.on("tableBuilt", () => {
+        const first = recentTable.getRows(true)[0];
+        if (first) first.select();
+        badge.textContent = "첫 행 선택됨";
+    });
+
+</script>
+</body>
+</html>
