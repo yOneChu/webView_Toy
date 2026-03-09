@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/resources/favicon.ico" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>로직 Viewer</title>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+
+<!-- Header -->
+<header class="border-b border-slate-200 bg-white/90 backdrop-blur sticky top-0 z-50">
+    <div class="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4">
+        <div class="flex items-center gap-3">
+            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md">
+                <span class="text-lg font-bold">L</span>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-slate-900">로직에디터 어시스턴트</h1>
+                <p class="text-sm text-slate-500">PID 로직 조회 및 버전 비교</p>
+            </div>
+        </div>
+
+        <div class="hidden md:flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-500">
+            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+            Viewer Ready
+        </div>
+    </div>
+</header>
+
+<!-- Main -->
+<main class="mx-auto max-w-[1600px] px-6 py-6">
+    <!-- Toolbar / Search Panel -->
+    <section class="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h2 class="text-base font-semibold text-slate-900">검색 및 비교</h2>
+                <p class="text-sm text-slate-500">PID를 검색하고 버전 간 차이를 비교할 수 있습니다.</p>
+            </div>
+
+            <button
+                    class="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.98]"
+                    onclick="insertChart()"
+            >
+                <span class="mr-2">📈</span>
+                Maptify
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+            <div class="xl:col-span-3">
+                <label for="searchInput" class="mb-2 block text-sm font-medium text-slate-700">PID 검색</label>
+                <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="예: PID1001"
+                        class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                />
+            </div>
+
+            <div class="xl:col-span-2 flex items-end">
+                <button
+                        class="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98]"
+                        onclick="searchPIDList()"
+                >
+                    검색
+                </button>
+            </div>
+
+            <div class="xl:col-span-3">
+                <label for="pidList" class="mb-2 block text-sm font-medium text-rose-600">
+                    비교할 PID 버전 선택
+                </label>
+                <select
+                        id="pidList"
+                        class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+                >
+                </select>
+            </div>
+
+            <div class="xl:col-span-3">
+                <label for="pidList2" class="mb-2 block text-sm font-medium text-emerald-600">
+                    기준 PID 선택
+                </label>
+                <select
+                        id="pidList2"
+                        class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                >
+                </select>
+            </div>
+
+            <div class="xl:col-span-1 flex items-end">
+                <button
+                        class="w-full rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-900 active:scale-[0.98]"
+                        onclick="searchDiff()"
+                >
+                    비교
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Viewer Card -->
+    <section class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h3 class="text-base font-semibold text-slate-900">비교 결과 Viewer</h3>
+                    <p class="text-sm text-slate-500">기준 PID를 중심으로 차이 내용을 확인합니다.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 text-sm">
+                        <span class="rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">
+                            상태: <span id="statusText-top">준비</span>
+                        </span>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+                            행: <span id="rowCount-top">0</span>
+                        </span>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+                            열: <span id="colCount-top">0</span>
+                        </span>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+                            선택 셀: <span id="selectedCell-top">-</span>
+                        </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-5">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div id="handsontable-container-top" class="min-h-[420px] rounded-xl bg-white overflow-auto"></div>
+            </div>
+        </div>
+
+        <div class="border-t border-slate-200 bg-slate-50 px-5 py-3 text-sm text-slate-500">
+            샘플 데이터 기준으로 검색 및 비교 결과가 표시됩니다.
+        </div>
+    </section>
+</main>
+
+<!-- Footer -->
+<footer class="mt-8 border-t border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-[1600px] flex-col gap-3 px-6 py-4 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center gap-2">
+            <span class="rounded-lg bg-slate-100 px-2 py-1 font-medium text-slate-700">Version 1.0.0</span>
+        </div>
+
+        <div class="text-left md:text-right">
+            <p class="font-medium text-slate-700">Copyright &copy; 2026 수배로직설계팀-김영환 M</p>
+            <p>All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // 샘플 데이터
+    const sampleData = {
+        PID1001: [
+            {
+                version: "v1.0",
+                rows: [
+                    { ITEM: "MOTOR", SPEC: "15KW", QTY: "1", REMARK: "기존 모델" },
+                    { ITEM: "BRAKE", SPEC: "STD", QTY: "1", REMARK: "기본" },
+                    { ITEM: "PANEL", SPEC: "A-TYPE", QTY: "2", REMARK: "회색" }
+                ]
+            },
+            {
+                version: "v1.1",
+                rows: [
+                    { ITEM: "MOTOR", SPEC: "18KW", QTY: "1", REMARK: "출력 변경" },
+                    { ITEM: "BRAKE", SPEC: "STD", QTY: "1", REMARK: "기본" },
+                    { ITEM: "PANEL", SPEC: "B-TYPE", QTY: "2", REMARK: "색상 변경" }
+                ]
+            },
+            {
+                version: "v2.0",
+                rows: [
+                    { ITEM: "MOTOR", SPEC: "18KW", QTY: "1", REMARK: "최신 모델" },
+                    { ITEM: "BRAKE", SPEC: "HEAVY", QTY: "1", REMARK: "사양 변경" },
+                    { ITEM: "PANEL", SPEC: "B-TYPE", QTY: "3", REMARK: "수량 변경" }
+                ]
+            }
+        ],
+        PID2001: [
+            {
+                version: "v1.0",
+                rows: [
+                    { ITEM: "RAIL", SPEC: "T90", QTY: "2", REMARK: "초기" },
+                    { ITEM: "GUIDE", SPEC: "G1", QTY: "4", REMARK: "기본형" }
+                ]
+            },
+            {
+                version: "v1.1",
+                rows: [
+                    { ITEM: "RAIL", SPEC: "T90", QTY: "2", REMARK: "초기" },
+                    { ITEM: "GUIDE", SPEC: "G2", QTY: "4", REMARK: "개선형" }
+                ]
+            }
+        ]
+    };
+
+    function insertChart() {
+        alert("샘플에서는 Maptify 기능이 연결되어 있지 않습니다.");
+    }
+
+    function searchPIDList() {
+        const keyword = document.getElementById("searchInput").value.trim().toUpperCase();
+        const pidList = document.getElementById("pidList");
+        const pidList2 = document.getElementById("pidList2");
+
+        pidList.innerHTML = "";
+        pidList2.innerHTML = "";
+
+        if (!keyword) {
+            setStatus("PID를 입력하세요.", 0, 0);
+            renderEmptyMessage("검색할 PID를 입력하세요.");
+            return;
+        }
+
+        const matched = Object.keys(sampleData).filter(pid => pid.includes(keyword));
+
+        if (matched.length === 0) {
+            setStatus("검색 결과 없음", 0, 0);
+            renderEmptyMessage("일치하는 PID가 없습니다.");
+            return;
+        }
+
+        const selectedPID = matched[0];
+        const versions = sampleData[selectedPID];
+
+        versions.forEach((item, index) => {
+            const option1 = document.createElement("option");
+            option1.value = index;
+            option1.textContent = `${selectedPID} - ${item.version}`;
+            pidList.appendChild(option1);
+
+            const option2 = document.createElement("option");
+            option2.value = index;
+            option2.textContent = `${selectedPID} - ${item.version}`;
+            pidList2.appendChild(option2);
+        });
+
+        if (versions.length > 1) {
+            pidList.value = 0;
+            pidList2.value = versions.length - 1;
+        }
+
+        setStatus(`검색 완료: ${selectedPID}`, 0, 0);
+        renderEmptyMessage(`"${selectedPID}" 검색 완료. 비교 버튼을 눌러 결과를 확인하세요.`);
+    }
+
+    function searchDiff() {
+        const keyword = document.getElementById("searchInput").value.trim().toUpperCase();
+        const beforeIndex = document.getElementById("pidList").value;
+        const mainIndex = document.getElementById("pidList2").value;
+
+        if (!keyword || !sampleData[keyword]) {
+            setStatus("비교할 PID 없음", 0, 0);
+            renderEmptyMessage("먼저 PID를 검색하세요.");
+            return;
+        }
+
+        const versions = sampleData[keyword];
+        const beforeData = versions[beforeIndex];
+        const mainData = versions[mainIndex];
+
+        if (!beforeData || !mainData) {
+            setStatus("버전 선택 필요", 0, 0);
+            renderEmptyMessage("비교할 버전을 선택하세요.");
+            return;
+        }
+
+        renderDiffTable(keyword, beforeData, mainData);
+    }
+
+    function renderDiffTable(pid, beforeData, mainData) {
+        const container = document.getElementById("handsontable-container-top");
+        const headers = ["ITEM", "SPEC", "QTY", "REMARK"];
+        const mainRows = mainData.rows;
+        const beforeRows = beforeData.rows;
+
+        let html = `
+                <div class="mb-4 flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <p class="text-sm text-slate-500">기준 PID</p>
+                        <p class="text-base font-semibold text-emerald-700">${pid} / ${mainData.version}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-slate-500">비교 PID</p>
+                        <p class="text-base font-semibold text-rose-600">${pid} / ${beforeData.version}</p>
+                    </div>
+                </div>
+
+                <div class="overflow-auto rounded-2xl border border-slate-200">
+                    <table class="min-w-full border-collapse text-sm">
+                        <thead class="bg-slate-100">
+                            <tr>
+                                <th class="border-b border-slate-200 px-4 py-3 text-left font-semibold text-slate-700">No</th>
+            `;
+
+        headers.forEach(header => {
+            html += `<th class="border-b border-slate-200 px-4 py-3 text-left font-semibold text-slate-700">${header}</th>`;
+        });
+
+        html += `</tr></thead><tbody class="bg-white">`;
+
+        mainRows.forEach((row, rowIndex) => {
+            const beforeRow = beforeRows[rowIndex] || {};
+            html += `<tr class="hover:bg-slate-50">`;
+            html += `<td class="border-b border-slate-100 px-4 py-3 text-slate-500">${rowIndex + 1}</td>`;
+
+            headers.forEach(header => {
+                const currentValue = row[header] ?? "";
+                const beforeValue = beforeRow[header] ?? "";
+                const isDiff = currentValue !== beforeValue;
+
+                html += `
+                        <td class="border-b border-slate-100 px-4 py-3 ${isDiff ? 'bg-rose-50 text-rose-700 font-semibold' : 'text-slate-700'}">
+                            <div>${currentValue}</div>
+                            ${isDiff ? `<div class="mt-1 text-xs text-slate-400 line-through">${beforeValue || '-'}</div>` : ""}
+                        </td>
+                    `;
+            });
+
+            html += `</tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+        container.innerHTML = html;
+
+        setStatus("비교 완료", mainRows.length, headers.length);
+    }
+
+    function renderEmptyMessage(message) {
+        const container = document.getElementById("handsontable-container-top");
+        container.innerHTML = `
+                <div class="flex min-h-[380px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+                    <div class="text-center">
+                        <p class="text-base font-medium text-slate-600">${message}</p>
+                        <p class="mt-2 text-sm text-slate-400">샘플 예시: PID1001, PID2001</p>
+                    </div>
+                </div>
+            `;
+    }
+
+    function setStatus(status, rowCount, colCount) {
+        document.getElementById("statusText-top").textContent = status;
+        document.getElementById("rowCount-top").textContent = rowCount;
+        document.getElementById("colCount-top").textContent = colCount;
+        document.getElementById("selectedCell-top").textContent = "-";
+    }
+
+    // 초기 화면
+    renderEmptyMessage("PID를 검색하면 샘플 조회 결과가 표시됩니다.");
+</script>
+</body>
+</html>
