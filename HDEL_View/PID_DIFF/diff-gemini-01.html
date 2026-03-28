@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOM 리비전 비교 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #f8fafc; }
+    </style>
+</head>
+<body class="bg-slate-50 p-6">
+
+<div class="max-w-full mx-auto bg-white rounded-xl shadow-md overflow-hidden flex flex-col h-[90vh]">
+    <div class="p-6 border-b border-gray-200 bg-slate-800 text-white flex justify-between items-center">
+        <h1 class="text-2xl font-bold">BOM 리비전 비교</h1>
+        <div class="flex gap-4 text-sm font-medium">
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-200 inline-block border border-green-500"></span> 추가됨</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-100 inline-block border border-red-400"></span> 삭제됨</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-200 inline-block border border-yellow-500"></span> 수정됨 (셀 강조)</span>
+        </div>
+    </div>
+
+    <div class="bg-gray-50 p-4 border-b border-gray-200 flex flex-wrap gap-4 items-end">
+        <div>
+            <label for="pidInput" class="block text-sm font-semibold text-gray-700 mb-1">Part ID (PID)</label>
+            <input type="text" id="pidInput" placeholder="예: P-001" class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48">
+        </div>
+
+        <div>
+            <label for="baseVersion" class="block text-sm font-semibold text-gray-700 mb-1">기준 버전 (과거)</label>
+            <select id="baseVersion" class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-32 bg-white">
+                <option value="">선택</option>
+                <option value="v1.0">v1.0</option>
+                <option value="v2.0">v2.0</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="compareVersion" class="block text-sm font-semibold text-gray-700 mb-1">비교 버전 (최신)</label>
+            <select id="compareVersion" class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-32 bg-white">
+                <option value="">선택</option>
+                <option value="v2.0">v2.0</option>
+                <option value="v3.0">v3.0</option>
+            </select>
+        </div>
+
+        <button id="searchBtn" class="bg-blue-600 text-white px-5 py-2 rounded-md text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm">
+            조회 및 비교
+        </button>
+    </div>
+
+    <div class="flex-1 overflow-auto">
+        <table class="min-w-max w-full text-left text-sm whitespace-nowrap">
+            <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+            <tr id="table-header" class="text-slate-600">
+                <th class="px-4 py-3 font-semibold border-b border-gray-200 text-center">상태</th>
+                <th class="px-4 py-3 font-semibold border-b border-gray-200">Part ID</th>
+                <th class="px-4 py-3 font-semibold border-b border-gray-200">부품명</th>
+            </tr>
+            </thead>
+            <tbody id="bom-tbody" class="divide-y divide-gray-200">
+            <tr><td colspan="43" class="text-center py-10 text-gray-500">PID와 버전을 선택한 후 조회 버튼을 눌러주세요.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // 1. 비교할 컬럼명 배열 생성 (spec01~20, con01~20)
+    const compareColumns = [];
+    for(let i = 1; i <= 20; i++) {
+        compareColumns.push(`spec${String(i).padStart(2, '0')}`);
+        compareColumns.push(`con${String(i).padStart(2, '0')}`);
+    }
+
+    // 테이블 헤더 동적 렌더링
+    const headerRow = document.getElementById('table-header');
+    compareColumns.forEach(col => {
+        const th = document.createElement('th');
+        th.className = 'px-4 py-3 font-semibold border-b border-gray-200 text-slate-500 text-xs';
+        th.textContent = col.toUpperCase();
+        headerRow.appendChild(th);
+    });
+
+    const tbody = document.getElementById('bom-tbody');
+
+    // 빈 속성 채워주기
+    const fillEmptyColumns = (item) => {
+        const newItem = { ...item };
+        compareColumns.forEach(col => { if(!newItem[col]) newItem[col] = '-'; });
+        return newItem;
+    };
+
+    // 2. 검색 및 렌더링 함수
+    function executeCompare(pastDataArr, latestDataArr) {
+        tbody.innerHTML = ''; // 기존 테이블 초기화
+
+        const pastMap = new Map(pastDataArr.map(item => [item.id, fillEmptyColumns(item)]));
+        const latestMap = new Map(latestDataArr.map(item => [item.id, fillEmptyColumns(item)]));
+        const diffResult = [];
+
+        // 최신 버전 기준 순회 (추가, 동일, 수정)
+        latestMap.forEach((latestItem, id) => {
+            if (!pastMap.has(id)) {
+                diffResult.push({ status: 'ADDED', data: latestItem, changedCols: [] });
+            } else {
+                const pastItem = pastMap.get(id);
+                const changedCols = [];
+
+                compareColumns.forEach(col => {
+                    if (pastItem[col] !== latestItem[col]) {
+                        changedCols.push(col);
+                    }
+                });
+
+                if (changedCols.length > 0) {
+                    diffResult.push({ status: 'MODIFIED', data: latestItem, pastData: pastItem, changedCols });
+                } else {
+                    diffResult.push({ status: 'SAME', data: latestItem, changedCols: [] });
+                }
+            }
+        });
+
+        // 과거 버전 기준 순회 (삭제)
+        pastMap.forEach((pastItem, id) => {
+            if (!latestMap.has(id)) {
+                diffResult.push({ status: 'DELETED', data: pastItem, changedCols: [] });
+            }
+        });
+
+        // 데이터가 없을 경우
+        if(diffResult.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="43" class="text-center py-10 text-gray-500">해당 조건에 맞는 BOM 데이터가 없습니다.</td></tr>`;
+            return;
+        }
+
+        // 화면 렌더링
+        const statusConfig = {
+            'ADDED': { label: '추가됨', rowClass: 'bg-green-50 hover:bg-green-100 transition-colors', labelClass: 'bg-green-100 text-green-700 font-bold px-2 py-1 rounded' },
+            'DELETED': { label: '삭제됨', rowClass: 'bg-red-50 opacity-60 hover:opacity-100 transition-opacity line-through text-red-500', labelClass: 'bg-red-100 text-red-700 font-bold px-2 py-1 rounded line-through-none' },
+            'MODIFIED': { label: '수정됨', rowClass: 'hover:bg-slate-50 transition-colors', labelClass: 'bg-yellow-100 text-yellow-700 font-bold px-2 py-1 rounded' },
+            'SAME': { label: '동일', rowClass: 'hover:bg-slate-50 transition-colors text-slate-500', labelClass: 'bg-slate-100 text-slate-500 px-2 py-1 rounded' }
+        };
+
+        diffResult.forEach(item => {
+            const tr = document.createElement('tr');
+            const config = statusConfig[item.status];
+            tr.className = config.rowClass;
+
+            let html = `<td class="px-4 py-2 text-center border-b border-gray-100"><span class="text-xs ${config.labelClass}">${config.label}</span></td>`;
+            html += `<td class="px-4 py-2 border-b border-gray-100 font-medium">${item.data.id}</td>`;
+            html += `<td class="px-4 py-2 border-b border-gray-100">${item.data.name}</td>`;
+
+            compareColumns.forEach(col => {
+                const isChanged = item.changedCols.includes(col);
+                let cellValue = item.data[col];
+                let cellClass = "px-4 py-2 border-b border-gray-100 truncate max-w-[120px]";
+
+                if (isChanged && item.status === 'MODIFIED') {
+                    cellClass += " bg-yellow-200 text-yellow-900 font-semibold cursor-help";
+                    const pastValue = item.pastData[col];
+                    html += `<td class="${cellClass}" title="과거 데이터: ${pastValue} -> 변경됨">${cellValue}</td>`;
+                } else {
+                    html += `<td class="${cellClass}">${cellValue}</td>`;
+                }
+            });
+
+            tr.innerHTML = html;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 3. 이벤트 리스너 등록
+    document.getElementById('searchBtn').addEventListener('click', () => {
+        const pid = document.getElementById('pidInput').value;
+        const v1 = document.getElementById('baseVersion').value;
+        const v2 = document.getElementById('compareVersion').value;
+
+        if(!pid || !v1 || !v2) {
+            alert("PID와 두 버전을 모두 선택해주세요.");
+            return;
+        }
+
+        // TODO: 실제 환경에서는 fetch API나 axios를 사용해 Spring Boot 백엔드에 요청
+        // 예시: axios.get(`/api/bom/compare?pid=${pid}&base=${v1}&target=${v2}`).then(res => executeCompare(res.data.past, res.data.latest));
+
+        // 샘플 테스트용 더미 데이터
+        const pastDummy = [
+            { id: `${pid}-001`, name: 'CAR HEADER ARM', spec01: 'Steel', con01: 'A-Type' },
+            { id: `${pid}-002`, name: '시브커브', spec01: 'Iron', con01: 'B-Type' },
+            { id: `${pid}-003`, name: '컴펜체인', spec01: 'Alloy', con01: 'C-Type' },
+        ];
+
+        const latestDummy = [
+            { id: `${pid}-001`, name: 'CAR HEADER ARM', spec01: 'Steel', con01: 'A-Type' },
+            { id: `${pid}-002`, name: '시브커브', spec01: 'Aluminium', con01: 'B-Type' },
+            { id: `${pid}-004`, name: 'pit screen', spec01: 'Mesh', con01: 'D-Type' },
+        ];
+
+        // 렌더링 함수 호출
+        executeCompare(pastDummy, latestDummy);
+    });
+
+</script>
+</body>
+</html>
