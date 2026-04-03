@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLM BOM 수배율 분석 대시보드</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"></script>
+
+    <style>
+        /* 대시보드 폰트 및 기본 스타일 조정 */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .gridjs-wrapper { border-radius: 0.5rem; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+<div class="container mx-auto p-6 max-w-7xl">
+    <header class="flex justify-between items-center mb-8 bg-white p-4 rounded-lg shadow-sm">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">PLM BOM 수배율 분석 대시보드</h1>
+            <p class="text-sm text-gray-500 mt-1">BLOCKNO 및 기간별 수배 현황 모니터링</p>
+        </div>
+        <div>
+            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow text-sm font-medium transition-colors">
+                데이터 엑셀 다운로드
+            </button>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">기간별(월) BOM 수배율 트렌드</h2>
+            <div class="relative h-64">
+                <canvas id="monthlyTrendChart"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">BLOCKNO 기준 수배율 (Top 5)</h2>
+            <div class="relative h-64">
+                <canvas id="blockSourcingChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
+        <h2 class="text-lg font-semibold mb-4 text-gray-700">BOM 수배 상세 현황</h2>
+        <div id="bom-data-grid"></div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+
+        // 1. 기간별(월) BOM 수배율 차트 (Line Chart)
+        const ctxMonthly = document.getElementById('monthlyTrendChart').getContext('2d');
+        new Chart(ctxMonthly, {
+            type: 'line',
+            data: {
+                labels: ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06'],
+                datasets: [{
+                    label: '평균 수배율 (%)',
+                    data: [82.5, 85.0, 89.2, 88.5, 93.1, 95.4],
+                    borderColor: 'rgba(59, 130, 246, 1)', // Blue-500
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: 'rgba(59, 130, 246, 1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: false, min: 70, max: 100 }
+                }
+            }
+        });
+
+        // 2. BLOCKNO 기준 BOM 수배율 차트 (Bar Chart)
+        const ctxBlock = document.getElementById('blockSourcingChart').getContext('2d');
+        new Chart(ctxBlock, {
+            type: 'bar',
+            data: {
+                labels: ['BLK-001', 'BLK-002', 'BLK-003', 'BLK-004', 'BLK-005'],
+                datasets: [{
+                    label: '수배율 (%)',
+                    data: [98.5, 92.1, 85.4, 76.8, 65.2],
+                    backgroundColor: [
+                        'rgba(34, 197, 94, 0.7)', // Green
+                        'rgba(59, 130, 246, 0.7)', // Blue
+                        'rgba(245, 158, 11, 0.7)', // Yellow
+                        'rgba(249, 115, 22, 0.7)', // Orange
+                        'rgba(239, 68, 68, 0.7)'   // Red
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100 }
+                }
+            }
+        });
+
+        // 3. 상세 데이터 그리드 (Grid.js)
+        // 요청하신 컬럼 구성: BLOCKNO, PARTNO, PARTNAME, 수배건수, 수정건수, 수배율, 주석
+        const gridData = [
+            ['BLK-001', 'PN-10010', 'CAR HEADER ARM', 150, 2, '98.6%', '정상 수배 완료'],
+            ['BLK-001', 'PN-10011', 'COMPENSATING CHAIN', 45, 0, '100%', '-'],
+            ['BLK-002', 'PN-20050', 'BALANCE WEIGHT', 120, 15, '88.8%', '설계 변경 진행 중'],
+            ['BLK-002', 'PN-20051', 'SUBWEIGHT', 300, 5, '98.3%', '일부 지연'],
+            ['BLK-003', 'PN-30120', 'PIT SCREEN', 80, 20, '80.0%', '자재 수급 확인 필요'],
+            ['BLK-004', 'PN-40550', 'SHEAVE ASSY', 50, 12, '76.0%', '수정 사항 반영 대기'],
+            ['BLK-005', 'PN-50990', 'MAIN CONTROLLER', 10, 5, '50.0%', '업체 단가 협의 중']
+        ];
+
+        new gridjs.Grid({
+            columns: [
+                { name: 'BLOCKNO' },
+                { name: 'PARTNO' },
+                { name: 'PARTNAME', width: '250px' },
+                { name: '수배건수', formatter: (cell) => gridjs.html(`<span class="font-medium text-gray-700">${cell}</span>`) },
+                { name: '수정건수', formatter: (cell) => gridjs.html(`<span class="font-medium ${cell > 10 ? 'text-red-500' : 'text-gray-700'}">${cell}</span>`) },
+                { name: '수배율', formatter: (cell) => {
+                        const val = parseFloat(cell);
+                        let colorClass = 'text-green-600';
+                        if(val < 90) colorClass = 'text-yellow-600';
+                        if(val < 80) colorClass = 'text-red-600';
+                        return gridjs.html(`<span class="font-bold ${colorClass}">${cell}</span>`);
+                    }},
+                { name: '주석' }
+            ],
+            data: gridData,
+            search: true,
+            sort: true,
+            pagination: {
+                limit: 5
+            },
+            language: {
+                search: { placeholder: '데이터 검색...' },
+                pagination: {
+                    previous: '이전',
+                    next: '다음',
+                    showing: '표시 중',
+                    results: '결과'
+                }
+            }
+        }).render(document.getElementById('bom-data-grid'));
+    });
+</script>
+</body>
+</html>

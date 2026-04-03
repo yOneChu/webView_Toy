@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BOM 수배율 대시보드</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Inter, "SF Pro Display", "SF Pro Text", "Noto Sans KR",
+            "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+            background:
+                    radial-gradient(circle at top left, rgba(34,197,94,0.08), transparent 28%),
+                    radial-gradient(circle at top right, rgba(59,130,246,0.06), transparent 24%),
+                    linear-gradient(to bottom, #f8fafc, #eef2f7);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.78);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255,255,255,0.75);
+            box-shadow:
+                    0 10px 30px rgba(15, 23, 42, 0.06),
+                    inset 0 1px 0 rgba(255,255,255,0.9);
+        }
+
+        .soft-border {
+            border: 1px solid rgba(148, 163, 184, 0.14);
+        }
+
+        .metric-shine {
+            background:
+                    linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.62));
+        }
+
+        .table-scroll::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .table-scroll::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.45);
+            border-radius: 999px;
+        }
+        .table-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800">
+<div class="max-w-[1440px] mx-auto px-6 py-8 lg:px-8 lg:py-10">
+
+    <!-- Header -->
+    <header class="mb-8">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+                <p class="text-sm font-medium text-slate-500 tracking-wide">Manufacturing Dashboard</p>
+                <h1 class="mt-1 text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">
+                    BOM 수배율 현황
+                </h1>
+                <p class="mt-2 text-sm md:text-base text-slate-500">
+                    기간별 추이, 기종별 성과, BLOCK NO 기준 상세 현황을 한 화면에서 확인합니다.
+                </p>
+            </div>
+
+            <div class="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 shadow-sm ring-1 ring-slate-200 backdrop-blur">
+                <span class="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                <span class="text-sm font-medium text-slate-600">Updated just now</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- KPI -->
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
+        <div class="glass-card metric-shine rounded-3xl p-6 soft-border xl:col-span-2">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">BOM 수배율</p>
+                    <h2 id="mainRate" class="mt-4 text-5xl md:text-6xl font-semibold tracking-tight text-slate-900">
+                        95.92%
+                    </h2>
+                </div>
+                <div class="rounded-2xl bg-emerald-50 px-3 py-2 text-emerald-700 text-sm font-semibold">
+                    Stable
+                </div>
+            </div>
+            <div class="mt-6 flex items-center gap-2 text-sm text-slate-500">
+                <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+                전체 수배 대비 수정 비율을 반영한 지표
+            </div>
+        </div>
+
+        <div class="glass-card rounded-3xl p-6 soft-border">
+            <p class="text-sm font-medium text-slate-500">수배건수</p>
+            <div id="requestCount" class="mt-5 text-4xl font-semibold tracking-tight text-slate-900">
+                5,175,587
+            </div>
+            <p class="mt-4 text-sm text-slate-500">누적 기준 전체 요청 건수</p>
+        </div>
+
+        <div class="glass-card rounded-3xl p-6 soft-border">
+            <p class="text-sm font-medium text-slate-500">수정 건수</p>
+            <div id="modifyCount" class="mt-5 text-4xl font-semibold tracking-tight text-slate-900">
+                211,405
+            </div>
+            <p class="mt-4 text-sm text-slate-500">재작업 및 수정 반영 건수</p>
+        </div>
+    </section>
+
+    <!-- Main Grid -->
+    <section class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <!-- Left -->
+        <div class="xl:col-span-8 space-y-6">
+            <div class="glass-card rounded-[28px] p-6 md:p-7 soft-border">
+                <div class="flex items-center justify-between mb-5">
+                    <div>
+                        <h3 class="text-xl font-semibold tracking-tight text-slate-900">기간별 BOM 수배율</h3>
+                        <p class="mt-1 text-sm text-slate-500">월 단위 추세를 통해 변동 구간을 빠르게 파악합니다.</p>
+                    </div>
+                    <div class="hidden md:flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-500">
+                        Monthly Trend
+                    </div>
+                </div>
+                <div class="h-[340px]">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-[28px] p-6 md:p-7 soft-border">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-5">
+                    <div>
+                        <h3 class="text-xl font-semibold tracking-tight text-slate-900">BLOCK NO 상세 현황</h3>
+                        <p class="mt-1 text-sm text-slate-500">수배건수, 수정건수, 수배율을 기준으로 주요 자재를 비교합니다.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input
+                                id="searchInput"
+                                type="text"
+                                placeholder="BLOCK NO / 자재명 검색"
+                                class="w-full md:w-72 rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-200"
+                        />
+                    </div>
+                </div>
+
+                <div class="table-scroll overflow-auto rounded-2xl border border-slate-100 bg-white/60">
+                    <table class="min-w-full text-sm">
+                        <thead class="sticky top-0 bg-white/90 backdrop-blur border-b border-slate-100 text-slate-500">
+                        <tr>
+                            <th class="px-5 py-4 text-left font-semibold">BLOCK NO</th>
+                            <th class="px-5 py-4 text-left font-semibold">자재명</th>
+                            <th class="px-5 py-4 text-right font-semibold">수배 건수</th>
+                            <th class="px-5 py-4 text-right font-semibold">수정 건수</th>
+                            <th class="px-5 py-4 text-right font-semibold">수배율</th>
+                        </tr>
+                        </thead>
+                        <tbody id="bomTableBody" class="divide-y divide-slate-100"></tbody>
+                        <tfoot class="sticky bottom-0 bg-slate-50/95 backdrop-blur border-t border-slate-200">
+                        <tr>
+                            <td class="px-5 py-4 font-semibold text-slate-900">합계</td>
+                            <td class="px-5 py-4"></td>
+                            <td id="tfootRequest" class="px-5 py-4 text-right font-semibold text-slate-900">5,175,587</td>
+                            <td id="tfootModify" class="px-5 py-4 text-right font-semibold text-slate-900">211,405</td>
+                            <td id="tfootRate" class="px-5 py-4 text-right font-semibold text-slate-900">95.92%</td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right -->
+        <div class="xl:col-span-4 space-y-6">
+            <div class="glass-card rounded-[28px] p-6 md:p-7 soft-border">
+                <div class="mb-5">
+                    <h3 class="text-xl font-semibold tracking-tight text-slate-900">기종별 BOM 수배율</h3>
+                    <p class="mt-1 text-sm text-slate-500">기종별 성과 수준을 한눈에 비교합니다.</p>
+                </div>
+                <div class="h-[440px]">
+                    <canvas id="typeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-[28px] p-6 soft-border">
+                <h3 class="text-base font-semibold text-slate-900">인사이트</h3>
+                <div class="mt-4 space-y-3 text-sm text-slate-600">
+                    <div class="rounded-2xl bg-white/80 p-4 ring-1 ring-slate-100">
+                        전체 수배율은 <span class="font-semibold text-slate-900">95% 이상</span>으로 안정적인 수준입니다.
+                    </div>
+                    <div class="rounded-2xl bg-white/80 p-4 ring-1 ring-slate-100">
+                        일부 기종은 상대적으로 낮아 <span class="font-semibold text-slate-900">집중 개선 대상</span>으로 볼 수 있습니다.
+                    </div>
+                    <div class="rounded-2xl bg-white/80 p-4 ring-1 ring-slate-100">
+                        BLOCK NO 기준 상위 건수 자재는 <span class="font-semibold text-slate-900">세부 원인 분석</span>이 필요합니다.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    const summary = {
+        totalRequest: 5175587,
+        totalModify: 211405
+    };
+
+    const monthlyRateData = [
+        { label: "2024-01", rate: 92.74 },
+        { label: "2024-02", rate: 94.40 },
+        { label: "2024-03", rate: 94.67 },
+        { label: "2024-04", rate: 96.98 },
+        { label: "2024-05", rate: 96.58 },
+        { label: "2024-06", rate: 97.12 },
+        { label: "2024-07", rate: 96.75 },
+        { label: "2024-08", rate: 96.41 },
+        { label: "2024-09", rate: 96.24 },
+        { label: "2024-10", rate: 96.48 },
+        { label: "2024-11", rate: 96.57 },
+        { label: "2024-12", rate: 96.97 },
+        { label: "2025-01", rate: 95.42 },
+        { label: "2025-02", rate: 95.85 },
+        { label: "2025-03", rate: 96.69 },
+        { label: "2025-04", rate: 96.15 },
+        { label: "2025-05", rate: 96.68 },
+        { label: "2025-06", rate: 96.18 },
+        { label: "2025-07", rate: 95.98 },
+        { label: "2025-08", rate: 95.08 },
+        { label: "2025-09", rate: 95.89 },
+        { label: "2025-10", rate: 94.99 },
+        { label: "2025-11", rate: 95.79 },
+        { label: "2025-12", rate: 96.57 },
+        { label: "2026-01", rate: 94.96 },
+        { label: "2026-02", rate: 95.78 },
+        { label: "2026-03", rate: 90.60 }
+    ];
+
+    const machineTypeRateData = [
+        { type: "GTSS", rate: 99.04 },
+        { type: "GTLX", rate: 96.43 },
+        { type: "WBSS", rate: 95.12 },
+        { type: "LXVF", rate: 94.80 },
+        { type: "HSVF", rate: 93.35 },
+        { type: "SUVF", rate: 78.68 },
+        { type: "STS7H", rate: 75.40 },
+        { type: "WLSH", rate: 69.66 },
+        { type: "WSH", rate: 61.93 }
+    ];
+
+    const blockRows = [
+        { blockNo: "B182D01", material: "RAIL LINER", request: 63282, modify: 1061 },
+        { blockNo: "B126A01", material: "GUIDE SHOE", request: 63219, modify: 3016 },
+        { blockNo: "A230A04", material: "JOB SITE TOOL", request: 54487, modify: 66 },
+        { blockNo: "A103C", material: "ISOLATION PAD", request: 53460, modify: 298 },
+        { blockNo: "C361A", material: "JAMB", request: 49491, modify: 2322 },
+        { blockNo: "B183B01", material: "BUFFER BLOCKING", request: 47106, modify: 2504 },
+        { blockNo: "E280A01", material: "CABLE ASSY", request: 45953, modify: 14 },
+        { blockNo: "A230B02", material: "SPRAY", request: 44083, modify: 3 },
+        { blockNo: "B182A01", material: "GUIDE RAIL", request: 43628, modify: 3260 },
+        { blockNo: "E281A01", material: "CABLE ASSY", request: 42003, modify: 36 },
+        { blockNo: "B126C01", material: "GUIDE SHOE ADAPTOR", request: 40701, modify: 3387 },
+        { blockNo: "D112A04", material: "BRACKET", request: 39528, modify: 2201 },
+        { blockNo: "M220A11", material: "MOTOR BASE", request: 38210, modify: 514 },
+        { blockNo: "K201F02", material: "PANEL", request: 37102, modify: 1280 }
+    ];
+
+    function formatNumber(value) {
+        return new Intl.NumberFormat("ko-KR").format(value);
+    }
+
+    function calculateRate(request, modify) {
+        if (!request) return 0;
+        return ((request - modify) / request) * 100;
+    }
+
+    function formatRate(value) {
+        return `${value.toFixed(2)}%`;
+    }
+
+    function renderSummary() {
+        const totalRate = calculateRate(summary.totalRequest, summary.totalModify);
+
+        document.getElementById("mainRate").textContent = formatRate(totalRate);
+        document.getElementById("requestCount").textContent = formatNumber(summary.totalRequest);
+        document.getElementById("modifyCount").textContent = formatNumber(summary.totalModify);
+
+        document.getElementById("tfootRequest").textContent = formatNumber(summary.totalRequest);
+        document.getElementById("tfootModify").textContent = formatNumber(summary.totalModify);
+        document.getElementById("tfootRate").textContent = formatRate(totalRate);
+    }
+
+    function getRateTone(rate) {
+        if (rate >= 97) return "bg-emerald-50 text-emerald-700";
+        if (rate >= 94) return "bg-sky-50 text-sky-700";
+        return "bg-amber-50 text-amber-700";
+    }
+
+    function renderTable(rows) {
+        const tbody = document.getElementById("bomTableBody");
+        tbody.innerHTML = "";
+
+        rows.forEach((row) => {
+            const rate = calculateRate(row.request, row.modify);
+            const tone = getRateTone(rate);
+
+            const tr = document.createElement("tr");
+            tr.className = "hover:bg-slate-50/70 transition";
+
+            tr.innerHTML = `
+          <td class="px-5 py-4 font-medium text-slate-900 whitespace-nowrap">${row.blockNo}</td>
+          <td class="px-5 py-4 text-slate-600">${row.material}</td>
+          <td class="px-5 py-4 text-right text-slate-700">${formatNumber(row.request)}</td>
+          <td class="px-5 py-4 text-right text-slate-700">${formatNumber(row.modify)}</td>
+          <td class="px-5 py-4 text-right">
+            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${tone}">
+              ${formatRate(rate)}
+            </span>
+          </td>
+        `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderMonthlyChart() {
+        const ctx = document.getElementById("monthlyChart");
+
+        new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: monthlyRateData.map(item => item.label),
+                datasets: [
+                    {
+                        label: "BOM 수배율",
+                        data: monthlyRateData.map(item => item.rate),
+                        borderColor: "#16a34a",
+                        backgroundColor: "rgba(22, 163, 74, 0.14)",
+                        fill: true,
+                        tension: 0.34,
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: "index",
+                    intersect: false
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: "rgba(15,23,42,0.88)",
+                        titleColor: "#fff",
+                        bodyColor: "#fff",
+                        padding: 12,
+                        displayColors: false,
+                        callbacks: {
+                            label: (context) => `수배율 ${context.parsed.y.toFixed(2)}%`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 90,
+                        max: 98,
+                        ticks: {
+                            color: "#64748b",
+                            callback: (value) => value + "%"
+                        },
+                        grid: {
+                            color: "rgba(148,163,184,0.12)",
+                            drawBorder: false
+                        },
+                        border: { display: false }
+                    },
+                    x: {
+                        ticks: {
+                            color: "#94a3b8",
+                            maxTicksLimit: 8
+                        },
+                        grid: {
+                            display: false
+                        },
+                        border: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderTypeChart() {
+        const ctx = document.getElementById("typeChart");
+
+        new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: machineTypeRateData.map(item => item.type),
+                datasets: [
+                    {
+                        data: machineTypeRateData.map(item => item.rate),
+                        backgroundColor: [
+                            "#166534",
+                            "#15803d",
+                            "#16a34a",
+                            "#22c55e",
+                            "#4ade80",
+                            "#86efac",
+                            "#bbf7d0",
+                            "#d1fae5",
+                            "#dcfce7"
+                        ],
+                        borderRadius: 999,
+                        barThickness: 16
+                    }
+                ]
+            },
+            options: {
+                indexAxis: "y",
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: "rgba(15,23,42,0.88)",
+                        titleColor: "#fff",
+                        bodyColor: "#fff",
+                        padding: 12,
+                        displayColors: false,
+                        callbacks: {
+                            label: (context) => `${context.parsed.x.toFixed(2)}%`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        min: 0,
+                        max: 100,
+                        ticks: {
+                            color: "#64748b",
+                            callback: (v) => v + "%"
+                        },
+                        grid: {
+                            color: "rgba(148,163,184,0.12)",
+                            drawBorder: false
+                        },
+                        border: { display: false }
+                    },
+                    y: {
+                        ticks: {
+                            color: "#475569",
+                            font: { size: 12, weight: "600" }
+                        },
+                        grid: { display: false },
+                        border: { display: false }
+                    }
+                }
+            },
+            plugins: [{
+                id: "valueLabelPlugin",
+                afterDatasetsDraw(chart) {
+                    const { ctx } = chart;
+                    const meta = chart.getDatasetMeta(0);
+
+                    ctx.save();
+                    ctx.font = "600 12px Inter, sans-serif";
+                    ctx.fillStyle = "#334155";
+
+                    meta.data.forEach((bar, i) => {
+                        const value = machineTypeRateData[i].rate.toFixed(2) + "%";
+                        ctx.fillText(value, bar.x + 10, bar.y + 4);
+                    });
+
+                    ctx.restore();
+                }
+            }]
+        });
+    }
+
+    function bindSearch() {
+        const input = document.getElementById("searchInput");
+        input.addEventListener("input", (e) => {
+            const keyword = e.target.value.trim().toLowerCase();
+
+            const filtered = blockRows.filter(row =>
+                row.blockNo.toLowerCase().includes(keyword) ||
+                row.material.toLowerCase().includes(keyword)
+            );
+
+            renderTable(filtered);
+        });
+    }
+
+    renderSummary();
+    renderTable(blockRows);
+    renderMonthlyChart();
+    renderTypeChart();
+    bindSearch();
+</script>
+</body>
+</html>

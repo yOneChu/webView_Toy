@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BOM 수배율 분석 대시보드</title>
+
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            background: #f8fafc;
+        }
+        .card {
+            @apply bg-white rounded-2xl shadow-sm border border-slate-200;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<div class="min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">BOM 수배율 분석 대시보드</h1>
+                <p class="text-sm text-slate-500 mt-1">PLM BOM 수배 현황 / BLOCKNO 기준 / 월별 수배율 분석</p>
+            </div>
+            <div class="flex items-center gap-2 text-sm">
+                <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">Sample Dashboard</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+        <!-- Filter -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+            <div class="flex flex-col lg:flex-row gap-4 lg:items-end">
+                <div class="w-full lg:w-52">
+                    <label class="block text-sm font-medium mb-2">조회 시작월</label>
+                    <input id="startMonth" type="month" class="w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+
+                <div class="w-full lg:w-52">
+                    <label class="block text-sm font-medium mb-2">조회 종료월</label>
+                    <input id="endMonth" type="month" class="w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+
+                <div class="w-full lg:w-60">
+                    <label class="block text-sm font-medium mb-2">BLOCKNO</label>
+                    <select id="blockFilter" class="w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="ALL">전체</option>
+                    </select>
+                </div>
+
+                <div class="w-full lg:w-72">
+                    <label class="block text-sm font-medium mb-2">검색어 (PARTNO / PARTNAME / 주석)</label>
+                    <input id="keywordFilter" type="text" placeholder="예: GUIDE, BRKT, 설계변경"
+                           class="w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+
+                <div class="flex gap-2">
+                    <button id="searchBtn" class="rounded-xl bg-blue-600 text-white px-5 py-2.5 font-medium hover:bg-blue-700 transition">
+                        조회
+                    </button>
+                    <button id="resetBtn" class="rounded-xl bg-slate-100 text-slate-700 px-5 py-2.5 font-medium hover:bg-slate-200 transition border border-slate-200">
+                        초기화
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- KPI -->
+        <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <p class="text-sm text-slate-500">총 수배건수</p>
+                <h2 id="totalReqCount" class="mt-2 text-3xl font-bold">0</h2>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <p class="text-sm text-slate-500">총 수정건수</p>
+                <h2 id="totalModCount" class="mt-2 text-3xl font-bold">0</h2>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <p class="text-sm text-slate-500">평균 수배율</p>
+                <h2 id="avgRate" class="mt-2 text-3xl font-bold">0%</h2>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <p class="text-sm text-slate-500">대상 품목 수</p>
+                <h2 id="itemCount" class="mt-2 text-3xl font-bold">0</h2>
+            </div>
+        </section>
+
+        <!-- Charts -->
+        <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">월별 BOM 수배율</h3>
+                    <span class="text-sm text-slate-500">기간별 추이</span>
+                </div>
+                <div class="h-[340px]">
+                    <canvas id="monthlyRateChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">BLOCKNO별 수배율</h3>
+                    <span class="text-sm text-slate-500">상위/전체 비교</span>
+                </div>
+                <div class="h-[340px]">
+                    <canvas id="blockRateChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Table -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                    <h3 class="text-lg font-semibold">상세 데이터</h3>
+                    <p class="text-sm text-slate-500">BLOCKNO / PARTNO / PARTNAME 기준 세부 현황</p>
+                </div>
+                <div class="text-sm text-slate-500">
+                    조회건수: <span id="rowCount" class="font-semibold text-slate-700">0</span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-slate-100 text-slate-700">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-semibold">월</th>
+                        <th class="px-4 py-3 text-left font-semibold">BLOCKNO</th>
+                        <th class="px-4 py-3 text-left font-semibold">PARTNO</th>
+                        <th class="px-4 py-3 text-left font-semibold">PARTNAME</th>
+                        <th class="px-4 py-3 text-right font-semibold">수배건수</th>
+                        <th class="px-4 py-3 text-right font-semibold">수정건수</th>
+                        <th class="px-4 py-3 text-right font-semibold">수배율</th>
+                        <th class="px-4 py-3 text-left font-semibold">주석</th>
+                    </tr>
+                    </thead>
+                    <tbody id="dataTableBody" class="divide-y divide-slate-200 bg-white"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    // ----------------------------
+    // 샘플 데이터
+    // month: YYYY-MM
+    // ----------------------------
+    const bomData = [
+        { month: "2026-01", blockno: "B101", partno: "P-1001", partname: "CAR FRAME", reqCount: 120, modCount: 20, comment: "기본 안정" },
+        { month: "2026-01", blockno: "B101", partno: "P-1002", partname: "GUIDE RAIL", reqCount: 100, modCount: 15, comment: "일부 수정 발생" },
+        { month: "2026-01", blockno: "B102", partno: "P-1003", partname: "DOOR PANEL", reqCount: 90, modCount: 30, comment: "설계변경 반영" },
+        { month: "2026-01", blockno: "B103", partno: "P-1004", partname: "BRACKET ASSY", reqCount: 70, modCount: 10, comment: "양호" },
+
+        { month: "2026-02", blockno: "B101", partno: "P-1001", partname: "CAR FRAME", reqCount: 130, modCount: 18, comment: "개선 효과 확인" },
+        { month: "2026-02", blockno: "B102", partno: "P-1003", partname: "DOOR PANEL", reqCount: 80, modCount: 25, comment: "수정건 지속" },
+        { month: "2026-02", blockno: "B103", partno: "P-1004", partname: "BRACKET ASSY", reqCount: 95, modCount: 8, comment: "수배 안정화" },
+        { month: "2026-02", blockno: "B104", partno: "P-1005", partname: "MOTOR BASE", reqCount: 60, modCount: 12, comment: "신규 품목" },
+
+        { month: "2026-03", blockno: "B101", partno: "P-1002", partname: "GUIDE RAIL", reqCount: 115, modCount: 12, comment: "정상" },
+        { month: "2026-03", blockno: "B102", partno: "P-1006", partname: "CAB FLOOR", reqCount: 88, modCount: 22, comment: "사양변경" },
+        { month: "2026-03", blockno: "B103", partno: "P-1007", partname: "ROLLER GUIDE", reqCount: 76, modCount: 9, comment: "양호" },
+        { month: "2026-03", blockno: "B104", partno: "P-1005", partname: "MOTOR BASE", reqCount: 67, modCount: 14, comment: "현장 피드백 반영" },
+
+        { month: "2026-04", blockno: "B101", partno: "P-1001", partname: "CAR FRAME", reqCount: 140, modCount: 16, comment: "지속 개선" },
+        { month: "2026-04", blockno: "B102", partno: "P-1006", partname: "CAB FLOOR", reqCount: 92, modCount: 18, comment: "안정화 추세" },
+        { month: "2026-04", blockno: "B103", partno: "P-1008", partname: "SIDE PANEL", reqCount: 84, modCount: 20, comment: "외관 변경 반영" },
+        { month: "2026-04", blockno: "B104", partno: "P-1009", partname: "CONTROL BOX", reqCount: 73, modCount: 11, comment: "신규 제어부품" },
+
+        { month: "2026-05", blockno: "B101", partno: "P-1010", partname: "TOP BEAM", reqCount: 125, modCount: 10, comment: "매우 양호" },
+        { month: "2026-05", blockno: "B102", partno: "P-1003", partname: "DOOR PANEL", reqCount: 98, modCount: 19, comment: "개선됨" },
+        { month: "2026-05", blockno: "B103", partno: "P-1007", partname: "ROLLER GUIDE", reqCount: 82, modCount: 7, comment: "안정" },
+        { month: "2026-05", blockno: "B104", partno: "P-1009", partname: "CONTROL BOX", reqCount: 79, modCount: 13, comment: "수정 이력 존재" },
+    ];
+
+    // 수배율 계산
+    function calcRate(reqCount, modCount) {
+        const total = reqCount + modCount;
+        if (total === 0) return 0;
+        return (reqCount / total) * 100;
+    }
+
+    // 화면 요소
+    const startMonthEl = document.getElementById("startMonth");
+    const endMonthEl = document.getElementById("endMonth");
+    const blockFilterEl = document.getElementById("blockFilter");
+    const keywordFilterEl = document.getElementById("keywordFilter");
+    const searchBtn = document.getElementById("searchBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const totalReqCountEl = document.getElementById("totalReqCount");
+    const totalModCountEl = document.getElementById("totalModCount");
+    const avgRateEl = document.getElementById("avgRate");
+    const itemCountEl = document.getElementById("itemCount");
+    const rowCountEl = document.getElementById("rowCount");
+    const dataTableBody = document.getElementById("dataTableBody");
+
+    let monthlyRateChart;
+    let blockRateChart;
+
+    // 초기값 세팅
+    function initializeFilters() {
+        const months = [...new Set(bomData.map(item => item.month))].sort();
+        startMonthEl.value = months[0];
+        endMonthEl.value = months[months.length - 1];
+
+        const blocks = [...new Set(bomData.map(item => item.blockno))].sort();
+        blockFilterEl.innerHTML = `<option value="ALL">전체</option>`;
+        blocks.forEach(block => {
+            const option = document.createElement("option");
+            option.value = block;
+            option.textContent = block;
+            blockFilterEl.appendChild(option);
+        });
+    }
+
+    // 데이터 필터링
+    function getFilteredData() {
+        const startMonth = startMonthEl.value;
+        const endMonth = endMonthEl.value;
+        const block = blockFilterEl.value;
+        const keyword = keywordFilterEl.value.trim().toLowerCase();
+
+        return bomData
+            .filter(item => {
+                const inMonthRange = (!startMonth || item.month >= startMonth) && (!endMonth || item.month <= endMonth);
+                const inBlock = block === "ALL" || item.blockno === block;
+                const inKeyword =
+                    !keyword ||
+                    item.partno.toLowerCase().includes(keyword) ||
+                    item.partname.toLowerCase().includes(keyword) ||
+                    item.comment.toLowerCase().includes(keyword) ||
+                    item.blockno.toLowerCase().includes(keyword);
+
+                return inMonthRange && inBlock && inKeyword;
+            })
+            .map(item => ({
+                ...item,
+                rate: calcRate(item.reqCount, item.modCount)
+            }));
+    }
+
+    // KPI 렌더링
+    function renderKpi(data) {
+        const totalReq = data.reduce((sum, item) => sum + item.reqCount, 0);
+        const totalMod = data.reduce((sum, item) => sum + item.modCount, 0);
+        const totalRate = calcRate(totalReq, totalMod);
+
+        totalReqCountEl.textContent = totalReq.toLocaleString();
+        totalModCountEl.textContent = totalMod.toLocaleString();
+        avgRateEl.textContent = totalRate.toFixed(1) + "%";
+        itemCountEl.textContent = data.length.toLocaleString();
+    }
+
+    // 테이블 렌더링
+    function renderTable(data) {
+        rowCountEl.textContent = data.length.toLocaleString();
+
+        if (data.length === 0) {
+            dataTableBody.innerHTML = `
+          <tr>
+            <td colspan="8" class="px-4 py-10 text-center text-slate-500">
+              조회 결과가 없습니다.
+            </td>
+          </tr>
+        `;
+            return;
+        }
+
+        dataTableBody.innerHTML = data
+            .map(item => {
+                const badgeClass =
+                    item.rate >= 85
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : item.rate >= 70
+                            ? "bg-amber-50 text-amber-700 border border-amber-200"
+                            : "bg-rose-50 text-rose-700 border border-rose-200";
+
+                return `
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3">${item.month}</td>
+              <td class="px-4 py-3 font-medium">${item.blockno}</td>
+              <td class="px-4 py-3">${item.partno}</td>
+              <td class="px-4 py-3">${item.partname}</td>
+              <td class="px-4 py-3 text-right">${item.reqCount.toLocaleString()}</td>
+              <td class="px-4 py-3 text-right">${item.modCount.toLocaleString()}</td>
+              <td class="px-4 py-3 text-right">
+                <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">
+                  ${item.rate.toFixed(1)}%
+                </span>
+              </td>
+              <td class="px-4 py-3 text-slate-600">${item.comment}</td>
+            </tr>
+          `;
+            })
+            .join("");
+    }
+
+    // 월별 집계
+    function getMonthlyAggregated(data) {
+        const grouped = {};
+
+        data.forEach(item => {
+            if (!grouped[item.month]) {
+                grouped[item.month] = { reqCount: 0, modCount: 0 };
+            }
+            grouped[item.month].reqCount += item.reqCount;
+            grouped[item.month].modCount += item.modCount;
+        });
+
+        const labels = Object.keys(grouped).sort();
+        const rates = labels.map(month => {
+            const g = grouped[month];
+            return calcRate(g.reqCount, g.modCount).toFixed(1);
+        });
+
+        return { labels, rates };
+    }
+
+    // BLOCKNO별 집계
+    function getBlockAggregated(data) {
+        const grouped = {};
+
+        data.forEach(item => {
+            if (!grouped[item.blockno]) {
+                grouped[item.blockno] = { reqCount: 0, modCount: 0 };
+            }
+            grouped[item.blockno].reqCount += item.reqCount;
+            grouped[item.blockno].modCount += item.modCount;
+        });
+
+        const labels = Object.keys(grouped).sort();
+        const rates = labels.map(block => {
+            const g = grouped[block];
+            return calcRate(g.reqCount, g.modCount).toFixed(1);
+        });
+
+        return { labels, rates };
+    }
+
+    // 차트 렌더링
+    function renderCharts(data) {
+        const monthly = getMonthlyAggregated(data);
+        const byBlock = getBlockAggregated(data);
+
+        if (monthlyRateChart) monthlyRateChart.destroy();
+        if (blockRateChart) blockRateChart.destroy();
+
+        const monthlyCtx = document.getElementById("monthlyRateChart").getContext("2d");
+        monthlyRateChart = new Chart(monthlyCtx, {
+            type: "line",
+            data: {
+                labels: monthly.labels,
+                datasets: [
+                    {
+                        label: "월별 수배율(%)",
+                        data: monthly.rates,
+                        tension: 0.3,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + "%";
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const blockCtx = document.getElementById("blockRateChart").getContext("2d");
+        blockRateChart = new Chart(blockCtx, {
+            type: "bar",
+            data: {
+                labels: byBlock.labels,
+                datasets: [
+                    {
+                        label: "BLOCKNO별 수배율(%)",
+                        data: byBlock.rates
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + "%";
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 전체 렌더
+    function renderDashboard() {
+        const filteredData = getFilteredData();
+        renderKpi(filteredData);
+        renderTable(filteredData);
+        renderCharts(filteredData);
+    }
+
+    // 이벤트
+    searchBtn.addEventListener("click", renderDashboard);
+
+    resetBtn.addEventListener("click", () => {
+        initializeFilters();
+        keywordFilterEl.value = "";
+        renderDashboard();
+    });
+
+    keywordFilterEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            renderDashboard();
+        }
+    });
+
+    // 초기 실행
+    initializeFilters();
+    renderDashboard();
+</script>
+</body>
+</html>
