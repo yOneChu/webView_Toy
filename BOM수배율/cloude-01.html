@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOM 수배율 분석 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f3ef; color: #2c2c2a; }
+        .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 500; }
+        .badge-good { background: #EAF3DE; color: #3B6D11; }
+        .badge-warn { background: #FAEEDA; color: #854F0B; }
+        .badge-danger { background: #FCEBEB; color: #A32D2D; }
+        .metric-card { background: #f1efe8; border-radius: 8px; padding: 14px 16px; }
+        .card { background: #fff; border: 0.5px solid rgba(44,44,42,0.15); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+        .section-label { font-size: 12px; color: #5f5e5a; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
+        .tab-btn { font-size: 12px; padding: 4px 12px; border-radius: 6px; border: 0.5px solid rgba(44,44,42,0.3); background: transparent; color: #5f5e5a; cursor: pointer; }
+        .tab-btn.active { background: #E6F1FB; color: #185FA5; border-color: transparent; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+        thead th { font-size: 11px; font-weight: 500; color: #5f5e5a; text-align: left; padding: 6px 10px; border-bottom: 0.5px solid rgba(44,44,42,0.15); background: #f1efe8; }
+        tbody td { padding: 7px 10px; border-bottom: 0.5px solid rgba(44,44,42,0.1); color: #2c2c2a; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        tbody tr:hover td { background: #f4f3ef; }
+        .rate-bar-wrap { display: flex; align-items: center; gap: 6px; }
+        .rate-bar { height: 6px; border-radius: 3px; flex-shrink: 0; }
+        .rate-bar.high { background: #1D9E75; }
+        .rate-bar.mid { background: #EF9F27; }
+        .rate-bar.low { background: #E24B4A; }
+        select { font-size: 13px; padding: 5px 10px; border-radius: 6px; border: 0.5px solid rgba(44,44,42,0.3); background: #fff; color: #2c2c2a; }
+        header { background: #fff; border-bottom: 0.5px solid rgba(44,44,42,0.15); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+        header h1 { font-size: 16px; font-weight: 500; color: #2c2c2a; }
+        header span { font-size: 12px; color: #5f5e5a; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>BOM 수배율 분석 대시보드</h1>
+    <span id="last-updated"></span>
+</header>
+
+<div style="padding: 1.25rem 1.5rem;">
+
+    <!-- Filters -->
+    <div style="display:flex; gap:12px; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap;">
+        <label style="font-size:13px;color:#5f5e5a;">기간</label>
+        <select id="sel-month" onchange="render()">
+            <option value="all">전체</option>
+            <option value="2025-01">2025-01</option>
+            <option value="2025-02">2025-02</option>
+            <option value="2025-03">2025-03</option>
+            <option value="2025-04">2025-04</option>
+            <option value="2025-05">2025-05</option>
+            <option value="2025-06">2025-06</option>
+        </select>
+        <label style="font-size:13px;color:#5f5e5a;">블록</label>
+        <select id="sel-block" onchange="render()">
+            <option value="all">전체</option>
+            <option value="BLK-001">BLK-001</option>
+            <option value="BLK-002">BLK-002</option>
+            <option value="BLK-003">BLK-003</option>
+            <option value="BLK-004">BLK-004</option>
+        </select>
+        <label style="font-size:13px;color:#5f5e5a;">수배율 기준</label>
+        <select id="sel-rate" onchange="render()">
+            <option value="all">전체</option>
+            <option value="high">90% 이상</option>
+            <option value="mid">70~90%</option>
+            <option value="low">70% 미만</option>
+        </select>
+    </div>
+
+    <!-- Metric Cards -->
+    <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:1.5rem;">
+        <div class="metric-card">
+            <div style="font-size:12px;color:#5f5e5a;margin-bottom:6px;">전체 수배건수</div>
+            <div style="font-size:22px;font-weight:500;" id="m-total">—</div>
+            <div style="font-size:11px;color:#888780;margin-top:3px;">BOM 항목 합계</div>
+        </div>
+        <div class="metric-card">
+            <div style="font-size:12px;color:#5f5e5a;margin-bottom:6px;">평균 수배율</div>
+            <div style="font-size:22px;font-weight:500;" id="m-rate">—</div>
+            <div style="font-size:11px;color:#888780;margin-top:3px;">필터 기준</div>
+        </div>
+        <div class="metric-card">
+            <div style="font-size:12px;color:#5f5e5a;margin-bottom:6px;">수정건수 합계</div>
+            <div style="font-size:22px;font-weight:500;" id="m-fix">—</div>
+            <div style="font-size:11px;color:#888780;margin-top:3px;">변경 이력</div>
+        </div>
+        <div class="metric-card">
+            <div style="font-size:12px;color:#5f5e5a;margin-bottom:6px;">미달 블록</div>
+            <div style="font-size:22px;font-weight:500;" id="m-low">—</div>
+            <div style="font-size:11px;color:#888780;margin-top:3px;">수배율 70% 미만</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div style="display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:12px; margin-bottom:1rem;">
+        <div class="card">
+            <div class="section-label">월별 수배율 추이</div>
+            <div style="display:flex;gap:4px;margin-bottom:12px;">
+                <button class="tab-btn active" onclick="setChartMode('rate',this)">수배율</button>
+                <button class="tab-btn" onclick="setChartMode('count',this)">수배건수</button>
+            </div>
+            <div style="position:relative;width:100%;height:220px;"><canvas id="trendChart"></canvas></div>
+        </div>
+        <div class="card">
+            <div class="section-label">블록별 수배율</div>
+            <div style="position:relative;width:100%;height:236px;"><canvas id="blockChart"></canvas></div>
+        </div>
+    </div>
+
+    <!-- Detail Table -->
+    <div class="card">
+        <div class="section-label" style="margin-bottom:10px;">BOM 수배 상세 현황</div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                <tr>
+                    <th style="width:90px;">BLOCKNO</th>
+                    <th style="width:110px;">PARTNO</th>
+                    <th style="width:150px;">PARTNAME</th>
+                    <th style="width:60px;">기간</th>
+                    <th style="width:75px;text-align:right;">수배건수</th>
+                    <th style="width:75px;text-align:right;">수정건수</th>
+                    <th style="width:150px;">수배율</th>
+                    <th style="width:120px;">주석</th>
+                </tr>
+                </thead>
+                <tbody id="tbl-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const RAW = [
+        {block:'BLK-001',part:'P-10023',name:'선체 격벽 플레이트',month:'2025-01',수배:120,수정:8,주석:'정상'},
+        {block:'BLK-001',part:'P-10024',name:'메인 프레임',month:'2025-01',수배:95,수정:15,주석:'수정 다수'},
+        {block:'BLK-001',part:'P-10025',name:'용접 브라켓',month:'2025-02',수배:110,수정:5,주석:'정상'},
+        {block:'BLK-001',part:'P-10026',name:'앵글 스티프너',month:'2025-02',수배:88,수정:20,주석:'설계 변경'},
+        {block:'BLK-001',part:'P-10027',name:'데크 플레이트',month:'2025-03',수배:130,수정:3,주석:'정상'},
+        {block:'BLK-002',part:'P-20011',name:'엔진룸 배관',month:'2025-01',수배:60,수정:30,주석:'지연 발생'},
+        {block:'BLK-002',part:'P-20012',name:'밸브 어셈블리',month:'2025-01',수배:75,수정:10,주석:'정상'},
+        {block:'BLK-002',part:'P-20013',name:'펌프 하우징',month:'2025-02',수배:80,수정:12,주석:'정상'},
+        {block:'BLK-002',part:'P-20014',name:'플랜지 커플링',month:'2025-03',수배:55,수정:28,주석:'사양 미확정'},
+        {block:'BLK-002',part:'P-20015',name:'냉각수 파이프',month:'2025-04',수배:90,수정:6,주석:'정상'},
+        {block:'BLK-003',part:'P-30001',name:'갑판 핸드레일',month:'2025-02',수배:140,수정:2,주석:'정상'},
+        {block:'BLK-003',part:'P-30002',name:'사다리 조립체',month:'2025-03',수배:125,수정:4,주석:'정상'},
+        {block:'BLK-003',part:'P-30003',name:'환기 덕트',month:'2025-03',수배:70,수정:18,주석:'도면 수정중'},
+        {block:'BLK-003',part:'P-30004',name:'전기 케이블 트레이',month:'2025-04',수배:100,수정:9,주석:'정상'},
+        {block:'BLK-003',part:'P-30005',name:'소화 배관',month:'2025-05',수배:85,수정:11,주석:'정상'},
+        {block:'BLK-004',part:'P-40001',name:'프로펠러 샤프트',month:'2025-01',수배:40,수정:35,주석:'공급 지연'},
+        {block:'BLK-004',part:'P-40002',name:'러더 어셈블리',month:'2025-02',수배:65,수정:22,주석:'검토중'},
+        {block:'BLK-004',part:'P-40003',name:'스턴튜브',month:'2025-03',수배:78,수정:14,주석:'정상'},
+        {block:'BLK-004',part:'P-40004',name:'베어링 하우징',month:'2025-04',수배:92,수정:7,주석:'정상'},
+        {block:'BLK-004',part:'P-40005',name:'시일링 장치',month:'2025-05',수배:110,수정:4,주석:'정상'},
+        {block:'BLK-001',part:'P-10028',name:'코밍 플레이트',month:'2025-04',수배:115,수정:6,주석:'정상'},
+        {block:'BLK-002',part:'P-20016',name:'해수 필터',month:'2025-05',수배:68,수정:19,주석:'부품 미입고'},
+        {block:'BLK-003',part:'P-30006',name:'구명정 브라켓',month:'2025-06',수배:135,수정:1,주석:'정상'},
+        {block:'BLK-004',part:'P-40006',name:'조타 실린더',month:'2025-06',수배:50,수정:27,주석:'설계 변경중'},
+    ];
+
+    function getRate(r){ return r.수배 > 0 ? Math.min(100, Math.round(((r.수배 - r.수정) / r.수배) * 100)) : 0; }
+
+    function filtered(){
+        const m = document.getElementById('sel-month').value;
+        const b = document.getElementById('sel-block').value;
+        const rv = document.getElementById('sel-rate').value;
+        return RAW.filter(r => {
+            if(m !== 'all' && r.month !== m) return false;
+            if(b !== 'all' && r.block !== b) return false;
+            const rate = getRate(r);
+            if(rv === 'high' && rate < 90) return false;
+            if(rv === 'mid' && (rate < 70 || rate >= 90)) return false;
+            if(rv === 'low' && rate >= 70) return false;
+            return true;
+        });
+    }
+
+    let chartMode = 'rate';
+    let trendChart, blockChart;
+
+    function setChartMode(mode, btn){
+        chartMode = mode;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        render();
+    }
+
+    function rateBadge(rate){
+        if(rate >= 90) return `<span class="badge badge-good">${rate}%</span>`;
+        if(rate >= 70) return `<span class="badge badge-warn">${rate}%</span>`;
+        return `<span class="badge badge-danger">${rate}%</span>`;
+    }
+
+    function rateBar(rate){
+        const cls = rate >= 90 ? 'high' : rate >= 70 ? 'mid' : 'low';
+        const w = Math.max(4, rate);
+        return `<div class="rate-bar-wrap"><div class="rate-bar ${cls}" style="width:${w}px;"></div><span style="font-size:12px;">${rateBadge(rate)}</span></div>`;
+    }
+
+    function render(){
+        const data = filtered();
+        const total = data.reduce((s,r) => s + r.수배, 0);
+        const fix = data.reduce((s,r) => s + r.수정, 0);
+        const avgRate = data.length ? Math.round(data.reduce((s,r) => s + getRate(r), 0) / data.length) : 0;
+        const lowBlocks = [...new Set(data.filter(r => getRate(r) < 70).map(r => r.block))].length;
+
+        document.getElementById('m-total').textContent = total.toLocaleString();
+        document.getElementById('m-rate').textContent = avgRate + '%';
+        document.getElementById('m-fix').textContent = fix.toLocaleString();
+        document.getElementById('m-low').textContent = lowBlocks + '개';
+
+        const tbody = document.getElementById('tbl-body');
+        tbody.innerHTML = data.map(r => {
+            const rate = getRate(r);
+            return `<tr>
+      <td>${r.block}</td>
+      <td>${r.part}</td>
+      <td title="${r.name}">${r.name}</td>
+      <td>${r.month.slice(5)+'월'}</td>
+      <td style="text-align:right;">${r.수배.toLocaleString()}</td>
+      <td style="text-align:right;">${r.수정.toLocaleString()}</td>
+      <td>${rateBar(rate)}</td>
+      <td title="${r.주석}">${r.주석}</td>
+    </tr>`;
+        }).join('');
+
+        const months = ['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06'];
+        const monthLabel = months.map(m => m.slice(5)+'월');
+
+        const trendData = months.map(m => {
+            const rows = RAW.filter(r => r.month === m);
+            if(!rows.length) return null;
+            if(chartMode === 'rate') return Math.round(rows.reduce((s,r) => s + getRate(r), 0) / rows.length);
+            return rows.reduce((s,r) => s + r.수배, 0);
+        });
+
+        if(trendChart) trendChart.destroy();
+        trendChart = new Chart(document.getElementById('trendChart'), {
+            type: 'line',
+            data: {
+                labels: monthLabel,
+                datasets: [{
+                    label: chartMode === 'rate' ? '평균 수배율(%)' : '수배건수',
+                    data: trendData,
+                    borderColor: '#185FA5',
+                    backgroundColor: 'rgba(24,95,165,0.08)',
+                    pointBackgroundColor: '#185FA5',
+                    pointRadius: 4,
+                    fill: true,
+                    tension: 0.35,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        grid: { color: 'rgba(136,135,128,0.12)' },
+                        ticks: { font: { size: 11 }, color: '#888780', callback: v => chartMode === 'rate' ? v + '%' : v }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 }, color: '#888780', autoSkip: false }
+                    }
+                }
+            }
+        });
+
+        const blocks = ['BLK-001','BLK-002','BLK-003','BLK-004'];
+        const blockRates = blocks.map(b => {
+            const rows = RAW.filter(r => r.block === b);
+            return rows.length ? Math.round(rows.reduce((s,r) => s + getRate(r), 0) / rows.length) : 0;
+        });
+        const blockColors = blockRates.map(r => r >= 90 ? '#1D9E75' : r >= 70 ? '#EF9F27' : '#E24B4A');
+
+        if(blockChart) blockChart.destroy();
+        blockChart = new Chart(document.getElementById('blockChart'), {
+            type: 'bar',
+            data: {
+                labels: blocks,
+                datasets: [{
+                    label: '평균 수배율(%)',
+                    data: blockRates,
+                    backgroundColor: blockColors,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        max: 100, beginAtZero: true,
+                        grid: { color: 'rgba(136,135,128,0.12)' },
+                        ticks: { font: { size: 11 }, color: '#888780', callback: v => v + '%' }
+                    },
+                    x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#888780' } }
+                }
+            }
+        });
+    }
+
+    document.getElementById('last-updated').textContent = '기준일: ' + new Date().toLocaleDateString('ko-KR');
+    render();
+</script>
+</body>
+</html>
