@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제품-자재 Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Pretendard', 'Apple SD Gothic Neo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body { font-family: 'Pretendard', sans-serif; }
+        /* 커스텀 스크롤바 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300 min-h-screen p-4 md:p-8">
+
+<header class="flex justify-between items-end mb-6">
+    <div>
+        <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-300 drop-shadow-sm">
+            제품-자재 Analytics
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium">PLM에 등록된 제품-자재 연계 데이터 분석</p>
+    </div>
+
+    <button id="themeToggle" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+        <i class="fas fa-moon text-indigo-500 dark:hidden"></i>
+        <i class="fas fa-sun text-yellow-400 hidden dark:block"></i>
+        <span class="text-sm font-semibold" id="themeText">다크모드</span>
+    </button>
+</header>
+
+<section class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden mb-6 transition-all">
+    <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-3 flex justify-between items-center text-white cursor-pointer" onclick="toggleFilters()">
+        <h2 class="font-bold tracking-wide"><i class="fas fa-filter mr-2"></i>조회 조건</h2>
+        <div class="flex gap-3">
+            <i class="fas fa-window-minimize mt-[-8px]"></i>
+            <i class="fas fa-times"></i>
+        </div>
+    </div>
+
+    <div id="filterBody" class="p-6">
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-4 mb-6 text-sm text-blue-800 dark:text-blue-300">
+            <h3 class="font-bold text-blue-900 dark:text-blue-200 mb-2 flex items-center gap-2">
+                <i class="fas fa-volume-up text-blue-500"></i> 도움말
+            </h3>
+            <ul class="list-disc pl-5 space-y-1 opacity-90">
+                <li>PartNo, BlockNo 둘 중 하나는 필수입력 (속도 이슈)</li>
+                <li>ex. 자재번호를 입력하면, 그 자재가 사용되고 있는 모든 제품을 조회</li>
+                <li>TEST, Q호기는 제외</li>
+                <li>사용방법: <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">26300551G0*</code> → Like 검색 ('26300551G0' 문자 포함한 자재를 사용중인 모든 제품 검색)</li>
+                <li>'*' 없으면 EQUAL 검색</li>
+            </ul>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 text-sm">
+            <div class="flex flex-col gap-1"><label class="font-semibold text-gray-600 dark:text-gray-400">년도</label>
+                <select class="form-input"><option>2025</option><option>2026</option></select></div>
+            <div class="flex flex-col gap-1"><label class="font-semibold text-gray-600 dark:text-gray-400">브랜드</label>
+                <select class="form-input"><option>-</option></select></div>
+            <div class="flex flex-col gap-1"><label class="font-semibold text-gray-600 dark:text-gray-400">생산거점(설계)</label>
+                <select class="form-input"><option>-</option></select></div>
+            <div class="flex flex-col gap-1"><label class="font-semibold text-gray-600 dark:text-gray-400">기종</label>
+                <select class="form-input"><option>-</option></select></div>
+
+            <div class="flex flex-col gap-1"><label class="font-semibold text-gray-600 dark:text-gray-400">Part No.</label>
+                <input type="text" placeholder="Part No." class="form-input"></div>
+            <div class="flex flex-col gap-1"><label class="font-semibold text-gray-600 dark:text-gray-400">BlockNo</label>
+                <input type="text" placeholder="Block No." class="form-input"></div>
+
+            <div class="flex flex-col gap-1 col-span-1 lg:col-span-2 xl:col-span-1"><label class="font-semibold text-gray-600 dark:text-gray-400">기계구조 최초설계일</label>
+                <div class="flex gap-2">
+                    <input type="text" placeholder="ex. 20260130" class="form-input w-full">
+                    <select class="form-input w-24"><option>이상 (>=)</option><option>이하 (<=)</option></select>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-1"><label class="font-semibold text-gray-600 dark:text-gray-400">CMT</label>
+                <input type="text" placeholder="cmt ..." class="form-input"></div>
+            <div class="flex flex-col gap-1"><label class="font-semibold text-gray-600 dark:text-gray-400">SPEC</label>
+                <input type="text" placeholder="spec ..." class="form-input"></div>
+            <div class="flex flex-col gap-1"><label class="font-semibold text-gray-600 dark:text-gray-400">관통(EL_ETHRU)</label>
+                <select class="form-input"><option>-</option></select></div>
+            <div class="flex flex-col gap-1"><label class="font-semibold text-gray-600 dark:text-gray-400">전망 타입(EL_COB)</label>
+                <select class="form-input"><option>직접 입력 또는 선택</option></select></div>
+            <div class="flex flex-col gap-1"><label class="font-semibold text-gray-600 dark:text-gray-400">제품 상태</label>
+                <select class="form-input text-blue-600 font-semibold"><option>릴리즈</option><option>작업중</option></select></div>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+            <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-8 rounded-lg shadow-lg shadow-blue-500/30 transition-transform active:scale-95 flex items-center gap-2">
+                <i class="fas fa-search"></i> 분석
+            </button>
+        </div>
+    </div>
+</section>
+
+<section class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 transition-all">
+
+    <div class="flex flex-wrap gap-2 mb-4 text-xs">
+        <button class="col-toggle active">제품번호</button>
+        <button class="col-toggle active">제품버전</button>
+        <button class="col-toggle active">제품상태</button>
+        <button class="col-toggle active">기계구조 최초설계일</button>
+        <button class="col-toggle">브랜드</button>
+        <button class="col-toggle">기종</button>
+    </div>
+
+    <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 text-sm">
+        <div class="flex items-center gap-4">
+            <div class="text-gray-600 dark:text-gray-400">
+                Show
+                <select class="mx-1 border rounded dark:bg-gray-700 dark:border-gray-600 px-1 py-0.5">
+                    <option>50</option><option>100</option>
+                </select>
+                entries
+            </div>
+            <div class="flex rounded-md shadow-sm" role="group">
+                <button type="button" class="px-4 py-1.5 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600">CSV</button>
+                <button type="button" class="px-4 py-1.5 text-sm font-medium text-gray-900 bg-white border-t border-b border-gray-200 hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600">Excel</button>
+                <button type="button" class="px-4 py-1.5 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600">Copy</button>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+            <label>Search:</label>
+            <input type="text" class="form-input w-48 py-1.5">
+        </div>
+    </div>
+
+    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg" id="gridContainer">
+        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 whitespace-nowrap">
+            <thead class="text-xs text-white uppercase bg-slate-500 dark:bg-slate-700">
+            <tr>
+                <th class="px-4 py-3 cursor-pointer hover:bg-slate-600">제품번호 <i class="fas fa-sort ml-1 opacity-50"></i></th>
+                <th class="px-4 py-3 cursor-pointer hover:bg-slate-600">제품버전 <i class="fas fa-sort ml-1 opacity-50"></i></th>
+                <th class="px-4 py-3 cursor-pointer hover:bg-slate-600">제품상태 <i class="fas fa-sort ml-1 opacity-50"></i></th>
+                <th class="px-4 py-3 cursor-pointer hover:bg-slate-600">기계구조 최초설계일 <i class="fas fa-sort ml-1 opacity-50"></i></th>
+                <th class="px-4 py-3 cursor-pointer hover:bg-slate-600">브랜드 <i class="fas fa-sort ml-1 opacity-50"></i></th>
+                <th class="px-4 py-3 cursor-pointer hover:bg-slate-600">관통 <i class="fas fa-sort ml-1 opacity-50"></i></th>
+                <th class="px-4 py-3 cursor-pointer hover:bg-slate-600">전망타입 <i class="fas fa-sort ml-1 opacity-50"></i></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400 font-medium">
+                    <i class="fas fa-inbox text-3xl mb-3 text-gray-300 dark:text-gray-600 block"></i>
+                    No data available in table
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-between items-center mt-4 text-sm text-gray-600 dark:text-gray-400">
+        <div>Showing 0 to 0 of 0 entries</div>
+        <div class="inline-flex rounded-md shadow-sm">
+            <button class="px-3 py-1 border border-gray-300 bg-white text-gray-500 rounded-l-md hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 cursor-not-allowed">Previous</button>
+            <button class="px-3 py-1 border border-l-0 border-gray-300 bg-white text-gray-500 rounded-r-md hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 cursor-not-allowed">Next</button>
+        </div>
+    </div>
+</section>
+
+<style type="text/tailwindcss">
+    @layer components {
+        .form-input {
+            @apply bg-white border border-gray-300 text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-2 outline-none transition-all dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-400;
+        }
+        .col-toggle {
+            @apply px-3 py-1 border rounded-full text-gray-600 border-gray-300 bg-white hover:bg-gray-50 transition-colors dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600;
+        }
+        .col-toggle.active {
+            @apply border-blue-500 text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-500;
+        }
+    }
+</style>
+
+<script>
+    // 다크모드 토글 로직
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const themeText = document.getElementById('themeText');
+    const html = document.documentElement;
+
+    themeToggleBtn.addEventListener('click', () => {
+        html.classList.toggle('dark');
+        if (html.classList.contains('dark')) {
+            themeText.textContent = '라이트모드';
+        } else {
+            themeText.textContent = '다크모드';
+        }
+    });
+
+    // 조건 패널 접기/펴기 로직
+    function toggleFilters() {
+        const body = document.getElementById('filterBody');
+        if (body.style.display === 'none') {
+            body.style.display = 'block';
+        } else {
+            body.style.display = 'none';
+        }
+    }
+</script>
+</body>
+</html>
