@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>제품-자재 Analytics</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eef6ff',
+                            100: '#d9ebff',
+                            500: '#1976f3',
+                            600: '#1463cf',
+                            700: '#104da1'
+                        },
+                        ink: '#0f172a'
+                    },
+                    boxShadow: {
+                        soft: '0 8px 30px rgba(15, 23, 42, 0.08)',
+                        glow: '0 0 0 1px rgba(25,118,243,0.08), 0 18px 40px rgba(25,118,243,0.12)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Open source libs -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                    radial-gradient(circle at top left, rgba(25,118,243,.08), transparent 28%),
+                    linear-gradient(180deg, #f8fbff 0%, #f3f6fb 100%);
+        }
+
+        .glass {
+            background: rgba(255,255,255,0.82);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+
+        .dataTables_wrapper .dataTables_filter input,
+        .dataTables_wrapper .dataTables_length select {
+            border: 1px solid #d1d5db;
+            border-radius: 0.75rem;
+            padding: 0.45rem 0.75rem;
+            background: white;
+            outline: none;
+        }
+
+        .dataTables_wrapper .dt-buttons .dt-button {
+            border: none !important;
+            border-radius: 0.75rem !important;
+            background: #64748b !important;
+            color: white !important;
+            padding: 0.5rem 0.85rem !important;
+            margin-right: 0.4rem !important;
+            box-shadow: 0 6px 20px rgba(100,116,139,.18);
+        }
+
+        table.dataTable thead th {
+            background: linear-gradient(180deg, #7b8794 0%, #667281 100%);
+            color: white !important;
+            font-weight: 700;
+            border-bottom: none !important;
+            white-space: nowrap;
+        }
+
+        table.dataTable tbody td {
+            white-space: nowrap;
+        }
+
+        .ai-chip {
+            background: linear-gradient(135deg, rgba(25,118,243,0.1), rgba(99,102,241,0.12));
+            border: 1px solid rgba(25,118,243,0.12);
+        }
+
+        .pulse-ring {
+            box-shadow: 0 0 0 0 rgba(25,118,243,0.45);
+            animation: pulse 2.2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(25,118,243,0.35); }
+            70% { box-shadow: 0 0 0 12px rgba(25,118,243,0); }
+            100% { box-shadow: 0 0 0 0 rgba(25,118,243,0); }
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen">
+<div class="max-w-[1680px] mx-auto p-4 md:p-6">
+    <!-- Header -->
+    <header class="mb-5">
+        <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+                <div class="flex items-center gap-3">
+                    <div class="h-11 w-11 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-500 text-white flex items-center justify-center shadow-glow">
+                        <i data-lucide="boxes" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">제품-자재 <span class="text-primary-600">Analytics</span></h1>
+                        <p class="text-sm text-slate-500 mt-1">PLM에 등록된 제품-자재 연계 데이터를 AI 감성 UI로 탐색하고 분석합니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 self-end md:self-start">
+                <div class="ai-chip px-3 py-2 rounded-2xl flex items-center gap-2 shadow-soft">
+                    <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 pulse-ring"></span>
+                    <span class="text-sm font-semibold text-slate-700">AI Insight Ready</span>
+                </div>
+
+                <button id="themeToggle" class="glass border border-white/60 rounded-2xl px-4 py-2 shadow-soft flex items-center gap-2 hover:-translate-y-0.5 transition">
+                    <i data-lucide="sun-medium" class="w-4 h-4 text-amber-500"></i>
+                    <span class="text-sm font-semibold">라이트모드</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Summary cards -->
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+        <div class="glass rounded-3xl p-5 shadow-soft border border-white/60">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm text-slate-500">등록 제품 수</span>
+                <i data-lucide="package" class="w-5 h-5 text-primary-500"></i>
+            </div>
+            <div class="text-3xl font-extrabold">24,981</div>
+            <p class="text-xs text-emerald-600 mt-2">+12.4% 전월 대비</p>
+        </div>
+        <div class="glass rounded-3xl p-5 shadow-soft border border-white/60">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm text-slate-500">연계 자재 수</span>
+                <i data-lucide="link-2" class="w-5 h-5 text-violet-500"></i>
+            </div>
+            <div class="text-3xl font-extrabold">183,240</div>
+            <p class="text-xs text-sky-600 mt-2">평균 제품당 7.3개</p>
+        </div>
+        <div class="glass rounded-3xl p-5 shadow-soft border border-white/60">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm text-slate-500">검색 응답 속도</span>
+                <i data-lucide="zap" class="w-5 h-5 text-amber-500"></i>
+            </div>
+            <div class="text-3xl font-extrabold">0.28s</div>
+            <p class="text-xs text-slate-500 mt-2">PartNo 또는 BlockNo 필수</p>
+        </div>
+        <div class="glass rounded-3xl p-5 shadow-soft border border-white/60">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm text-slate-500">AI 추천 정확도</span>
+                <i data-lucide="sparkles" class="w-5 h-5 text-pink-500"></i>
+            </div>
+            <div class="text-3xl font-extrabold">94.8%</div>
+            <p class="text-xs text-slate-500 mt-2">유사 검색 패턴 기반</p>
+        </div>
+    </section>
+
+    <!-- Filter panel -->
+    <section class="glass rounded-[28px] shadow-soft border border-white/70 overflow-hidden mb-5">
+        <div class="bg-gradient-to-r from-primary-600 to-blue-500 px-5 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2 text-white font-bold">
+                <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
+                <span>조건</span>
+            </div>
+            <div class="flex items-center gap-2 text-white/90">
+                <button class="hover:text-white"><i data-lucide="minus" class="w-4 h-4"></i></button>
+                <button class="hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+        </div>
+
+        <div class="p-5 md:p-6">
+            <!-- Help box -->
+            <div class="rounded-2xl border-l-4 border-rose-500 bg-white/70 p-5 mb-6 shadow-sm">
+                <div class="flex items-start gap-3">
+                    <div class="mt-0.5 text-primary-600"><i data-lucide="volume-2" class="w-5 h-5"></i></div>
+                    <div>
+                        <h2 class="font-extrabold text-xl mb-2">도움말</h2>
+                        <ul class="space-y-1.5 text-[15px] leading-7 text-slate-700">
+                            <li>- <b>PartNo, BlockNo</b> 둘 중 하나는 필수 입력입니다. <span class="text-rose-500">(속도 이슈)</span></li>
+                            <li>- 예: 자재번호를 입력하면, 해당 자재가 사용되는 모든 제품을 조회합니다.</li>
+                            <li>- TEST, 0호기는 제외됩니다.</li>
+                            <li>- 사용방법: <b>26300551G0*</b> → Like 검색 <span class="text-slate-500">('26300551G0' 문자를 포함한 자재를 사용하는 모든 제품 검색)</span></li>
+                            <li>- <b>*</b>가 없으면 Equal 검색입니다.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-2 block">년도</label>
+                    <select class="ts-input w-full rounded-2xl">
+                        <option selected>2025</option>
+                        <option>2024</option>
+                        <option>2023</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-2 block">브랜드</label>
+                    <select class="ts-input w-full rounded-2xl">
+                        <option selected>-</option>
+                        <option>KIA</option>
+                        <option>HYUNDAI</option>
+                        <option>GENESIS</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-2 block">생산거점(설계)</label>
+                    <select class="ts-input w-full rounded-2xl">
+                        <option selected>-</option>
+                        <option>국내</option>
+                        <option>미주</option>
+                        <option>유럽</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-2 block">기종</label>
+                    <select class="ts-input w-full rounded-2xl">
+                        <option selected>-</option>
+                        <option>SEDAN</option>
+                        <option>SUV</option>
+                        <option>EV</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-2 block">Part No.</label>
+                    <input id="partNo" type="text" placeholder="Part No." class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-500 transition" />
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-2 block">BlockNo</label>
+                    <input id="blockNo" type="text" placeholder="Block No." class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-500 transition" />
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-2 block">기계구조 최초설계일</label>
+                    <input type="text" placeholder="ex. 20260130" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-500 transition" />
+                    <select class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-500 transition">
+                        <option>이상 ( &gt;= )</option>
+                        <option>이하 ( &lt;= )</option>
+                        <option>같음 ( = )</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-2 block">CMT</label>
+                    <input type="text" placeholder="cmt ..." class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-500 transition" />
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-2 block">SPEC</label>
+                    <input type="text" placeholder="spec ..." class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-500 transition" />
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-2 block">관통(EL_ETHRU)</label>
+                    <select class="ts-input w-full rounded-2xl">
+                        <option selected>-</option>
+                        <option>Y</option>
+                        <option>N</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-2 block">전망 타입(EL_COB)</label>
+                    <input type="text" placeholder="직접 입력 또는 선택" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-500 transition" />
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-2 block">제품 상태</label>
+                    <select class="ts-input w-full rounded-2xl">
+                        <option selected>릴리즈</option>
+                        <option>개발중</option>
+                        <option>중지</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-col md:flex-row gap-3 md:justify-between md:items-center">
+                <div class="flex flex-wrap gap-2">
+                    <span class="ai-chip text-xs font-semibold px-3 py-2 rounded-full">AI 추천 검색어: 26300551G0*</span>
+                    <span class="ai-chip text-xs font-semibold px-3 py-2 rounded-full">고빈도 브랜드: KIA</span>
+                    <span class="ai-chip text-xs font-semibold px-3 py-2 rounded-full">최근 많이 조회된 조건: 릴리즈 + EV</span>
+                </div>
+
+                <div class="flex gap-3 justify-end">
+                    <button id="resetBtn" class="rounded-2xl px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition flex items-center gap-2">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> 초기화
+                    </button>
+                    <button id="searchBtn" class="rounded-2xl px-6 py-3 bg-gradient-to-r from-primary-600 to-blue-500 hover:from-primary-700 hover:to-blue-600 text-white font-bold shadow-glow transition flex items-center gap-2">
+                        <i data-lucide="search" class="w-4 h-4"></i> 분석
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Insights + chart -->
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
+        <div class="xl:col-span-2 glass rounded-[28px] p-5 border border-white/70 shadow-soft">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-extrabold">검색 결과 트렌드</h3>
+                    <p class="text-sm text-slate-500">월별 제품-자재 매핑 빈도 분석</p>
+                </div>
+                <span class="ai-chip px-3 py-2 rounded-full text-xs font-bold">AI Pattern Detection</span>
+            </div>
+            <div class="h-[300px]"><canvas id="trendChart"></canvas></div>
+        </div>
+
+        <div class="glass rounded-[28px] p-5 border border-white/70 shadow-soft">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-extrabold">AI 인사이트</h3>
+                    <p class="text-sm text-slate-500">조건 기반 추천</p>
+                </div>
+                <i data-lucide="brain-circuit" class="w-5 h-5 text-violet-500"></i>
+            </div>
+
+            <div class="space-y-3">
+                <div class="rounded-2xl bg-slate-50 p-4 border border-slate-200">
+                    <div class="font-bold text-sm mb-1">가장 유사한 검색 패턴</div>
+                    <div class="text-sm text-slate-600">PartNo가 와일드카드(*)를 포함할 때 평균 조회 건수가 2.7배 증가합니다.</div>
+                </div>
+                <div class="rounded-2xl bg-slate-50 p-4 border border-slate-200">
+                    <div class="font-bold text-sm mb-1">추천 필터 조합</div>
+                    <div class="text-sm text-slate-600">브랜드 + 제품상태 + 기종을 함께 선택하면 불필요 결과를 크게 줄일 수 있습니다.</div>
+                </div>
+                <div class="rounded-2xl bg-gradient-to-br from-primary-50 to-indigo-50 p-4 border border-primary-100">
+                    <div class="font-bold text-sm mb-1 text-primary-700">AI 경고</div>
+                    <div class="text-sm text-slate-700">PartNo / BlockNo 미입력 시 성능 저하가 발생할 수 있습니다.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Table -->
+    <section class="glass rounded-[28px] p-5 border border-white/70 shadow-soft">
+        <div class="flex flex-col gap-4 mb-4">
+            <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+                <div>
+                    <h3 class="text-lg font-extrabold">분석 결과 데이터셋</h3>
+                    <p class="text-sm text-slate-500">엑셀 다운로드, CSV 추출, 복사 기능을 지원합니다.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <span class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold bg-white">제품번호</span>
+                    <span class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold bg-white">제품상태</span>
+                    <span class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold bg-white">브랜드</span>
+                    <span class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold bg-white">BlockNo</span>
+                    <span class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold bg-white">SPEC</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table id="analyticsTable" class="display stripe hover w-full text-sm">
+                <thead>
+                <tr>
+                    <th>제품번호</th>
+                    <th>제품버전</th>
+                    <th>제품상태</th>
+                    <th>제품수정일</th>
+                    <th>기계구조 최초설계일</th>
+                    <th>브랜드</th>
+                    <th>기종</th>
+                    <th>속도</th>
+                    <th>생산거점</th>
+                    <th>관통</th>
+                    <th>전망타입</th>
+                    <th>용량</th>
+                    <th>CAR_BG</th>
+                    <th>CWT_BG</th>
+                    <th>CWT폭</th>
+                    <th>품번</th>
+                    <th>품명</th>
+                    <th>SPEC</th>
+                    <th>QTY</th>
+                    <th>BLOCKNO.</th>
+                    <th>품목</th>
+                    <th>GL_CODE</th>
+                    <th>버전</th>
+                    <th>CMT</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </section>
+</div>
+
+<script>
+    const mockData = [
+        ['P-240001','A.01','릴리즈','2025-01-12','2024-11-30','KIA','EV','180','국내','Y','EL-C01','72kWh','BG-A','CWT-01','1450','26300551G01','배터리 하우징','AL / HEAT RESIST','2','BK-10021','ASSY','GL-221','V2','양산 적용'],
+        ['P-240002','A.03','릴리즈','2025-01-18','2024-12-02','HYUNDAI','SUV','160','미주','N','EL-C03','64kWh','BG-B','CWT-02','1430','26300551G02','사이드 브라켓','STEEL / Zn','4','BK-10022','PART','GL-131','V1','설계 변경'],
+        ['P-240003','B.01','개발중','2025-02-01','2025-01-10','GENESIS','SEDAN','200','유럽','Y','EL-C02','84kWh','BG-C','CWT-02','1510','26300551G03','하부 커버','CFRP','1','BK-10023','ASSY','GL-441','V5','성능 검토'],
+        ['P-240004','A.07','릴리즈','2025-02-14','2024-09-09','KIA','SUV','140','국내','N','EL-C04','58kWh','BG-A','CWT-03','1390','26300551G04','프론트 플레이트','AL 6061','6','BK-10024','PART','GL-221','V3','원가절감'],
+        ['P-240005','C.02','중지','2025-03-03','2024-06-11','HYUNDAI','EV','220','미주','Y','EL-C01','90kWh','BG-D','CWT-01','1550','26300551G05','리어 프레임','STEEL 980MPa','2','BK-10025','ASSY','GL-551','V8','테스트 제외']
+    ];
+
+    function initSelects() {
+        document.querySelectorAll('.ts-input').forEach((el) => {
+            new TomSelect(el, {
+                create: false,
+                allowEmptyOption: true,
+                controlInput: '<input>',
+                render: {
+                    option: function(data, escape) {
+                        return `<div class="py-2 px-2">${escape(data.text)}</div>`;
+                    }
+                }
+            });
+        });
+    }
+
+    function initTable() {
+        $('#analyticsTable').DataTable({
+            data: mockData,
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'csvHtml5', text: 'CSV' },
+                { extend: 'excelHtml5', text: 'Excel' },
+                { extend: 'copyHtml5', text: 'Copy' }
+            ],
+            pageLength: 10,
+            scrollX: true,
+            language: {
+                search: 'Search:',
+                lengthMenu: 'Show _MENU_ entries',
+                info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+                emptyTable: 'No data available in table',
+                paginate: { previous: 'Previous', next: 'Next' }
+            }
+        });
+    }
+
+    function initChart() {
+        const ctx = document.getElementById('trendChart');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['1월','2월','3월','4월','5월','6월','7월','8월'],
+                datasets: [
+                    {
+                        label: '조회 건수',
+                        data: [120, 190, 160, 240, 260, 230, 310, 355],
+                        borderColor: '#1976f3',
+                        backgroundColor: 'rgba(25,118,243,0.15)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'AI 예측',
+                        data: [110, 175, 170, 225, 245, 250, 295, 370],
+                        borderColor: '#8b5cf6',
+                        borderDash: [8, 6],
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.35,
+                        pointRadius: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(148,163,184,0.18)' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function bindActions() {
+        const partNo = document.getElementById('partNo');
+        const blockNo = document.getElementById('blockNo');
+
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            if (!partNo.value.trim() && !blockNo.value.trim()) {
+                alert('Part No. 또는 BlockNo 중 하나는 반드시 입력해야 합니다.');
+                return;
+            }
+            alert('분석 요청이 실행되었습니다. 실제 환경에서는 API 호출로 연결하세요.');
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            document.querySelectorAll('input').forEach(el => el.value = '');
+            alert('검색 조건이 초기화되었습니다.');
+        });
+
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            alert('현재 예제는 라이트모드 중심입니다. 다크모드는 class 전환 방식으로 쉽게 확장할 수 있습니다.');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+        initSelects();
+        initTable();
+        initChart();
+        bindActions();
+    });
+</script>
+</body>
+</html>
