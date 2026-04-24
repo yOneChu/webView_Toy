@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>팀명: I'M BOM , 프로젝트명: BOM-WATCHER 활동 보고서</title>
+    <style>
+        body {
+            font-family: "Malgun Gothic", Arial, sans-serif;
+            line-height: 1.7;
+            color: #222;
+            margin: 40px;
+        }
+
+        h1 {
+            font-size: 28px;
+            border-bottom: 3px solid #1f4e79;
+            padding-bottom: 10px;
+            color: #1f4e79;
+        }
+
+        h2 {
+            font-size: 22px;
+            margin-top: 35px;
+            color: #1f4e79;
+            border-left: 6px solid #1f4e79;
+            padding-left: 10px;
+        }
+
+        h3 {
+            font-size: 18px;
+            margin-top: 20px;
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f0f4f8;
+            text-align: left;
+        }
+
+        .summary-box {
+            background-color: #f7f9fc;
+            border: 1px solid #d9e2ec;
+            padding: 18px;
+            margin-top: 15px;
+            border-radius: 6px;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #c00000;
+        }
+
+        ul {
+            margin-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>팀명: I'M BOM</h1>
+<BR>
+<H2>■ 프로젝트명: BOM-WATCHER 활동 보고서 <H3>
+
+    <h2>1. 개요</h2>
+    <div class="summary-box">
+        <p>
+            <strong>BOM-WATCHER</strong>는 대표 호기를 기준으로 매일 자동 TEST 및 BOM 비교를 수행하여,
+            변경사항과 오류를 사전에 감지하기 위한 <strong>검증 자동화 시스템</strong>이다.
+        </p>
+        <p>
+            기존에는 대표호기 생성, 복제, BOM 계산, 비교 작업이 수작업 중심으로 이루어져
+            검증 누락, 오류 발견 지연, 업무 피로도 증가 등의 문제가 있었다.
+            본 시스템은 이러한 반복 검증 업무를 자동화하여 설계 품질과 업무 효율성을 동시에 향상시키는 것을 목표로 한다.
+        </p>
+    </div>
+
+    <h2>2. 추진 목적</h2>
+    <p>
+        BOM 계산 및 검증 업무는 설계 품질과 직결되는 중요한 업무이나,
+        현재는 담당자 개인의 루틴과 수작업 검증에 의존하는 비중이 높다.
+        이에 따라 TEST 수행 여부와 검증 결과가 사람마다 달라질 수 있으며,
+        오류 발생 시 즉시 인지하기 어려운 한계가 있다.
+    </p>
+
+    <p>
+        BOM-WATCHER는 매일 반복되는 TEST 및 BOM 비교 업무를 자동화하여
+        검증 기준을 표준화하고, 오류를 조기에 발견하며,
+        설계 변경으로 인한 품질 리스크를 사전에 차단하기 위해 추진되었다.
+    </p>
+
+    <h2>3. 핵심 정보</h2>
+
+    <h3>3.1 대상 업무 및 사용자</h3>
+    <table>
+        <thead>
+        <tr>
+            <th>구분</th>
+            <th>대상</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>주요 사용자</td>
+            <td>기계/전기 설계자</td>
+        </tr>
+        <tr>
+            <td>검증 담당</td>
+            <td>BOM 계산 및 검증 수행자</td>
+        </tr>
+        <tr>
+            <td>운영 담당</td>
+            <td>PLM 운영 및 검증 담당자</td>
+        </tr>
+        <tr>
+            <td>수행 업무</td>
+            <td>TEST 호기 생성, BOM 계산, 비교 및 변경사항 확인</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h3>3.2 현재 문제점</h3>
+    <table>
+        <thead>
+        <tr>
+            <th>문제 영역</th>
+            <th>상세 내용</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>TEST 수행의 비정형성</td>
+            <td>
+                TEST 수행이 개인 루틴에 의존하고 있으며,
+                일부 담당자의 경우 TEST 미수행 또는 누락이 발생할 수 있음.
+            </td>
+        </tr>
+        <tr>
+            <td>검증 방식의 비효율</td>
+            <td>
+                대표호기 생성, 복제, BOM 계산, 비교까지 전 과정이 수작업으로 진행되며,
+                전일 대비 변경사항 확인도 수동 비교에 의존함.
+            </td>
+        </tr>
+        <tr>
+            <td>오류 사전 차단 미흡</td>
+            <td>
+                자동 입력 오류 발생 시 사람이 직접 확인해야 인지 가능하며,
+                오류 발생 후에도 다음 단계가 진행되는 경우가 존재함.
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h3>3.3 주요 Pain Point</h3>
+    <ul>
+        <li><strong>업무 피로도 증가:</strong> 매일 반복되는 수작업 TEST와 단순 비교 작업으로 인한 시간 소모 발생</li>
+        <li><strong>테스트 신뢰성 부족:</strong> 담당자별 검증 방식 차이 및 TEST 누락 가능성 존재</li>
+        <li><strong>오류 발견 지연:</strong> 문제 발생 시 즉시 인지하지 못하고, 설계자 문제 제기 또는 이후 단계에서 발견될 가능성 존재</li>
+    </ul>
+
+    <h2>4. 개선 방안</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>개선 항목</th>
+            <th>주요 내용</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>일일 자동 TEST 스케줄링</td>
+            <td>
+                대표 호기를 기준으로 매일 자동 TEST를 수행하여,
+                개인별 수행 여부에 따른 검증 누락을 방지함.
+            </td>
+        </tr>
+        <tr>
+            <td>BOM 변경 자동 비교 리포트</td>
+            <td>
+                전일 대비 BOM 변경사항을 자동 비교하고,
+                변경 내역을 리포트 형태로 제공함.
+            </td>
+        </tr>
+        <tr>
+            <td>오류 발생 시 즉시 차단 및 알림</td>
+            <td>
+                자동 입력 오류 및 BOM 이상 발생 시 즉시 감지하고,
+                후속 단계 진행 전 담당자가 확인할 수 있도록 알림 체계를 구성함.
+            </td>
+        </tr>
+        <tr>
+            <td>검증 결과 이력 관리 및 대시보드</td>
+            <td>
+                일별 검증 결과, 오류 발생 내역, 변경 이력을 관리하여
+                검증 현황을 한눈에 확인할 수 있도록 구성함.
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>5. 기대효과</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>구분</th>
+            <th>기대효과</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>업무 효율 향상</td>
+            <td>
+                수작업 TEST 및 BOM 비교 업무를 자동화하여,
+                기존 수시간 소요되던 검증 시간을 <span class="highlight">수분 단위</span>로 단축할 수 있음.
+            </td>
+        </tr>
+        <tr>
+            <td>오류 조기 발견</td>
+            <td>
+                자동 입력 오류 및 BOM 이상을 즉시 탐지하여,
+                문제를 당일 또는 즉시 인지할 수 있음.
+            </td>
+        </tr>
+        <tr>
+            <td>검증 신뢰성 확보</td>
+            <td>
+                사람마다 다른 검증 기준을 제거하고,
+                동일한 기준으로 자동 검증을 수행하여 결과의 일관성을 확보함.
+            </td>
+        </tr>
+        <tr>
+            <td>품질 및 안정성 향상</td>
+            <td>
+                설계 변경으로 인한 BOM 오류와 품질 리스크를 사전에 차단하여,
+                후속 공정 및 현장 문제 발생 가능성을 줄일 수 있음.
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>6. 향후 계획</h2>
+    <ol>
+        <li>
+            <strong>대표 호기 선정 및 기준 정립</strong><br />
+            브랜드 또는 제품군별 대표 호기를 선정하고, 자동 TEST 수행 기준을 정의한다.
+        </li>
+        <li>
+            <strong>자동 TEST 프로세스 설계</strong><br />
+            대표호기 생성, 복제, BOM 계산, 비교까지의 자동 수행 흐름을 설계한다.
+        </li>
+        <li>
+            <strong>BOM 비교 리포트 기능 구현</strong><br />
+            전일 대비 변경사항과 오류 내역을 자동으로 비교하고,
+            담당자가 쉽게 확인할 수 있는 리포트 화면을 구성한다.
+        </li>
+        <li>
+            <strong>오류 알림 및 차단 기준 검토</strong><br />
+            자동 입력 오류 및 BOM 이상 발생 시 알림 대상, 차단 조건, 후속 처리 기준을 수립한다.
+        </li>
+        <li>
+            <strong>이력 관리 및 대시보드 구축</strong><br />
+            검증 결과를 누적 관리하고, 오류 발생 추이와 검증 현황을 확인할 수 있는 대시보드를 구축한다.
+        </li>
+    </ol>
+
+    <h2>7. 종합 의견</h2>
+    <div class="summary-box">
+        <p>
+            BOM-WATCHER는 반복적인 수작업 TEST와 BOM 비교 업무를 자동화하여
+            검증 업무의 효율성과 신뢰성을 높이기 위한 시스템이다.
+        </p>
+        <p>
+            특히 자동 TEST, BOM 변경 비교, 오류 즉시 감지, 검증 이력 관리 기능을 통해
+            설계 변경에 따른 품질 리스크를 사전에 차단하고,
+            PLM 기반 BOM 검증 업무의 표준화 및 안정성 향상에 기여할 것으로 기대된다.
+        </p>
+    </div>
+
+</body>
+</html>
