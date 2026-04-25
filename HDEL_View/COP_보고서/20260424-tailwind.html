@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BOM-WATCHER 활동 보고서 - I'M BOM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+            background-color: #f8fafc;
+        }
+        @media print {
+            body { background-color: white; }
+            .no-print { display: none; }
+            .page-break { page-break-before: always; }
+        }
+    </style>
+</head>
+
+<body class="text-slate-800 leading-relaxed py-12 px-4">
+<div class="max-w-4xl mx-auto bg-white shadow-xl border border-slate-200 rounded-lg overflow-hidden">
+    <!-- Header -->
+    <header class="bg-slate-900 text-white p-10 border-b-4 border-blue-600">
+        <div class="flex justify-between items-start mb-6">
+            <span class="px-3 py-1 bg-blue-600 text-xs font-bold uppercase tracking-widest rounded-full">Executive Report</span>
+            <span class="text-slate-400 text-sm">2026. 04. 24</span>
+        </div>
+        <h1 class="text-4xl font-extrabold mb-4 tracking-tight leading-tight">BOM-WATCHER<br><span class="text-blue-400">활동 보고서</span></h1>
+        <div class="flex flex-wrap gap-x-8 gap-y-2 text-sm text-slate-300 border-t border-slate-700 pt-6">
+            <div><span class="text-slate-500 mr-2">TEAM</span> <span class="font-semibold text-white">I'M BOM</span></div>
+            <div><span class="text-slate-500 mr-2">MEMBER</span> <span class="text-slate-300">김영환(PM), 김도현, 서동기, 이지은, 안대환</span></div>
+        </div>
+    </header>
+
+    <main class="p-10 space-y-12">
+        <!-- 1. 개요 -->
+        <section>
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 bg-blue-100 text-blue-700 flex items-center justify-center rounded font-bold">01</span>
+                <h2 class="text-2xl font-bold text-slate-900">개요</h2>
+            </div>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+                <p class="mb-3 text-lg leading-relaxed italic text-slate-700">
+                    "<strong class="text-blue-900 font-bold">BOM-WATCHER</strong>는 대표 호기를 기준으로 매일 자동 TEST 및 BOM 비교를 수행하여, 변경사항과 오류를 사전에 감지하기 위한 <strong class="text-blue-900 font-bold underline decoration-blue-300">검증 자동화 시스템</strong>입니다."
+                </p>
+                <p class="text-slate-600">
+                    기존의 수작업 중심 검증(생성, 복제, 계산, 비교) 프로세스에서 발생하는 검증 누락, 지연 발견 등의 문제를 해결하고 설계 품질과 업무 효율성을 극대화하는 것을 목표로 합니다.
+                </p>
+            </div>
+        </section>
+
+        <!-- 2. 추진 목적 -->
+        <section>
+            <div class="flex items-center gap-3 mb-4">
+                <span class="w-8 h-8 bg-blue-100 text-blue-700 flex items-center justify-center rounded font-bold">02</span>
+                <h2 class="text-2xl font-bold text-slate-900">추진 목적</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-5 border border-slate-200 rounded-lg bg-white shadow-sm">
+                    <h4 class="font-bold text-blue-700 mb-2">현상 및 한계</h4>
+                    <p class="text-sm text-slate-600 leading-relaxed">개인 루틴 및 수작업 의존도가 높아 검증 결과의 편차가 발생하며, 오류 발생 시 즉각적인 인지가 어려운 환경임</p>
+                </div>
+                <div class="p-5 border border-slate-200 rounded-lg bg-white shadow-sm">
+                    <h4 class="font-bold text-blue-700 mb-2">핵심 목표</h4>
+                    <p class="text-sm text-slate-600 leading-relaxed">검증 기준의 표준화 및 자동화를 통해 품질 리스크를 사전에 차단하고 전사적 설계 품질 신뢰도 확보</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 핵심 정보 -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 bg-blue-100 text-blue-700 flex items-center justify-center rounded font-bold">03</span>
+                <h2 class="text-2xl font-bold text-slate-900">핵심 정보</h2>
+            </div>
+
+            <div class="space-y-8">
+                <!-- 3.1 대상 업무 및 사용자 -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3 flex items-center text-slate-700">
+                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span> 3.1 대상 업무 및 사용자
+                    </h3>
+                    <div class="overflow-hidden rounded-lg border border-slate-200">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200">
+                                <th class="py-3 px-4 text-sm font-bold text-slate-600 w-1/3 text-center">구분</th>
+                                <th class="py-3 px-4 text-sm font-bold text-slate-600">대상 및 내용</th>
+                            </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                            <tr>
+                                <td class="py-3 px-4 text-sm font-semibold text-slate-700 bg-slate-50/50 text-center">주요 사용자</td>
+                                <td class="py-3 px-4 text-sm text-slate-600">기계 / 전기 설계자</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 text-sm font-semibold text-slate-700 bg-slate-50/50 text-center">검증 담당</td>
+                                <td class="py-3 px-4 text-sm text-slate-600">BOM 계산 및 검증 수행자</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 text-sm font-semibold text-slate-700 bg-slate-50/50 text-center">운영 담당</td>
+                                <td class="py-3 px-4 text-sm text-slate-600">PLM 운영 및 검증 담당자</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 text-sm font-semibold text-slate-700 bg-slate-50/50 text-center">수행 업무</td>
+                                <td class="py-3 px-4 text-sm text-slate-600 font-medium text-blue-600">TEST 호기 생성, BOM 계산, 비교 및 변경사항 확인</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 3.2 현재 문제점 -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3 flex items-center text-slate-700">
+                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span> 3.2 현재 문제점 (Pain Points)
+                    </h3>
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="flex gap-4 p-4 rounded-lg bg-red-50 border border-red-100">
+                            <span class="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold">!</span>
+                            <div>
+                                <h4 class="font-bold text-red-900">수행 비정형성</h4>
+                                <p class="text-sm text-red-800/80">개인 루틴 의존으로 인한 TEST 미수행 및 누락 위험 존재</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4 p-4 rounded-lg bg-red-50 border border-red-100">
+                            <span class="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold">!</span>
+                            <div>
+                                <h4 class="font-bold text-red-900">업무 비효율</h4>
+                                <p class="text-sm text-red-800/80">전 과정 수작업 및 수동 비교로 인한 업무 피로도 및 시간 소모 심화</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4 p-4 rounded-lg bg-red-50 border border-red-100">
+                            <span class="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold">!</span>
+                            <div>
+                                <h4 class="font-bold text-red-900">인지 지연</h4>
+                                <p class="text-sm text-red-800/80">오류 발생 시 실시간 감지 체계 부재로 인한 후속 공정 리스크 전이</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 개선 방안 -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 bg-blue-100 text-blue-700 flex items-center justify-center rounded font-bold">04</span>
+                <h2 class="text-2xl font-bold text-slate-900">개선 방안</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-slate-50 p-5 rounded-xl border border-slate-100 hover:border-blue-200 transition-colors">
+                    <div class="text-blue-600 font-extrabold text-xs uppercase mb-2">Schedule</div>
+                    <h4 class="font-bold text-slate-800 mb-2 leading-tight text-lg">일일 자동 TEST 스케줄링</h4>
+                    <p class="text-sm text-slate-600">대표 호기 기준 매일 자동 검증을 수행하여 누락 원천 차단</p>
+                </div>
+                <div class="bg-slate-50 p-5 rounded-xl border border-slate-100 hover:border-blue-200 transition-colors">
+                    <div class="text-blue-600 font-extrabold text-xs uppercase mb-2">Reporting</div>
+                    <h4 class="font-bold text-slate-800 mb-2 leading-tight text-lg">BOM 변경 자동 비교 리포트</h4>
+                    <p class="text-sm text-slate-600">전일 대비 변경사항을 자동 추출하여 가독성 높은 리포트 제공</p>
+                </div>
+                <div class="bg-slate-50 p-5 rounded-xl border border-slate-100 hover:border-blue-200 transition-colors">
+                    <div class="text-blue-600 font-extrabold text-xs uppercase mb-2">Alert</div>
+                    <h4 class="font-bold text-slate-800 mb-2 leading-tight text-lg">실시간 감지 및 알림 체계</h4>
+                    <p class="text-sm text-slate-600">이상 징후 발생 시 즉시 차단 및 담당자 실시간 알림 송출</p>
+                </div>
+                <div class="bg-slate-50 p-5 rounded-xl border border-slate-100 hover:border-blue-200 transition-colors">
+                    <div class="text-blue-600 font-extrabold text-xs uppercase mb-2">Dashboard</div>
+                    <h4 class="font-bold text-slate-800 mb-2 leading-tight text-lg">이력 관리 대시보드</h4>
+                    <p class="text-sm text-slate-600">일별 검증 결과 및 오류 추이를 시각화하여 품질 현황 모니터링</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. 기대효과 -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 bg-blue-100 text-blue-700 flex items-center justify-center rounded font-bold">05</span>
+                <h2 class="text-2xl font-bold text-slate-900">기대효과</h2>
+            </div>
+            <div class="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                    <tr class="bg-slate-900 text-white">
+                        <th class="py-4 px-6 text-sm font-bold w-1/4">핵심 가치</th>
+                        <th class="py-4 px-6 text-sm font-bold">정성/정량적 기대성과</th>
+                    </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                    <tr>
+                        <td class="py-4 px-6 bg-slate-50 font-bold text-slate-700 text-center">업무 효율</td>
+                        <td class="py-4 px-6 text-slate-600">기존 수시간 소요 업무를 <span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 font-extrabold rounded">수분 단위</span>로 획기적 단축</td>
+                    </tr>
+                    <tr>
+                        <td class="py-4 px-6 bg-slate-50 font-bold text-slate-700 text-center">오류 탐지</td>
+                        <td class="py-4 px-6 text-slate-600">자동 입력 오류 및 BOM 이상을 즉시 탐지하여 리스크 사전 제어</td>
+                    </tr>
+                    <tr>
+                        <td class="py-4 px-6 bg-slate-50 font-bold text-slate-700 text-center">신뢰성</td>
+                        <td class="py-4 px-6 text-slate-600">동일한 자동 검증 로직 적용을 통한 데이터 정합성 및 일관성 확보</td>
+                    </tr>
+                    <tr>
+                        <td class="py-4 px-6 bg-slate-50 font-bold text-slate-700 text-center">품질 안정화</td>
+                        <td class="py-4 px-6 text-slate-600">설계 변경에 따른 현장 문제 발생 가능성을 최소화하여 품질 비용 절감</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 6. 향후 계획 -->
+        <section>
+            <div class="flex items-center gap-3 mb-6">
+                <span class="w-8 h-8 bg-blue-100 text-blue-700 flex items-center justify-center rounded font-bold">06</span>
+                <h2 class="text-2xl font-bold text-slate-900">향후 계획</h2>
+            </div>
+            <div class="relative pl-8 border-l-2 border-slate-200 space-y-8 ml-4">
+                <div class="relative">
+                    <span class="absolute -left-[41px] top-0 w-4 h-4 rounded-full bg-blue-600 border-4 border-white shadow"></span>
+                    <h4 class="font-bold text-slate-900 mb-1">Step 1. 기준 정립</h4>
+                    <p class="text-sm text-slate-600">제품군별 대표 호기 선정 및 자동 TEST 수행 기준 정의</p>
+                </div>
+                <div class="relative">
+                    <span class="absolute -left-[41px] top-0 w-4 h-4 rounded-full bg-slate-300 border-4 border-white shadow"></span>
+                    <h4 class="font-bold text-slate-900 mb-1 text-slate-500">Step 2. 프로세스 설계</h4>
+                    <p class="text-sm text-slate-500">호기 생성부터 BOM 비교까지의 자동 수행 워크플로우 설계</p>
+                </div>
+                <div class="relative">
+                    <span class="absolute -left-[41px] top-0 w-4 h-4 rounded-full bg-slate-300 border-4 border-white shadow"></span>
+                    <h4 class="font-bold text-slate-900 mb-1 text-slate-500">Step 3. 리포트 기능 구현</h4>
+                    <p class="text-sm text-slate-500">변경사항 및 오류 내역 자동 비교 대시보드 화면 구성</p>
+                </div>
+                <div class="relative">
+                    <span class="absolute -left-[41px] top-0 w-4 h-4 rounded-full bg-slate-300 border-4 border-white shadow"></span>
+                    <h4 class="font-bold text-slate-900 mb-1 text-slate-500">Step 4. 시스템 고도화</h4>
+                    <p class="text-sm text-slate-500">실시간 알림 체계 및 이력 관리 대시보드 구축</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. 종합 의견 -->
+        <section class="pt-8">
+            <div class="bg-slate-900 text-white p-8 rounded-2xl relative overflow-hidden shadow-lg">
+                <div class="absolute right-0 top-0 opacity-10 transform translate-x-1/4 -translate-y-1/4">
+                    <svg width="200" height="200" viewBox="0 0 24 24" fill="currentColor"><path d="M14 17h6v2h-6zm0-2h6v2h-6zm0-4h6v2h-6zm-3 10H4v-2h7v2zm0-4H4v-2h7v2zm0-4H4v-2h7v2zm3-4h6v2h-6zm-3 0H4V5h7v2z"></path></svg>
+                </div>
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    종합 의견
+                </h2>
+                <p class="text-slate-300 leading-relaxed relative z-10">
+                    BOM-WATCHER는 단순 반복 업무의 자동화를 넘어, <span class="text-white font-bold underline decoration-blue-500 decoration-2">데이터 기반의 설계 품질 검증 체계</span>를 구축하는 핵심 프로젝트입니다. 시스템 도입 시 휴먼 에러를 원천 차단하고 PLM 기반 검증 업무의 표준화를 달성하여 경영 효율화 및 품질 경쟁력 강화에 크게 기여할 것으로 확신합니다.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-50 p-8 border-t border-slate-200 text-center text-slate-500 text-xs">
+        <p>© 2026 I'M BOM TEAM. All Rights Reserved. Confidential Document.</p>
+    </footer>
+</div>
+</body>
+</html>

@@ -4,75 +4,171 @@
     <meta charset="UTF-8" />
     <title>팀명: I'M BOM , 프로젝트명: BOM-WATCHER 활동 보고서</title>
     <style>
+        :root {
+            --primary-color: #1a365d;
+            --secondary-color: #2b6cb0;
+            --accent-color: #c53030;
+            --bg-light: #f7fafc;
+            --border-color: #e2e8f0;
+            --text-main: #2d3748;
+            --text-muted: #4a5568;
+        }
+
         body {
-            font-family: "Malgun Gothic", Arial, sans-serif;
-            line-height: 1.7;
-            color: #222;
-            margin: 40px;
+            font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+            line-height: 1.6;
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px;
+            background-color: #fff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
         }
 
         h1 {
-            font-size: 28px;
-            border-bottom: 3px solid #1f4e79;
-            padding-bottom: 10px;
-            color: #1f4e79;
+            font-size: 32px;
+            color: var(--primary-color);
+            margin: 0 0 10px 0;
+            letter-spacing: -1px;
+        }
+
+        .team-info {
+            font-size: 16px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .project-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--secondary-color);
+            margin: 30px 0 20px 0;
+            padding: 10px 15px;
+            background-color: var(--bg-light);
+            border-left: 5px solid var(--secondary-color);
         }
 
         h2 {
-            font-size: 22px;
-            margin-top: 35px;
-            color: #1f4e79;
-            border-left: 6px solid #1f4e79;
-            padding-left: 10px;
+            font-size: 20px;
+            margin-top: 40px;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+        }
+
+        h2::before {
+            content: "";
+            display: inline-block;
+            width: 4px;
+            height: 18px;
+            background-color: var(--secondary-color);
+            margin-right: 10px;
         }
 
         h3 {
-            font-size: 18px;
-            margin-top: 20px;
-            color: #333;
+            font-size: 17px;
+            margin: 25px 0 10px 0;
+            color: var(--text-main);
+            font-weight: 600;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 12px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            table-layout: fixed;
         }
 
         th, td {
-            border: 1px solid #ccc;
-            padding: 10px;
-            vertical-align: top;
+            border: 1px solid var(--border-color);
+            padding: 12px 15px;
+            font-size: 14px;
         }
 
         th {
-            background-color: #f0f4f8;
-            text-align: left;
+            background-color: var(--bg-light);
+            color: var(--primary-color);
+            font-weight: bold;
+            text-align: center;
+            width: 25%;
+        }
+
+        td {
+            vertical-align: middle;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fafbfc;
         }
 
         .summary-box {
-            background-color: #f7f9fc;
-            border: 1px solid #d9e2ec;
-            padding: 18px;
-            margin-top: 15px;
-            border-radius: 6px;
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 20px 25px;
+            margin: 15px 0;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .summary-box p {
+            margin: 5px 0;
+            font-size: 15px;
         }
 
         .highlight {
             font-weight: bold;
-            color: #c00000;
+            color: var(--accent-color);
         }
 
-        ul {
-            margin-top: 8px;
+        ul, ol {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        strong {
+            color: #1a202c;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            background-color: var(--secondary-color);
+            color: white;
+            margin-right: 5px;
+            vertical-align: middle;
         }
     </style>
 </head>
 
 <body>
+<div class="container">
+    <header>
+        <h1>I'M BOM 팀 활동 보고서</h1>
+        <p class="team-info"><strong>팀 구성:</strong> 김영환(PM, 개발), 김도현(개발), 서동기(서비스 기획), 이지은(데이터 분석), 안대환(데이터 분석)</p>
+    </header>
 
-<h1>팀명: I'M BOM</h1>
-<BR>
-<H2>■ 프로젝트명: BOM-WATCHER 활동 보고서 <H3>
+    <div class="project-title">
+        프로젝트명: BOM-WATCHER (검증 자동화 시스템)
+    </div>
 
     <h2>1. 개요</h2>
     <div class="summary-box">
@@ -107,25 +203,25 @@
     <table>
         <thead>
         <tr>
-            <th>구분</th>
-            <th>대상</th>
+            <th><span class="badge">Category</span> 구분</th>
+            <th><span class="badge">Target</span> 대상</th>
         </tr>
         </thead>
         <tbody>
         <tr>
-            <td>주요 사용자</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">주요 사용자</td>
             <td>기계/전기 설계자</td>
         </tr>
         <tr>
-            <td>검증 담당</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">검증 담당</td>
             <td>BOM 계산 및 검증 수행자</td>
         </tr>
         <tr>
-            <td>운영 담당</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">운영 담당</td>
             <td>PLM 운영 및 검증 담당자</td>
         </tr>
         <tr>
-            <td>수행 업무</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">수행 업무</td>
             <td>TEST 호기 생성, BOM 계산, 비교 및 변경사항 확인</td>
         </tr>
         </tbody>
@@ -135,27 +231,27 @@
     <table>
         <thead>
         <tr>
-            <th>문제 영역</th>
-            <th>상세 내용</th>
+            <th><span class="badge">Issue</span> 문제 영역</th>
+            <th><span class="badge">Detail</span> 상세 내용</th>
         </tr>
         </thead>
         <tbody>
         <tr>
-            <td>TEST 수행의 비정형성</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">TEST 수행의 비정형성</td>
             <td>
                 TEST 수행이 개인 루틴에 의존하고 있으며,
                 일부 담당자의 경우 TEST 미수행 또는 누락이 발생할 수 있음.
             </td>
         </tr>
         <tr>
-            <td>검증 방식의 비효율</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">검증 방식의 비효율</td>
             <td>
                 대표호기 생성, 복제, BOM 계산, 비교까지 전 과정이 수작업으로 진행되며,
                 전일 대비 변경사항 확인도 수동 비교에 의존함.
             </td>
         </tr>
         <tr>
-            <td>오류 사전 차단 미흡</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">오류 사전 차단 미흡</td>
             <td>
                 자동 입력 오류 발생 시 사람이 직접 확인해야 인지 가능하며,
                 오류 발생 후에도 다음 단계가 진행되는 경우가 존재함.
@@ -175,34 +271,34 @@
     <table>
         <thead>
         <tr>
-            <th>개선 항목</th>
-            <th>주요 내용</th>
+            <th><span class="badge">Feature</span> 개선 항목</th>
+            <th><span class="badge">Content</span> 주요 내용</th>
         </tr>
         </thead>
         <tbody>
         <tr>
-            <td>일일 자동 TEST 스케줄링</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">일일 자동 TEST 스케줄링</td>
             <td>
                 대표 호기를 기준으로 매일 자동 TEST를 수행하여,
                 개인별 수행 여부에 따른 검증 누락을 방지함.
             </td>
         </tr>
         <tr>
-            <td>BOM 변경 자동 비교 리포트</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">BOM 변경 자동 비교 리포트</td>
             <td>
                 전일 대비 BOM 변경사항을 자동 비교하고,
                 변경 내역을 리포트 형태로 제공함.
             </td>
         </tr>
         <tr>
-            <td>오류 발생 시 즉시 차단 및 알림</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">오류 발생 시 즉시 차단 및 알림</td>
             <td>
                 자동 입력 오류 및 BOM 이상 발생 시 즉시 감지하고,
                 후속 단계 진행 전 담당자가 확인할 수 있도록 알림 체계를 구성함.
             </td>
         </tr>
         <tr>
-            <td>검증 결과 이력 관리 및 대시보드</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">검증 결과 이력 관리 및 대시보드</td>
             <td>
                 일별 검증 결과, 오류 발생 내역, 변경 이력을 관리하여
                 검증 현황을 한눈에 확인할 수 있도록 구성함.
@@ -215,34 +311,34 @@
     <table>
         <thead>
         <tr>
-            <th>구분</th>
-            <th>기대효과</th>
+            <th><span class="badge">Type</span> 구분</th>
+            <th><span class="badge">Effect</span> 기대효과</th>
         </tr>
         </thead>
         <tbody>
         <tr>
-            <td>업무 효율 향상</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">업무 효율 향상</td>
             <td>
                 수작업 TEST 및 BOM 비교 업무를 자동화하여,
                 기존 수시간 소요되던 검증 시간을 <span class="highlight">수분 단위</span>로 단축할 수 있음.
             </td>
         </tr>
         <tr>
-            <td>오류 조기 발견</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">오류 조기 발견</td>
             <td>
                 자동 입력 오류 및 BOM 이상을 즉시 탐지하여,
                 문제를 당일 또는 즉시 인지할 수 있음.
             </td>
         </tr>
         <tr>
-            <td>검증 신뢰성 확보</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">검증 신뢰성 확보</td>
             <td>
                 사람마다 다른 검증 기준을 제거하고,
                 동일한 기준으로 자동 검증을 수행하여 결과의 일관성을 확보함.
             </td>
         </tr>
         <tr>
-            <td>품질 및 안정성 향상</td>
+            <td style="text-align: center; font-weight: bold; background-color: var(--bg-light);">품질 및 안정성 향상</td>
             <td>
                 설계 변경으로 인한 BOM 오류와 품질 리스크를 사전에 차단하여,
                 후속 공정 및 현장 문제 발생 가능성을 줄일 수 있음.
@@ -277,7 +373,8 @@
     </ol>
 
     <h2>7. 종합 의견</h2>
-    <div class="summary-box">
+    <div class="summary-box" style="border-left: 5px solid var(--secondary-color); background-color: #f0f4f8;">
+        <p style="font-weight: bold; color: var(--primary-color); margin-bottom: 10px;">[결론]</p>
         <p>
             BOM-WATCHER는 반복적인 수작업 TEST와 BOM 비교 업무를 자동화하여
             검증 업무의 효율성과 신뢰성을 높이기 위한 시스템이다.
@@ -288,6 +385,6 @@
             PLM 기반 BOM 검증 업무의 표준화 및 안정성 향상에 기여할 것으로 기대된다.
         </p>
     </div>
-
+</div>
 </body>
 </html>
