@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>팀 문서 공유 게시판</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: '#0f172a',
+                        point: '#635bff',
+                        mint: '#18d6c4'
+                    },
+                    boxShadow: {
+                        premium: '0 28px 90px rgba(15, 23, 42, 0.18)',
+                        soft: '0 18px 45px rgba(15, 23, 42, 0.08)'
+                    },
+                    backgroundImage: {
+                        mesh: 'radial-gradient(circle at 12% 12%, rgba(99,91,255,.22), transparent 30%), radial-gradient(circle at 84% 8%, rgba(24,214,196,.18), transparent 32%), radial-gradient(circle at 75% 90%, rgba(99,91,255,.16), transparent 34%)'
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        .glass { background: rgba(255, 255, 255, .82); backdrop-filter: blur(18px); }
+        .dark-glass { background: rgba(15, 23, 42, .78); backdrop-filter: blur(18px); }
+        .scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .55); border-radius: 999px; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-900">
+<div class="fixed inset-0 bg-mesh"></div>
+<div class="fixed inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,.045)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.045)_1px,transparent_1px)] bg-[size:48px_48px]"></div>
+
+<div class="relative mx-auto flex min-h-screen max-w-[1600px] gap-5 p-5">
+    <!-- Sidebar -->
+    <aside class="dark-glass hidden w-[340px] shrink-0 rounded-[32px] border border-white/10 p-5 text-white shadow-premium lg:flex lg:flex-col">
+        <div class="flex items-center gap-3">
+            <div class="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-point to-mint shadow-lg">
+                <i data-lucide="notebook-tabs" class="h-6 w-6"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-black">Team Docs</h1>
+                <p class="text-xs text-slate-300">문서 작성 · 공유 게시판</p>
+            </div>
+        </div>
+
+        <button onclick="openWriteModal()" class="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
+            <i data-lucide="plus" class="h-4 w-4"></i>
+            글 작성
+        </button>
+
+        <div class="mt-4 grid grid-cols-2 gap-2">
+            <button onclick="openCategoryModal(null)" class="rounded-2xl bg-white/10 px-3 py-3 text-xs font-black text-white transition hover:bg-white/15">
+                + 상위 카테고리
+            </button>
+            <button onclick="openCategoryModal(selectedCategoryId === 'all' ? null : selectedCategoryId)" class="rounded-2xl bg-gradient-to-r from-point to-mint px-3 py-3 text-xs font-black text-white transition hover:opacity-90">
+                + 하위 카테고리
+            </button>
+        </div>
+
+        <div class="mt-5 rounded-3xl bg-white/10 p-3">
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-4 top-3.5 h-4 w-4 text-slate-400"></i>
+                <input id="categorySearch" oninput="renderCategoryTree()" class="w-full rounded-2xl border border-white/10 bg-white/10 py-3 pl-11 pr-4 text-sm text-white placeholder:text-slate-400 outline-none focus:border-mint/70" placeholder="카테고리 검색" />
+            </div>
+        </div>
+
+        <div class="mt-6 flex items-center justify-between px-1 text-xs text-slate-300">
+            <span>CATEGORY TREE</span>
+            <span id="categoryCount" class="rounded-full bg-white/10 px-2 py-1">0</span>
+        </div>
+
+        <nav id="categoryTree" class="scrollbar-thin mt-3 flex-1 overflow-y-auto pr-1"></nav>
+
+        <div class="mt-5 rounded-3xl bg-white/10 p-4">
+            <p class="text-sm font-black">운영 방식</p>
+            <ul class="mt-3 space-y-2 text-xs leading-5 text-slate-300">
+                <li>· 상위/하위 카테고리 추가 가능</li>
+                <li>· 하위 카테고리별 글 필터링 가능</li>
+                <li>· 글별 수정 / 삭제 버튼 제공</li>
+            </ul>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="min-w-0 flex-1">
+        <!-- Header -->
+        <header class="glass rounded-[32px] border border-white/70 p-6 shadow-premium">
+            <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                    <div class="mb-3 flex flex-wrap gap-2">
+                        <span class="rounded-full bg-slate-950 px-3 py-1 text-xs font-black text-white">NO PAYMENT</span>
+                        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">자유 작성</span>
+                        <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-black text-indigo-700">카테고리 트리</span>
+                    </div>
+                    <h2 class="text-3xl font-black tracking-tight text-slate-950 md:text-4xl">팀 문서 공유 게시판</h2>
+                    <p class="mt-3 text-sm text-slate-500">왼쪽 카테고리 트리에서 상위/하위 레벨을 추가하고, 선택한 카테고리 기준으로 글 목록을 확인합니다.</p>
+                </div>
+                <div class="flex flex-col gap-3 sm:flex-row">
+                    <button onclick="openWriteModal()" class="rounded-2xl bg-gradient-to-r from-point to-mint px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
+                        + 글 작성
+                    </button>
+                    <button onclick="resetSampleData()" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:-translate-y-0.5 hover:shadow-lg">
+                        샘플 초기화
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Summary -->
+        <section class="mt-5 grid gap-4 md:grid-cols-4">
+            <article class="glass rounded-3xl border border-white/70 p-5 shadow-soft">
+                <p class="text-sm font-bold text-slate-500">전체 글</p>
+                <p id="summaryTotal" class="mt-2 text-3xl font-black text-slate-950">0</p>
+            </article>
+            <article class="glass rounded-3xl border border-white/70 p-5 shadow-soft">
+                <p class="text-sm font-bold text-slate-500">선택 카테고리</p>
+                <p id="summarySelected" class="mt-2 truncate text-2xl font-black text-slate-950">전체</p>
+            </article>
+            <article class="glass rounded-3xl border border-white/70 p-5 shadow-soft">
+                <p class="text-sm font-bold text-slate-500">댓글</p>
+                <p id="summaryComment" class="mt-2 text-3xl font-black text-slate-950">0</p>
+            </article>
+            <article class="glass rounded-3xl border border-white/70 p-5 shadow-soft">
+                <p class="text-sm font-bold text-slate-500">최근 수정</p>
+                <p id="summaryEdit" class="mt-2 text-3xl font-black text-slate-950">0</p>
+            </article>
+        </section>
+
+        <!-- List panel -->
+        <section class="glass mt-5 rounded-[32px] border border-white/70 p-5 shadow-premium">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                    <h3 class="text-xl font-black text-slate-950">글 목록</h3>
+                    <p id="listDescription" class="mt-1 text-sm text-slate-500">전체 카테고리의 글을 리스트 형태로 보여줍니다.</p>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row">
+                    <div class="relative">
+                        <i data-lucide="search" class="absolute left-4 top-3.5 h-4 w-4 text-slate-400"></i>
+                        <input id="searchInput" oninput="renderPostList()" class="w-full rounded-2xl border border-slate-200 bg-white/80 py-3 pl-11 pr-4 text-sm outline-none focus:border-point sm:w-80" placeholder="제목, 작성자, 내용 검색" />
+                    </div>
+                    <select id="sortSelect" onchange="renderPostList()" class="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-point">
+                        <option value="latest">최신순</option>
+                        <option value="views">조회순</option>
+                        <option value="comments">댓글순</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white/80">
+                <div class="hidden grid-cols-[90px_190px_1fr_130px_110px_130px_190px] gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 text-xs font-black text-slate-500 xl:grid">
+                    <div>번호</div>
+                    <div>카테고리</div>
+                    <div>제목</div>
+                    <div>작성자</div>
+                    <div>조회/댓글</div>
+                    <div>작성일</div>
+                    <div class="text-center">관리</div>
+                </div>
+                <div id="postList" class="divide-y divide-slate-100"></div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Write/Edit Modal -->
+<div id="postModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
+        <div class="flex items-start justify-between border-b border-slate-200 p-6">
+            <div>
+                <h3 id="modalTitle" class="text-2xl font-black text-slate-950">글 작성</h3>
+                <p class="mt-1 text-sm text-slate-500">팀원들과 공유할 문서를 작성합니다. 결재 없이 저장됩니다.</p>
+            </div>
+            <button onclick="closePostModal()" class="rounded-2xl bg-slate-100 p-3 text-slate-500 hover:bg-slate-200">
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+
+        <div class="scrollbar-thin max-h-[72vh] overflow-y-auto p-6">
+            <input type="hidden" id="postId" />
+            <div class="grid gap-4 md:grid-cols-[1fr_260px]">
+                <div>
+                    <label class="mb-2 block text-sm font-black text-slate-700">제목</label>
+                    <input id="postTitle" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-lg font-bold outline-none focus:border-point focus:ring-4 focus:ring-indigo-100" placeholder="문서 제목을 입력하세요" />
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-black text-slate-700">카테고리</label>
+                    <select id="postCategory" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-point"></select>
+                </div>
+            </div>
+
+            <div class="mt-4 grid gap-4 md:grid-cols-2">
+                <div>
+                    <label class="mb-2 block text-sm font-black text-slate-700">작성자</label>
+                    <input id="postAuthor" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-point" placeholder="작성자" />
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-black text-slate-700">태그</label>
+                    <input id="postTags" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-point" placeholder="예: PLM, BOM, 매뉴얼" />
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <label class="mb-2 block text-sm font-black text-slate-700">내용</label>
+                <textarea id="postContent" rows="14" class="w-full resize-none rounded-3xl border border-slate-200 p-5 text-sm leading-7 outline-none focus:border-point focus:ring-4 focus:ring-indigo-100" placeholder="문서 내용을 입력하세요"></textarea>
+            </div>
+        </div>
+
+        <div class="flex flex-col-reverse gap-2 border-t border-slate-200 p-6 sm:flex-row sm:justify-end">
+            <button onclick="closePostModal()" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50">취소</button>
+            <button onclick="savePost()" class="rounded-2xl bg-slate-950 px-6 py-3 text-sm font-black text-white hover:bg-slate-800">저장</button>
+        </div>
+    </div>
+</div>
+
+<!-- Category Modal -->
+<div id="categoryModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-lg rounded-[32px] bg-white p-6 shadow-2xl">
+        <div class="flex items-start justify-between">
+            <div>
+                <h3 id="categoryModalTitle" class="text-2xl font-black text-slate-950">카테고리 추가</h3>
+                <p id="categoryModalDesc" class="mt-1 text-sm text-slate-500">상위 또는 하위 카테고리를 추가합니다.</p>
+            </div>
+            <button onclick="closeCategoryModal()" class="rounded-2xl bg-slate-100 p-3 text-slate-500 hover:bg-slate-200">
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+        <input type="hidden" id="categoryParentId" />
+        <div class="mt-6">
+            <label class="mb-2 block text-sm font-black text-slate-700">카테고리명</label>
+            <input id="categoryName" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-point focus:ring-4 focus:ring-indigo-100" placeholder="예: PLM 개선, BOM 검증, 회의자료" />
+        </div>
+        <div class="mt-4 rounded-3xl bg-slate-50 p-4 text-sm text-slate-600">
+            <b>사용 예시</b>
+            <p class="mt-2">상위: 업무매뉴얼 → 하위: BOM 검증 → 하위: 오류 확인 절차</p>
+        </div>
+        <div class="mt-6 flex justify-end gap-2">
+            <button onclick="closeCategoryModal()" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50">취소</button>
+            <button onclick="saveCategory()" class="rounded-2xl bg-slate-950 px-6 py-3 text-sm font-black text-white hover:bg-slate-800">추가</button>
+        </div>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div id="detailModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
+        <div class="flex items-start justify-between border-b border-slate-200 p-6">
+            <div>
+                <div id="detailCategory" class="mb-3 inline-flex rounded-full bg-indigo-100 px-3 py-1 text-xs font-black text-indigo-700"></div>
+                <h3 id="detailTitle" class="text-2xl font-black text-slate-950"></h3>
+                <p id="detailMeta" class="mt-2 text-sm text-slate-500"></p>
+            </div>
+            <button onclick="closeDetailModal()" class="rounded-2xl bg-slate-100 p-3 text-slate-500 hover:bg-slate-200">
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+        <div class="scrollbar-thin max-h-[70vh] overflow-y-auto p-6">
+            <div id="detailTags" class="mb-5 flex flex-wrap gap-2"></div>
+            <pre id="detailContent" class="whitespace-pre-wrap rounded-3xl bg-slate-50 p-6 text-sm leading-7 text-slate-700"></pre>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-6 left-1/2 z-[60] hidden -translate-x-1/2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-2xl"></div>
+
+<script>
+    const today = '2026.05.03';
+    let selectedCategoryId = 'all';
+    let posts = [];
+    let categories = [];
+
+    const sampleCategories = [
+        { id: 'manual', parentId: null, name: '업무매뉴얼', icon: 'book-open' },
+        { id: 'manual-bom', parentId: 'manual', name: 'BOM 검증', icon: 'workflow' },
+        { id: 'manual-plm', parentId: 'manual', name: 'PLM 사용법', icon: 'monitor-cog' },
+        { id: 'meeting', parentId: null, name: '회의록', icon: 'clipboard-list' },
+        { id: 'meeting-plm', parentId: 'meeting', name: 'PLM 개선 회의', icon: 'messages-square' },
+        { id: 'notice', parentId: null, name: '공지사항', icon: 'megaphone' },
+        { id: 'review', parentId: null, name: '검토자료', icon: 'scan-search' },
+        { id: 'review-material', parentId: 'review', name: '자재 분석', icon: 'network' }
+    ];
+
+    const samplePosts = [
+        {
+            id: 1004,
+            categoryId: 'manual-bom',
+            title: 'BOM 계산 검증 자동화 업무 절차',
+            author: '김영환',
+            content: 'BOM 계산 및 검증 업무에서 반복적으로 발생하는 수작업 TEST, BOM 비교, 오류 확인 업무를 자동화하기 위한 업무 절차입니다.\n\n1. 현장번호 입력\n2. 기준 BOM 조회\n3. 계산 BOM 비교\n4. 오류 후보 추출\n5. 담당자 검토 결과 기록',
+            tags: ['BOM', '자동화', '검증'],
+            date: '2026.05.03',
+            views: 328,
+            comments: 8,
+            edited: true
+        },
+        {
+            id: 1003,
+            categoryId: 'meeting-plm',
+            title: '레이아웃 도면 사양과 영업사양 비교 회의록',
+            author: '홍재민',
+            content: 'ECO 상신 전 레이아웃도면 사양과 영업사양을 비교 검증하는 방안에 대해 논의했습니다.\n\n핵심 내용:\n- 검증 이력 저장 필요\n- CRM/SAP 사양 DB와 PLM 사양값 비교 검토\n- 불일치 발생 시 ECO 전송 제한 검토',
+            tags: ['PLM', 'ECO', '사양비교'],
+            date: '2026.05.02',
+            views: 214,
+            comments: 4,
+            edited: false
+        },
+        {
+            id: 1002,
+            categoryId: 'review-material',
+            title: '자재 연계 분석 화면 개선 아이디어',
+            author: '박민수',
+            content: '특정 자재가 수배될 때 함께 수배되는 자재를 분석하기 위한 화면 개선 아이디어입니다.\n\n필요 기능:\n- 자재번호 기준 검색\n- 영업사양 조건별 필터\n- 연계 자재 리스트 표시\n- 관계도 시각화',
+            tags: ['자재', '분석', 'UI'],
+            date: '2026.05.01',
+            views: 167,
+            comments: 2,
+            edited: true
+        },
+        {
+            id: 1001,
+            categoryId: 'notice',
+            title: '팀 문서 게시판 운영 안내',
+            author: '관리자',
+            content: '본 게시판은 팀원들이 자유롭게 문서를 작성하고 공유하기 위한 공간입니다.\n\n운영 기준:\n- 별도 결재 없음\n- 누구나 작성 가능\n- 본인이 작성한 글은 수정 및 삭제 가능\n- 중요한 변경사항은 댓글 또는 변경 이력으로 공유 권장',
+            tags: ['공지', '운영기준'],
+            date: '2026.04.30',
+            views: 452,
+            comments: 12,
+            edited: false
+        }
+    ];
+
+    function resetSampleData() {
+        categories = JSON.parse(JSON.stringify(sampleCategories));
+        posts = JSON.parse(JSON.stringify(samplePosts));
+        selectedCategoryId = 'all';
+        renderCategoryTree();
+        renderCategoryOptions();
+        renderPostList();
+        showToast('샘플 데이터가 초기화되었습니다.');
+    }
+
+    function getCategory(id) {
+        return categories.find(c => c.id === id);
+    }
+
+    function getChildrenCategories(parentId) {
+        return categories.filter(c => c.parentId === parentId);
+    }
+
+    function getCategoryPath(id) {
+        const path = [];
+        let current = getCategory(id);
+        while (current) {
+            path.unshift(current.name);
+            current = getCategory(current.parentId);
+        }
+        return path.join(' / ') || '미분류';
+    }
+
+    function getDescendantIds(categoryId) {
+        const result = [categoryId];
+        getChildrenCategories(categoryId).forEach(child => {
+            result.push(...getDescendantIds(child.id));
+        });
+        return result;
+    }
+
+    function getPostCountByCategory(categoryId) {
+        if (categoryId === 'all') return posts.length;
+        const ids = getDescendantIds(categoryId);
+        return posts.filter(p => ids.includes(p.categoryId)).length;
+    }
+
+    function renderCategoryTree() {
+        const area = document.getElementById('categoryTree');
+        const keyword = document.getElementById('categorySearch')?.value.trim().toLowerCase() || '';
+        area.innerHTML = '';
+        document.getElementById('categoryCount').textContent = `${categories.length}`;
+
+        const allButton = document.createElement('button');
+        allButton.className = `mb-2 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-black transition ${selectedCategoryId === 'all' ? 'bg-white text-slate-950 shadow-lg' : 'text-slate-300 hover:bg-white/10'}`;
+        allButton.onclick = () => selectCategory('all');
+        allButton.innerHTML = `<span class="flex items-center gap-2"><i data-lucide="layout-list" class="h-4 w-4"></i>전체 글</span><span class="rounded-full ${selectedCategoryId === 'all' ? 'bg-slate-100' : 'bg-white/10'} px-2 py-1 text-xs">${posts.length}</span>`;
+        area.appendChild(allButton);
+
+        categories.filter(c => c.parentId === null).forEach(root => {
+            const node = renderCategoryNode(root, 0, keyword);
+            if (node) area.appendChild(node);
+        });
+        lucide.createIcons();
+    }
+
+    function renderCategoryNode(category, depth, keyword) {
+        const children = getChildrenCategories(category.id);
+        const matched = category.name.toLowerCase().includes(keyword);
+        const childNodes = children.map(child => renderCategoryNode(child, depth + 1, keyword)).filter(Boolean);
+        if (keyword && !matched && childNodes.length === 0) return null;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mb-1';
+        const count = getPostCountByCategory(category.id);
+        const selected = selectedCategoryId === category.id;
+
+        const row = document.createElement('div');
+        row.className = `group flex cursor-pointer items-center gap-2 rounded-2xl px-3 py-3 transition ${selected ? 'bg-white text-slate-950 shadow-lg' : 'text-slate-300 hover:bg-white/10'}`;
+        row.style.marginLeft = `${depth * 16}px`;
+        row.onclick = () => selectCategory(category.id);
+        row.innerHTML = `
+        <i data-lucide="${category.icon || 'folder'}" class="h-4 w-4 shrink-0 ${selected ? 'text-point' : 'text-slate-400'}"></i>
+        <span class="min-w-0 flex-1 truncate text-sm font-bold">${escapeHtml(category.name)}</span>
+        <span class="rounded-full ${selected ? 'bg-slate-100' : 'bg-white/10'} px-2 py-1 text-[11px] font-black">${count}</span>
+        <button title="하위 카테고리 추가" onclick="event.stopPropagation(); openCategoryModal('${category.id}')" class="hidden rounded-lg px-2 py-1 text-xs font-black ${selected ? 'bg-indigo-100 text-indigo-700' : 'bg-white/10 text-white'} group-hover:block">+</button>
+      `;
+        wrapper.appendChild(row);
+        childNodes.forEach(node => wrapper.appendChild(node));
+        return wrapper;
+    }
+
+    function selectCategory(categoryId) {
+        selectedCategoryId = categoryId;
+        renderCategoryTree();
+        renderPostList();
+    }
+
+    function openCategoryModal(parentId) {
+        const modalTitle = document.getElementById('categoryModalTitle');
+        const modalDesc = document.getElementById('categoryModalDesc');
+        const parentInput = document.getElementById('categoryParentId');
+        const nameInput = document.getElementById('categoryName');
+
+        parentInput.value = parentId || '';
+        nameInput.value = '';
+        if (parentId) {
+            modalTitle.textContent = '하위 카테고리 추가';
+            modalDesc.textContent = `'${getCategoryPath(parentId)}' 아래에 하위 카테고리를 추가합니다.`;
+        } else {
+            modalTitle.textContent = '상위 카테고리 추가';
+            modalDesc.textContent = '최상위 카테고리를 추가합니다.';
+        }
+        openModal('categoryModal');
+        setTimeout(() => nameInput.focus(), 50);
+    }
+
+    function saveCategory() {
+        const name = document.getElementById('categoryName').value.trim();
+        const parentId = document.getElementById('categoryParentId').value || null;
+        if (!name) {
+            showToast('카테고리명을 입력하세요.');
+            return;
+        }
+        const id = `cat-${Date.now()}`;
+        categories.push({ id, parentId, name, icon: parentId ? 'folder-plus' : 'folder' });
+        selectedCategoryId = id;
+        closeCategoryModal();
+        renderCategoryTree();
+        renderCategoryOptions();
+        renderPostList();
+        showToast(parentId ? '하위 카테고리가 추가되었습니다.' : '상위 카테고리가 추가되었습니다.');
+    }
+
+    function closeCategoryModal() {
+        closeModal('categoryModal');
+    }
+
+    function renderCategoryOptions() {
+        const select = document.getElementById('postCategory');
+        if (!select) return;
+        select.innerHTML = '';
+        categories.filter(c => c.parentId === null).forEach(root => appendCategoryOption(select, root, 0));
+    }
+
+    function appendCategoryOption(select, category, depth) {
+        const option = document.createElement('option');
+        option.value = category.id;
+        option.textContent = `${'— '.repeat(depth)}${category.name}`;
+        select.appendChild(option);
+        getChildrenCategories(category.id).forEach(child => appendCategoryOption(select, child, depth + 1));
+    }
+
+    function getFilteredPosts() {
+        const keyword = document.getElementById('searchInput')?.value.trim().toLowerCase() || '';
+        const sort = document.getElementById('sortSelect')?.value || 'latest';
+        const validCategoryIds = selectedCategoryId === 'all' ? null : getDescendantIds(selectedCategoryId);
+
+        let result = posts.filter(post => {
+            const categoryMatched = !validCategoryIds || validCategoryIds.includes(post.categoryId);
+            const searchText = `${post.title} ${post.author} ${post.content} ${post.tags.join(' ')} ${getCategoryPath(post.categoryId)}`.toLowerCase();
+            return categoryMatched && searchText.includes(keyword);
+        });
+
+        if (sort === 'latest') result.sort((a, b) => b.id - a.id);
+        if (sort === 'views') result.sort((a, b) => b.views - a.views);
+        if (sort === 'comments') result.sort((a, b) => b.comments - a.comments);
+        return result;
+    }
+
+    function renderPostList() {
+        const list = document.getElementById('postList');
+        const filtered = getFilteredPosts();
+        const selectedName = selectedCategoryId === 'all' ? '전체' : getCategoryPath(selectedCategoryId);
+        document.getElementById('summarySelected').textContent = selectedName;
+        document.getElementById('listDescription').textContent = selectedCategoryId === 'all'
+            ? '전체 카테고리의 글을 리스트 형태로 보여줍니다.'
+            : `'${selectedName}' 카테고리와 하위 카테고리의 글을 보여줍니다.`;
+        list.innerHTML = '';
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<div class="p-10 text-center text-sm text-slate-500">등록된 글이 없습니다.</div>';
+        }
+
+        filtered.forEach(post => {
+            const row = document.createElement('article');
+            row.className = 'grid gap-3 px-5 py-5 transition hover:bg-slate-50 xl:grid-cols-[90px_190px_1fr_130px_110px_130px_190px] xl:items-center';
+            row.innerHTML = `
+          <div class="flex items-center justify-between xl:block">
+            <span class="text-xs font-black text-slate-400 xl:hidden">번호</span>
+            <span class="font-black text-slate-500">${post.id}</span>
+          </div>
+          <div class="flex items-center justify-between xl:block">
+            <span class="text-xs font-black text-slate-400 xl:hidden">카테고리</span>
+            <span class="rounded-full ${categoryColor(post.categoryId)} px-3 py-1 text-xs font-black">${escapeHtml(getCategoryPath(post.categoryId))}</span>
+          </div>
+          <div class="min-w-0">
+            <button onclick="openDetailModal(${post.id})" class="block max-w-full truncate text-left text-lg font-black text-slate-950 hover:text-point">${escapeHtml(post.title)}</button>
+            <p class="mt-1 line-clamp-1 text-sm text-slate-500">${escapeHtml(post.content)}</p>
+            <div class="mt-2 flex flex-wrap gap-1">
+              ${post.tags.map(tag => `<span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500">#${escapeHtml(tag)}</span>`).join('')}
+              ${post.edited ? '<span class="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-700">수정됨</span>' : ''}
+            </div>
+          </div>
+          <div class="flex items-center justify-between text-sm xl:block">
+            <span class="text-xs font-black text-slate-400 xl:hidden">작성자</span>
+            <span class="font-bold text-slate-700">${escapeHtml(post.author)}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm text-slate-500 xl:block">
+            <span class="text-xs font-black text-slate-400 xl:hidden">조회/댓글</span>
+            <span>${post.views} / ${post.comments}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm text-slate-500 xl:block">
+            <span class="text-xs font-black text-slate-400 xl:hidden">작성일</span>
+            <span>${post.date}</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="openDetailModal(${post.id})" class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-200">보기</button>
+            <button onclick="openEditModal(${post.id})" class="rounded-xl bg-indigo-100 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-200">수정</button>
+            <button onclick="deletePost(${post.id})" class="rounded-xl bg-rose-100 px-3 py-2 text-xs font-black text-rose-700 hover:bg-rose-200">삭제</button>
+          </div>
+        `;
+            list.appendChild(row);
+        });
+
+        updateCounts();
+        lucide.createIcons();
+    }
+
+    function updateCounts() {
+        const totalComments = posts.reduce((sum, p) => sum + p.comments, 0);
+        const edited = posts.filter(p => p.edited).length;
+        document.getElementById('summaryTotal').textContent = posts.length;
+        document.getElementById('summaryComment').textContent = totalComments;
+        document.getElementById('summaryEdit').textContent = edited;
+        renderCategoryTree();
+    }
+
+    function openWriteModal() {
+        renderCategoryOptions();
+        document.getElementById('modalTitle').textContent = '글 작성';
+        document.getElementById('postId').value = '';
+        document.getElementById('postTitle').value = '';
+        document.getElementById('postCategory').value = selectedCategoryId === 'all' ? (categories[0]?.id || '') : selectedCategoryId;
+        document.getElementById('postAuthor').value = '김영환';
+        document.getElementById('postTags').value = '';
+        document.getElementById('postContent').value = '';
+        openModal('postModal');
+    }
+
+    function openEditModal(id) {
+        renderCategoryOptions();
+        const post = posts.find(p => p.id === id);
+        if (!post) return;
+        document.getElementById('modalTitle').textContent = '글 수정';
+        document.getElementById('postId').value = post.id;
+        document.getElementById('postTitle').value = post.title;
+        document.getElementById('postCategory').value = post.categoryId;
+        document.getElementById('postAuthor').value = post.author;
+        document.getElementById('postTags').value = post.tags.join(', ');
+        document.getElementById('postContent').value = post.content;
+        openModal('postModal');
+    }
+
+    function savePost() {
+        const idValue = document.getElementById('postId').value;
+        const title = document.getElementById('postTitle').value.trim();
+        const categoryId = document.getElementById('postCategory').value;
+        const author = document.getElementById('postAuthor').value.trim() || '작성자 없음';
+        const tags = document.getElementById('postTags').value.split(',').map(t => t.trim()).filter(Boolean);
+        const content = document.getElementById('postContent').value.trim();
+
+        if (!title) {
+            showToast('제목을 입력하세요.');
+            return;
+        }
+        if (!categoryId) {
+            showToast('카테고리를 선택하세요.');
+            return;
+        }
+        if (!content) {
+            showToast('내용을 입력하세요.');
+            return;
+        }
+
+        if (idValue) {
+            const post = posts.find(p => p.id === Number(idValue));
+            post.title = title;
+            post.categoryId = categoryId;
+            post.author = author;
+            post.tags = tags;
+            post.content = content;
+            post.edited = true;
+            post.date = today;
+            showToast('글이 수정되었습니다.');
+        } else {
+            posts.unshift({
+                id: Date.now(),
+                categoryId,
+                title,
+                author,
+                content,
+                tags,
+                date: today,
+                views: 0,
+                comments: 0,
+                edited: false
+            });
+            showToast('글이 작성되었습니다.');
+        }
+
+        closePostModal();
+        renderPostList();
+    }
+
+    function deletePost(id) {
+        const post = posts.find(p => p.id === id);
+        if (!post) return;
+        if (!confirm(`'${post.title}' 글을 삭제하시겠습니까?`)) return;
+        posts = posts.filter(p => p.id !== id);
+        renderPostList();
+        showToast('글이 삭제되었습니다.');
+    }
+
+    function openDetailModal(id) {
+        const post = posts.find(p => p.id === id);
+        if (!post) return;
+        post.views += 1;
+        document.getElementById('detailCategory').textContent = getCategoryPath(post.categoryId);
+        document.getElementById('detailTitle').textContent = post.title;
+        document.getElementById('detailMeta').textContent = `작성자 ${post.author} · 작성일 ${post.date} · 조회 ${post.views} · 댓글 ${post.comments}`;
+        document.getElementById('detailTags').innerHTML = post.tags.map(tag => `<span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500">#${escapeHtml(tag)}</span>`).join('');
+        document.getElementById('detailContent').textContent = post.content;
+        openModal('detailModal');
+        renderPostList();
+    }
+
+    function closePostModal() {
+        closeModal('postModal');
+    }
+
+    function closeDetailModal() {
+        closeModal('detailModal');
+    }
+
+    function openModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        lucide.createIcons();
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function categoryColor(categoryId) {
+        const rootId = getRootCategoryId(categoryId);
+        if (rootId === 'manual') return 'bg-indigo-100 text-indigo-700';
+        if (rootId === 'meeting') return 'bg-emerald-100 text-emerald-700';
+        if (rootId === 'notice') return 'bg-rose-100 text-rose-700';
+        if (rootId === 'review') return 'bg-amber-100 text-amber-700';
+        return 'bg-slate-100 text-slate-700';
+    }
+
+    function getRootCategoryId(categoryId) {
+        let current = getCategory(categoryId);
+        if (!current) return null;
+        while (current.parentId) current = getCategory(current.parentId);
+        return current.id;
+    }
+
+    function escapeHtml(text) {
+        return String(text)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.remove('hidden');
+        clearTimeout(window.toastTimer);
+        window.toastTimer = setTimeout(() => toast.classList.add('hidden'), 1800);
+    }
+
+    resetSampleData();
+    lucide.createIcons();
+</script>
+</body>
+</html>

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DocBoard — 팀 문서 게시판</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+        * { font-family: 'Pretendard', sans-serif; }
+        .nav-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; font-size: 13.5px; color: #6b7280; cursor: pointer; margin-bottom: 2px; transition: background 0.15s; }
+        .nav-item:hover { background: #fff; color: #111827; }
+        .nav-item.active { background: #fff; color: #111827; font-weight: 500; border: 0.5px solid #e5e7eb; }
+        .filter-chip { padding: 5px 12px; border-radius: 20px; font-size: 12.5px; cursor: pointer; border: 0.5px solid #e5e7eb; color: #6b7280; background: transparent; transition: all 0.15s; }
+        .filter-chip.active { background: #EEF2FF; color: #4F46E5; border-color: #C7D2FE; }
+        .doc-card { background: #fff; border: 0.5px solid #e5e7eb; border-radius: 12px; padding: 1rem 1.1rem; cursor: pointer; transition: border-color 0.15s, transform 0.12s; position: relative; }
+        .doc-card:hover { border-color: #9ca3af; transform: translateY(-1px); }
+        .new-doc-card { background: transparent; border: 0.5px dashed #9ca3af; border-radius: 12px; padding: 1rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 160px; color: #9ca3af; gap: 8px; transition: border-color 0.15s, color 0.15s; }
+        .new-doc-card:hover { border-color: #818CF8; color: #4F46E5; }
+        .avatar { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid #fff; font-size: 10px; font-weight: 500; display: flex; align-items: center; justify-content: center; margin-left: -6px; }
+        .avatar:first-child { margin-left: 0; }
+        .list-row { background: #fff; border: 0.5px solid #e5e7eb; border-radius: 8px; padding: 0.75rem 1rem; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .list-row:hover { border-color: #9ca3af; }
+        .view-btn { padding: 6px 10px; font-size: 13px; cursor: pointer; background: transparent; border: none; color: #9ca3af; }
+        .view-btn.active { background: #f3f4f6; color: #111827; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-6">
+
+<div class="flex border border-gray-200 rounded-xl overflow-hidden min-h-[620px] bg-white shadow-sm max-w-6xl mx-auto">
+
+    <!-- 사이드바 -->
+    <div class="w-52 border-r border-gray-100 p-5 bg-gray-50 flex flex-col gap-0.5">
+        <div class="flex items-center gap-2 mb-6">
+            <div class="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-xs font-medium">D</div>
+            <span class="text-sm font-medium text-gray-800">DocBoard</span>
+        </div>
+
+        <p class="text-[11px] text-gray-400 uppercase tracking-wide font-medium px-2 mt-2 mb-1">메뉴</p>
+        <div class="nav-item active">
+            <span class="text-sm">📋</span> 전체 문서
+            <span class="ml-auto text-[11px] bg-indigo-600 text-white rounded-full px-2 py-0.5 font-medium">24</span>
+        </div>
+        <div class="nav-item"><span class="text-sm">⭐</span> 즐겨찾기</div>
+        <div class="nav-item"><span class="text-sm">🕐</span> 최근 문서</div>
+        <div class="nav-item"><span class="text-sm">🗂️</span> 내 문서</div>
+
+        <p class="text-[11px] text-gray-400 uppercase tracking-wide font-medium px-2 mt-4 mb-1">팀 스페이스</p>
+        <div class="nav-item"><span class="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0"></span> 개발팀</div>
+        <div class="nav-item"><span class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span> 디자인팀</div>
+        <div class="nav-item"><span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span> 마케팅팀</div>
+        <div class="nav-item"><span class="w-2 h-2 rounded-full bg-red-400 flex-shrink-0"></span> 운영팀</div>
+
+        <div class="mt-auto pt-6">
+            <p class="text-[11px] text-gray-400 uppercase tracking-wide font-medium px-2 mb-1">설정</p>
+            <div class="nav-item"><span class="text-sm">⚙️</span> 환경설정</div>
+            <div class="nav-item"><span class="text-sm">👥</span> 팀원 관리</div>
+        </div>
+    </div>
+
+    <!-- 메인 -->
+    <div class="flex-1 p-6">
+
+        <!-- 상단 툴바 -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="text-[17px] font-medium text-gray-900">전체 문서</div>
+            <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 w-60">
+                    <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input type="text" placeholder="문서 검색..." class="bg-transparent text-sm text-gray-800 outline-none w-full placeholder-gray-400" />
+                </div>
+                <div class="flex border border-gray-200 rounded-lg overflow-hidden">
+                    <button class="view-btn active" id="btn-grid" onclick="setView('grid')">⊞</button>
+                    <button class="view-btn" id="btn-list" onclick="setView('list')">☰</button>
+                </div>
+                <button class="text-sm text-gray-500 border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50">필터</button>
+                <button onclick="openTemplatePicker()" class="text-sm bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">+ 새 문서</button>
+            </div>
+        </div>
+
+        <!-- 통계 카드 -->
+        <div class="grid grid-cols-3 gap-3 mb-6">
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-[11.5px] text-gray-400 mb-1">전체 문서</p>
+                <p class="text-2xl font-medium text-gray-900">24</p>
+                <p class="text-[11px] text-gray-400 mt-0.5">이번 달 +5개</p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-[11.5px] text-gray-400 mb-1">팀원</p>
+                <p class="text-2xl font-medium text-gray-900">8</p>
+                <p class="text-[11px] text-gray-400 mt-0.5">4개 팀</p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-[11.5px] text-gray-400 mb-1">최근 수정</p>
+                <p class="text-2xl font-medium text-gray-900">오늘</p>
+                <p class="text-[11px] text-gray-400 mt-0.5">기획안 v3.2</p>
+            </div>
+        </div>
+
+        <!-- 카테고리 필터 -->
+        <div class="flex gap-2 mb-5 flex-wrap">
+            <div class="filter-chip active" onclick="setFilter(this)">전체</div>
+            <div class="filter-chip" onclick="setFilter(this)">기획</div>
+            <div class="filter-chip" onclick="setFilter(this)">회의록</div>
+            <div class="filter-chip" onclick="setFilter(this)">가이드</div>
+            <div class="filter-chip" onclick="setFilter(this)">보고서</div>
+            <div class="filter-chip" onclick="setFilter(this)">공지</div>
+        </div>
+
+        <!-- 그리드 뷰 -->
+        <div id="grid-view" class="grid grid-cols-3 gap-3">
+
+            <!-- 고정 문서 -->
+            <div class="doc-card">
+                <span class="absolute top-2.5 right-2.5 text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">📌 고정</span>
+                <div class="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-lg mb-2.5">📄</div>
+                <p class="text-sm font-medium text-gray-900 mb-1 leading-snug">2025 Q2 서비스 기획안</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2.5 line-clamp-2">신규 기능 출시 및 사용자 경험 개선을 위한 분기 기획 문서입니다.</p>
+                <div class="mb-3">
+                    <span class="inline-block text-[11px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-medium mr-1">기획</span>
+                    <span class="inline-block text-[11px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">진행중</span>
+                </div>
+                <div class="flex items-center justify-between pt-2.5 border-t border-gray-100">
+                    <span class="text-[11.5px] text-gray-400">2일 전 수정</span>
+                    <div class="flex">
+                        <div class="avatar bg-blue-100 text-blue-700">김</div>
+                        <div class="avatar bg-green-100 text-green-700">이</div>
+                        <div class="avatar bg-pink-100 text-pink-700">박</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="doc-card">
+                <div class="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center text-lg mb-2.5">📝</div>
+                <p class="text-sm font-medium text-gray-900 mb-1">주간 팀 회의록 (5/2)</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2.5 line-clamp-2">스프린트 리뷰 및 다음 주 업무 계획 논의 내용이 정리되어 있습니다.</p>
+                <div class="mb-3">
+                    <span class="inline-block text-[11px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">회의록</span>
+                </div>
+                <div class="flex items-center justify-between pt-2.5 border-t border-gray-100">
+                    <span class="text-[11.5px] text-gray-400">어제 수정</span>
+                    <div class="flex">
+                        <div class="avatar bg-blue-100 text-blue-700">김</div>
+                        <div class="avatar bg-amber-100 text-amber-700">최</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="doc-card">
+                <div class="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center text-lg mb-2.5">📊</div>
+                <p class="text-sm font-medium text-gray-900 mb-1">디자인 시스템 가이드라인</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2.5 line-clamp-2">컴포넌트 사용 규칙, 색상, 타이포그래피 등 디자인 가이드입니다.</p>
+                <div class="mb-3">
+                    <span class="inline-block text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium mr-1">가이드</span>
+                    <span class="inline-block text-[11px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">완료</span>
+                </div>
+                <div class="flex items-center justify-between pt-2.5 border-t border-gray-100">
+                    <span class="text-[11.5px] text-gray-400">3일 전 수정</span>
+                    <div class="flex">
+                        <div class="avatar bg-pink-100 text-pink-700">박</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="doc-card">
+                <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center text-lg mb-2.5">📣</div>
+                <p class="text-sm font-medium text-gray-900 mb-1">팀 공지 — 워크숍 안내</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2.5 line-clamp-2">5월 팀 워크숍 일정 및 준비 사항 안내 공지입니다.</p>
+                <div class="mb-3">
+                    <span class="inline-block text-[11px] bg-red-50 text-red-700 px-2 py-0.5 rounded-full font-medium">공지</span>
+                </div>
+                <div class="flex items-center justify-between pt-2.5 border-t border-gray-100">
+                    <span class="text-[11.5px] text-gray-400">5일 전 수정</span>
+                    <div class="flex">
+                        <div class="avatar bg-blue-100 text-blue-700">김</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="doc-card">
+                <div class="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center text-lg mb-2.5">📈</div>
+                <p class="text-sm font-medium text-gray-900 mb-1">4월 성과 보고서</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2.5 line-clamp-2">월별 KPI 달성률 및 주요 지표 분석 보고서입니다.</p>
+                <div class="mb-3">
+                    <span class="inline-block text-[11px] bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full font-medium mr-1">보고서</span>
+                    <span class="inline-block text-[11px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">완료</span>
+                </div>
+                <div class="flex items-center justify-between pt-2.5 border-t border-gray-100">
+                    <span class="text-[11.5px] text-gray-400">1주 전 수정</span>
+                    <div class="flex">
+                        <div class="avatar bg-green-100 text-green-700">이</div>
+                        <div class="avatar bg-amber-100 text-amber-700">최</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="new-doc-card" onclick="openTemplatePicker()">
+                <span class="text-2xl leading-none">+</span>
+                <span class="text-sm">새 문서 만들기</span>
+            </div>
+
+        </div>
+
+        <!-- 리스트 뷰 -->
+        <div id="list-view" class="hidden flex-col gap-2">
+            <div class="list-row">
+                <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-base flex-shrink-0">📄</div>
+                <span class="text-sm font-medium text-gray-900 flex-1">2025 Q2 서비스 기획안</span>
+                <span class="text-[11px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-medium">기획</span>
+                <div class="flex mx-2">
+                    <div class="avatar bg-blue-100 text-blue-700">김</div>
+                    <div class="avatar bg-green-100 text-green-700">이</div>
+                </div>
+                <span class="text-xs text-gray-400 whitespace-nowrap">2일 전</span>
+            </div>
+            <div class="list-row">
+                <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-base flex-shrink-0">📝</div>
+                <span class="text-sm font-medium text-gray-900 flex-1">주간 팀 회의록 (5/2)</span>
+                <span class="text-[11px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">회의록</span>
+                <div class="flex mx-2">
+                    <div class="avatar bg-blue-100 text-blue-700">김</div>
+                </div>
+                <span class="text-xs text-gray-400 whitespace-nowrap">어제</span>
+            </div>
+            <div class="list-row">
+                <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-base flex-shrink-0">📊</div>
+                <span class="text-sm font-medium text-gray-900 flex-1">디자인 시스템 가이드라인</span>
+                <span class="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">가이드</span>
+                <div class="flex mx-2">
+                    <div class="avatar bg-pink-100 text-pink-700">박</div>
+                </div>
+                <span class="text-xs text-gray-400 whitespace-nowrap">3일 전</span>
+            </div>
+            <div class="list-row">
+                <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-base flex-shrink-0">📣</div>
+                <span class="text-sm font-medium text-gray-900 flex-1">팀 공지 — 워크숍 안내</span>
+                <span class="text-[11px] bg-red-50 text-red-700 px-2 py-0.5 rounded-full font-medium">공지</span>
+                <div class="flex mx-2">
+                    <div class="avatar bg-blue-100 text-blue-700">김</div>
+                </div>
+                <span class="text-xs text-gray-400 whitespace-nowrap">5일 전</span>
+            </div>
+            <div class="list-row">
+                <div class="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center text-base flex-shrink-0">📈</div>
+                <span class="text-sm font-medium text-gray-900 flex-1">4월 성과 보고서</span>
+                <span class="text-[11px] bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full font-medium">보고서</span>
+                <div class="flex mx-2">
+                    <div class="avatar bg-green-100 text-green-700">이</div>
+                </div>
+                <span class="text-xs text-gray-400 whitespace-nowrap">1주 전</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- 템플릿 선택 모달 -->
+<div id="modal-overlay" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl w-[680px] max-h-[80vh] overflow-y-auto p-6">
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <p class="text-[17px] font-medium text-gray-900">템플릿으로 시작하기</p>
+                <p class="text-sm text-gray-500 mt-0.5">원하는 문서 유형을 선택하세요</p>
+            </div>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+        </div>
+
+        <div class="flex gap-2 mb-5 flex-wrap">
+            <div class="filter-chip active" onclick="setTplFilter(this,'전체')">전체</div>
+            <div class="filter-chip" onclick="setTplFilter(this,'기획')">기획</div>
+            <div class="filter-chip" onclick="setTplFilter(this,'회의')">회의</div>
+            <div class="filter-chip" onclick="setTplFilter(this,'보고')">보고</div>
+            <div class="filter-chip" onclick="setTplFilter(this,'가이드')">가이드</div>
+            <div class="filter-chip" onclick="setTplFilter(this,'공지')">공지</div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3" id="tpl-grid">
+
+            <div class="new-doc-card" onclick="startBlank()">
+                <span class="text-2xl leading-none">+</span>
+                <span class="text-sm">빈 문서로 시작</span>
+            </div>
+
+            <div class="doc-card tpl-card" data-cat="회의" onclick="selectTpl(this,'주간 회의록')">
+                <div class="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center text-lg mb-2.5">📝</div>
+                <p class="text-sm font-medium text-gray-900 mb-1">주간 회의록</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2">안건, 논의 사항, 액션 아이템을 구조적으로 기록</p>
+                <span class="inline-block text-[11px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">회의</span>
+            </div>
+
+            <div class="doc-card tpl-card" data-cat="기획" onclick="selectTpl(this,'서비스 기획서')">
+                <div class="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-lg mb-2.5">📄</div>
+                <p class="text-sm font-medium text-gray-900 mb-1">서비스 기획서</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2">목적, 타겟, 기능 정의, 일정까지 포함한 기획 문서</p>
+                <span class="inline-block text-[11px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-medium">기획</span>
+            </div>
+
+            <div class="doc-card tpl-card" data-cat="보고" onclick="selectTpl(this,'월간 성과 보고서')">
+                <div class="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center text-lg mb-2.5">📊</div>
+                <p class="text-sm font-medium text-gray-900 mb-1">월간 성과 보고서</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2">KPI 달성률, 주요 성과, 개선 과제를 정리한 보고</p>
+                <span class="inline-block text-[11px] bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full font-medium">보고</span>
+            </div>
+
+            <div class="doc-card tpl-card" data-cat="기획" onclick="selectTpl(this,'스프린트 계획')">
+                <div class="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center text-lg mb-2.5">🗓️</div>
+                <p class="text-sm font-medium text-gray-900 mb-1">스프린트 계획</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2">스프린트 목표, 백로그, 담당자 배분 계획 문서</p>
+                <span class="inline-block text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">기획</span>
+            </div>
+
+            <div class="doc-card tpl-card" data-cat="가이드" onclick="selectTpl(this,'온보딩 가이드')">
+                <div class="w-9 h-9 rounded-lg bg-sky-50 flex items-center justify-center text-lg mb-2.5">📚</div>
+                <p class="text-sm font-medium text-gray-900 mb-1">온보딩 가이드</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2">신규 팀원을 위한 업무 환경 및 프로세스 안내</p>
+                <span class="inline-block text-[11px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full font-medium">가이드</span>
+            </div>
+
+            <div class="doc-card tpl-card" data-cat="공지" onclick="selectTpl(this,'팀 공지')">
+                <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center text-lg mb-2.5">📣</div>
+                <p class="text-sm font-medium text-gray-900 mb-1">팀 공지</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2">공지 제목, 대상, 내용, 기한이 포함된 공지 양식</p>
+                <span class="inline-block text-[11px] bg-red-50 text-red-700 px-2 py-0.5 rounded-full font-medium">공지</span>
+            </div>
+
+            <div class="doc-card tpl-card" data-cat="보고" onclick="selectTpl(this,'프로젝트 회고')">
+                <div class="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center text-lg mb-2.5">🔍</div>
+                <p class="text-sm font-medium text-gray-900 mb-1">프로젝트 회고</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2">잘된 점, 개선점, 다음 액션을 팀과 함께 정리</p>
+                <span class="inline-block text-[11px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">보고</span>
+            </div>
+
+            <div class="doc-card tpl-card" data-cat="가이드" onclick="selectTpl(this,'기술 문서 (Tech Spec)')">
+                <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-lg mb-2.5">⚙️</div>
+                <p class="text-sm font-medium text-gray-900 mb-1">기술 문서 (Tech Spec)</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2">시스템 설계, API 명세, 아키텍처를 담는 기술 문서</p>
+                <span class="inline-block text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">가이드</span>
+            </div>
+
+        </div>
+
+        <div class="flex items-center justify-between mt-5 pt-4 border-t border-gray-100">
+            <p class="text-sm text-gray-500" id="modal-sel-info">선택된 템플릿이 없습니다</p>
+            <div class="flex gap-2">
+                <button onclick="closeModal()" class="text-sm border border-gray-200 px-4 py-2 rounded-lg text-gray-500 hover:bg-gray-50">취소</button>
+                <button id="modal-start-btn" onclick="startWithTemplate()" class="text-sm bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium opacity-40 cursor-not-allowed transition-opacity" disabled>시작하기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 뷰 전환
+    function setView(type) {
+        const grid = document.getElementById('grid-view');
+        const list = document.getElementById('list-view');
+        document.getElementById('btn-grid').classList.toggle('active', type === 'grid');
+        document.getElementById('btn-list').classList.toggle('active', type === 'list');
+        if (type === 'grid') {
+            grid.classList.remove('hidden'); grid.classList.add('grid');
+            list.classList.add('hidden'); list.classList.remove('flex');
+        } else {
+            list.classList.remove('hidden'); list.classList.add('flex');
+            grid.classList.add('hidden'); grid.classList.remove('grid');
+        }
+    }
+
+    // 카테고리 필터 (게시판)
+    function setFilter(el) {
+        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    // 모달 열기/닫기
+    function openTemplatePicker() {
+        document.getElementById('modal-overlay').classList.remove('hidden');
+        document.getElementById('modal-overlay').classList.add('flex');
+    }
+    function closeModal() {
+        document.getElementById('modal-overlay').classList.remove('flex');
+        document.getElementById('modal-overlay').classList.add('hidden');
+        selectedTpl = null;
+        document.querySelectorAll('.tpl-card').forEach(c => c.classList.remove('border-indigo-500', 'border-2'));
+        document.getElementById('modal-sel-info').textContent = '선택된 템플릿이 없습니다';
+        document.getElementById('modal-start-btn').disabled = true;
+        document.getElementById('modal-start-btn').classList.add('opacity-40', 'cursor-not-allowed');
+    }
+
+    // 템플릿 선택
+    let selectedTpl = null;
+    function selectTpl(el, name) {
+        document.querySelectorAll('.tpl-card').forEach(c => {
+            c.classList.remove('border-indigo-500', 'border-2');
+            c.style.border = '0.5px solid #e5e7eb';
+        });
+        el.style.border = '2px solid #4F46E5';
+        selectedTpl = name;
+        document.getElementById('modal-sel-info').innerHTML = '선택됨: <strong>' + name + '</strong>';
+        const btn = document.getElementById('modal-start-btn');
+        btn.disabled = false;
+        btn.classList.remove('opacity-40', 'cursor-not-allowed');
+    }
+
+    function startBlank() {
+        alert('빈 문서 편집기를 엽니다.');
+        closeModal();
+    }
+
+    function startWithTemplate() {
+        if (!selectedTpl) return;
+        alert('"' + selectedTpl + '" 템플릿으로 문서를 시작합니다.');
+        closeModal();
+    }
+
+    // 템플릿 카테고리 필터
+    function setTplFilter(el, cat) {
+        document.querySelectorAll('#modal-overlay .filter-chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        document.querySelectorAll('.tpl-card').forEach(card => {
+            const cardCat = card.dataset.cat || '';
+            card.style.display = (cat === '전체' || cardCat === cat) ? '' : 'none';
+        });
+    }
+</script>
+</body>
+</html>

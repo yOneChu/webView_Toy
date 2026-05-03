@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>팀 문서 공유 게시판</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: '#0f172a',
+                        point: '#635bff',
+                        mint: '#18d6c4'
+                    },
+                    boxShadow: {
+                        premium: '0 28px 90px rgba(15, 23, 42, 0.18)',
+                        soft: '0 18px 45px rgba(15, 23, 42, 0.08)'
+                    },
+                    backgroundImage: {
+                        mesh: 'radial-gradient(circle at 12% 12%, rgba(99,91,255,.22), transparent 30%), radial-gradient(circle at 84% 8%, rgba(24,214,196,.18), transparent 32%), radial-gradient(circle at 75% 90%, rgba(99,91,255,.16), transparent 34%)'
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        .glass { background: rgba(255, 255, 255, .82); backdrop-filter: blur(18px); }
+        .dark-glass { background: rgba(15, 23, 42, .78); backdrop-filter: blur(18px); }
+        .scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .55); border-radius: 999px; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-900">
+<div class="fixed inset-0 bg-mesh"></div>
+<div class="fixed inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,.045)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.045)_1px,transparent_1px)] bg-[size:48px_48px]"></div>
+
+<div class="relative mx-auto flex min-h-screen max-w-[1600px] gap-5 p-5">
+    <!-- Sidebar -->
+    <aside class="dark-glass hidden w-72 shrink-0 rounded-[32px] border border-white/10 p-5 text-white shadow-premium lg:flex lg:flex-col">
+        <div class="flex items-center gap-3">
+            <div class="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-point to-mint shadow-lg">
+                <i data-lucide="notebook-tabs" class="h-6 w-6"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-black">Team Docs</h1>
+                <p class="text-xs text-slate-300">문서 작성 · 공유 게시판</p>
+            </div>
+        </div>
+
+        <button onclick="openWriteModal()" class="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-950 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
+            <i data-lucide="plus" class="h-4 w-4"></i>
+            글 작성
+        </button>
+
+        <nav class="mt-8 space-y-2 text-sm">
+            <button onclick="setCategory('전체')" class="category-btn active flex w-full items-center justify-between rounded-2xl bg-white px-4 py-3 font-black text-slate-950">
+                <span>전체 글</span><span id="countAll" class="rounded-full bg-slate-100 px-2 py-1 text-xs">0</span>
+            </button>
+            <button onclick="setCategory('업무매뉴얼')" class="category-btn flex w-full items-center justify-between rounded-2xl px-4 py-3 font-bold text-slate-300 hover:bg-white/10">
+                <span>업무매뉴얼</span><span id="countManual" class="text-xs">0</span>
+            </button>
+            <button onclick="setCategory('회의록')" class="category-btn flex w-full items-center justify-between rounded-2xl px-4 py-3 font-bold text-slate-300 hover:bg-white/10">
+                <span>회의록</span><span id="countMeeting" class="text-xs">0</span>
+            </button>
+            <button onclick="setCategory('공지사항')" class="category-btn flex w-full items-center justify-between rounded-2xl px-4 py-3 font-bold text-slate-300 hover:bg-white/10">
+                <span>공지사항</span><span id="countNotice" class="text-xs">0</span>
+            </button>
+            <button onclick="setCategory('검토자료')" class="category-btn flex w-full items-center justify-between rounded-2xl px-4 py-3 font-bold text-slate-300 hover:bg-white/10">
+                <span>검토자료</span><span id="countReview" class="text-xs">0</span>
+            </button>
+        </nav>
+
+        <div class="mt-auto rounded-3xl bg-white/10 p-4">
+            <p class="text-sm font-black">운영 방식</p>
+            <ul class="mt-3 space-y-2 text-xs leading-5 text-slate-300">
+                <li>· 결재 없이 자유롭게 문서 작성</li>
+                <li>· 글별 수정 / 삭제 버튼 제공</li>
+                <li>· 팀원 공유용 문서 게시판 UI</li>
+            </ul>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="min-w-0 flex-1">
+        <!-- Header -->
+        <header class="glass rounded-[32px] border border-white/70 p-6 shadow-premium">
+            <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                    <div class="mb-3 flex flex-wrap gap-2">
+                        <span class="rounded-full bg-slate-950 px-3 py-1 text-xs font-black text-white">NO PAYMENT</span>
+                        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">자유 작성</span>
+                        <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-black text-indigo-700">수정 / 삭제 가능</span>
+                    </div>
+                    <h2 class="text-3xl font-black tracking-tight text-slate-950 md:text-4xl">팀 문서 공유 게시판</h2>
+                    <p class="mt-3 text-sm text-slate-500">팀원들이 글을 작성하고, 목록에서 바로 확인하며, 각 글의 버튼으로 수정과 삭제를 처리하는 화면 샘플입니다.</p>
+                </div>
+                <div class="flex flex-col gap-3 sm:flex-row">
+                    <button onclick="openWriteModal()" class="rounded-2xl bg-gradient-to-r from-point to-mint px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
+                        + 글 작성
+                    </button>
+                    <button onclick="resetSampleData()" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:-translate-y-0.5 hover:shadow-lg">
+                        샘플 초기화
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Summary -->
+        <section class="mt-5 grid gap-4 md:grid-cols-4">
+            <article class="glass rounded-3xl border border-white/70 p-5 shadow-soft">
+                <p class="text-sm font-bold text-slate-500">전체 글</p>
+                <p id="summaryTotal" class="mt-2 text-3xl font-black text-slate-950">0</p>
+            </article>
+            <article class="glass rounded-3xl border border-white/70 p-5 shadow-soft">
+                <p class="text-sm font-bold text-slate-500">오늘 작성</p>
+                <p id="summaryToday" class="mt-2 text-3xl font-black text-slate-950">0</p>
+            </article>
+            <article class="glass rounded-3xl border border-white/70 p-5 shadow-soft">
+                <p class="text-sm font-bold text-slate-500">댓글</p>
+                <p id="summaryComment" class="mt-2 text-3xl font-black text-slate-950">0</p>
+            </article>
+            <article class="glass rounded-3xl border border-white/70 p-5 shadow-soft">
+                <p class="text-sm font-bold text-slate-500">최근 수정</p>
+                <p id="summaryEdit" class="mt-2 text-3xl font-black text-slate-950">0</p>
+            </article>
+        </section>
+
+        <!-- List panel -->
+        <section class="glass mt-5 rounded-[32px] border border-white/70 p-5 shadow-premium">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                    <h3 class="text-xl font-black text-slate-950">글 목록</h3>
+                    <p class="mt-1 text-sm text-slate-500">메인 화면은 작성된 글을 리스트 형태로 보여줍니다.</p>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row">
+                    <div class="relative">
+                        <i data-lucide="search" class="absolute left-4 top-3.5 h-4 w-4 text-slate-400"></i>
+                        <input id="searchInput" oninput="renderPostList()" class="w-full rounded-2xl border border-slate-200 bg-white/80 py-3 pl-11 pr-4 text-sm outline-none focus:border-point sm:w-80" placeholder="제목, 작성자, 내용 검색" />
+                    </div>
+                    <select id="sortSelect" onchange="renderPostList()" class="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-point">
+                        <option value="latest">최신순</option>
+                        <option value="views">조회순</option>
+                        <option value="comments">댓글순</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white/80">
+                <div class="hidden grid-cols-[90px_140px_1fr_130px_110px_130px_190px] gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 text-xs font-black text-slate-500 xl:grid">
+                    <div>번호</div>
+                    <div>분류</div>
+                    <div>제목</div>
+                    <div>작성자</div>
+                    <div>조회/댓글</div>
+                    <div>작성일</div>
+                    <div class="text-center">관리</div>
+                </div>
+                <div id="postList" class="divide-y divide-slate-100"></div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Write/Edit Modal -->
+<div id="postModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
+        <div class="flex items-start justify-between border-b border-slate-200 p-6">
+            <div>
+                <h3 id="modalTitle" class="text-2xl font-black text-slate-950">글 작성</h3>
+                <p class="mt-1 text-sm text-slate-500">팀원들과 공유할 문서를 작성합니다. 결재 없이 저장됩니다.</p>
+            </div>
+            <button onclick="closePostModal()" class="rounded-2xl bg-slate-100 p-3 text-slate-500 hover:bg-slate-200">
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+
+        <div class="scrollbar-thin max-h-[72vh] overflow-y-auto p-6">
+            <input type="hidden" id="postId" />
+            <div class="grid gap-4 md:grid-cols-[1fr_220px]">
+                <div>
+                    <label class="mb-2 block text-sm font-black text-slate-700">제목</label>
+                    <input id="postTitle" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-lg font-bold outline-none focus:border-point focus:ring-4 focus:ring-indigo-100" placeholder="문서 제목을 입력하세요" />
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-black text-slate-700">분류</label>
+                    <select id="postCategory" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-point">
+                        <option>업무매뉴얼</option>
+                        <option>회의록</option>
+                        <option>공지사항</option>
+                        <option>검토자료</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-4 grid gap-4 md:grid-cols-2">
+                <div>
+                    <label class="mb-2 block text-sm font-black text-slate-700">작성자</label>
+                    <input id="postAuthor" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-point" placeholder="작성자" />
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-black text-slate-700">태그</label>
+                    <input id="postTags" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-point" placeholder="예: PLM, BOM, 매뉴얼" />
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <label class="mb-2 block text-sm font-black text-slate-700">내용</label>
+                <textarea id="postContent" rows="14" class="w-full resize-none rounded-3xl border border-slate-200 p-5 text-sm leading-7 outline-none focus:border-point focus:ring-4 focus:ring-indigo-100" placeholder="문서 내용을 입력하세요"></textarea>
+            </div>
+        </div>
+
+        <div class="flex flex-col-reverse gap-2 border-t border-slate-200 p-6 sm:flex-row sm:justify-end">
+            <button onclick="closePostModal()" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50">취소</button>
+            <button onclick="savePost()" class="rounded-2xl bg-slate-950 px-6 py-3 text-sm font-black text-white hover:bg-slate-800">저장</button>
+        </div>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div id="detailModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
+        <div class="flex items-start justify-between border-b border-slate-200 p-6">
+            <div>
+                <div id="detailCategory" class="mb-3 inline-flex rounded-full bg-indigo-100 px-3 py-1 text-xs font-black text-indigo-700"></div>
+                <h3 id="detailTitle" class="text-2xl font-black text-slate-950"></h3>
+                <p id="detailMeta" class="mt-2 text-sm text-slate-500"></p>
+            </div>
+            <button onclick="closeDetailModal()" class="rounded-2xl bg-slate-100 p-3 text-slate-500 hover:bg-slate-200">
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+        <div class="scrollbar-thin max-h-[70vh] overflow-y-auto p-6">
+            <div id="detailTags" class="mb-5 flex flex-wrap gap-2"></div>
+            <pre id="detailContent" class="whitespace-pre-wrap rounded-3xl bg-slate-50 p-6 text-sm leading-7 text-slate-700"></pre>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-6 left-1/2 z-[60] hidden -translate-x-1/2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-2xl"></div>
+
+<script>
+    const today = '2026.05.03';
+    let currentCategory = '전체';
+    let posts = [];
+
+    const samplePosts = [
+        {
+            id: 1004,
+            category: '업무매뉴얼',
+            title: 'BOM 계산 검증 자동화 업무 절차',
+            author: '김영환',
+            content: 'BOM 계산 및 검증 업무에서 반복적으로 발생하는 수작업 TEST, BOM 비교, 오류 확인 업무를 자동화하기 위한 업무 절차입니다.\n\n1. 현장번호 입력\n2. 기준 BOM 조회\n3. 계산 BOM 비교\n4. 오류 후보 추출\n5. 담당자 검토 결과 기록',
+            tags: ['BOM', '자동화', '검증'],
+            date: '2026.05.03',
+            views: 328,
+            comments: 8,
+            edited: true
+        },
+        {
+            id: 1003,
+            category: '회의록',
+            title: '레이아웃 도면 사양과 영업사양 비교 회의록',
+            author: '홍재민',
+            content: 'ECO 상신 전 레이아웃도면 사양과 영업사양을 비교 검증하는 방안에 대해 논의했습니다.\n\n핵심 내용:\n- 검증 이력 저장 필요\n- CRM/SAP 사양 DB와 PLM 사양값 비교 검토\n- 불일치 발생 시 ECO 전송 제한 검토',
+            tags: ['PLM', 'ECO', '사양비교'],
+            date: '2026.05.02',
+            views: 214,
+            comments: 4,
+            edited: false
+        },
+        {
+            id: 1002,
+            category: '검토자료',
+            title: '자재 연계 분석 화면 개선 아이디어',
+            author: '박민수',
+            content: '특정 자재가 수배될 때 함께 수배되는 자재를 분석하기 위한 화면 개선 아이디어입니다.\n\n필요 기능:\n- 자재번호 기준 검색\n- 영업사양 조건별 필터\n- 연계 자재 리스트 표시\n- 관계도 시각화',
+            tags: ['자재', '분석', 'UI'],
+            date: '2026.05.01',
+            views: 167,
+            comments: 2,
+            edited: true
+        },
+        {
+            id: 1001,
+            category: '공지사항',
+            title: '팀 문서 게시판 운영 안내',
+            author: '관리자',
+            content: '본 게시판은 팀원들이 자유롭게 문서를 작성하고 공유하기 위한 공간입니다.\n\n운영 기준:\n- 별도 결재 없음\n- 누구나 작성 가능\n- 본인이 작성한 글은 수정 및 삭제 가능\n- 중요한 변경사항은 댓글 또는 변경 이력으로 공유 권장',
+            tags: ['공지', '운영기준'],
+            date: '2026.04.30',
+            views: 452,
+            comments: 12,
+            edited: false
+        }
+    ];
+
+    function resetSampleData() {
+        posts = JSON.parse(JSON.stringify(samplePosts));
+        renderPostList();
+        showToast('샘플 데이터가 초기화되었습니다.');
+    }
+
+    function setCategory(category) {
+        currentCategory = category;
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.className = 'category-btn flex w-full items-center justify-between rounded-2xl px-4 py-3 font-bold text-slate-300 hover:bg-white/10';
+        });
+        event.currentTarget.className = 'category-btn active flex w-full items-center justify-between rounded-2xl bg-white px-4 py-3 font-black text-slate-950';
+        renderPostList();
+    }
+
+    function getFilteredPosts() {
+        const keyword = document.getElementById('searchInput')?.value.trim().toLowerCase() || '';
+        const sort = document.getElementById('sortSelect')?.value || 'latest';
+
+        let result = posts.filter(post => {
+            const categoryMatched = currentCategory === '전체' || post.category === currentCategory;
+            const searchText = `${post.title} ${post.author} ${post.content} ${post.tags.join(' ')}`.toLowerCase();
+            return categoryMatched && searchText.includes(keyword);
+        });
+
+        if (sort === 'latest') result.sort((a, b) => b.id - a.id);
+        if (sort === 'views') result.sort((a, b) => b.views - a.views);
+        if (sort === 'comments') result.sort((a, b) => b.comments - a.comments);
+        return result;
+    }
+
+    function renderPostList() {
+        const list = document.getElementById('postList');
+        const filtered = getFilteredPosts();
+        list.innerHTML = '';
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<div class="p-10 text-center text-sm text-slate-500">등록된 글이 없습니다.</div>';
+        }
+
+        filtered.forEach((post, index) => {
+            const row = document.createElement('article');
+            row.className = 'grid gap-3 px-5 py-5 transition hover:bg-slate-50 xl:grid-cols-[90px_140px_1fr_130px_110px_130px_190px] xl:items-center';
+            row.innerHTML = `
+          <div class="flex items-center justify-between xl:block">
+            <span class="text-xs font-black text-slate-400 xl:hidden">번호</span>
+            <span class="font-black text-slate-500">${post.id}</span>
+          </div>
+          <div class="flex items-center justify-between xl:block">
+            <span class="text-xs font-black text-slate-400 xl:hidden">분류</span>
+            <span class="rounded-full ${categoryColor(post.category)} px-3 py-1 text-xs font-black">${post.category}</span>
+          </div>
+          <div class="min-w-0">
+            <button onclick="openDetailModal(${post.id})" class="block max-w-full truncate text-left text-lg font-black text-slate-950 hover:text-point">${escapeHtml(post.title)}</button>
+            <p class="mt-1 line-clamp-1 text-sm text-slate-500">${escapeHtml(post.content)}</p>
+            <div class="mt-2 flex flex-wrap gap-1">
+              ${post.tags.map(tag => `<span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500">#${escapeHtml(tag)}</span>`).join('')}
+              ${post.edited ? '<span class="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-black text-amber-700">수정됨</span>' : ''}
+            </div>
+          </div>
+          <div class="flex items-center justify-between text-sm xl:block">
+            <span class="text-xs font-black text-slate-400 xl:hidden">작성자</span>
+            <span class="font-bold text-slate-700">${escapeHtml(post.author)}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm text-slate-500 xl:block">
+            <span class="text-xs font-black text-slate-400 xl:hidden">조회/댓글</span>
+            <span>${post.views} / ${post.comments}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm text-slate-500 xl:block">
+            <span class="text-xs font-black text-slate-400 xl:hidden">작성일</span>
+            <span>${post.date}</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="openDetailModal(${post.id})" class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-200">보기</button>
+            <button onclick="openEditModal(${post.id})" class="rounded-xl bg-indigo-100 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-200">수정</button>
+            <button onclick="deletePost(${post.id})" class="rounded-xl bg-rose-100 px-3 py-2 text-xs font-black text-rose-700 hover:bg-rose-200">삭제</button>
+          </div>
+        `;
+            list.appendChild(row);
+        });
+
+        updateCounts();
+        lucide.createIcons();
+    }
+
+    function updateCounts() {
+        const count = category => posts.filter(p => category === '전체' || p.category === category).length;
+        const totalComments = posts.reduce((sum, p) => sum + p.comments, 0);
+        const edited = posts.filter(p => p.edited).length;
+        const todayCount = posts.filter(p => p.date === today).length;
+
+        document.getElementById('countAll').textContent = count('전체');
+        document.getElementById('countManual').textContent = count('업무매뉴얼');
+        document.getElementById('countMeeting').textContent = count('회의록');
+        document.getElementById('countNotice').textContent = count('공지사항');
+        document.getElementById('countReview').textContent = count('검토자료');
+        document.getElementById('summaryTotal').textContent = posts.length;
+        document.getElementById('summaryToday').textContent = todayCount;
+        document.getElementById('summaryComment').textContent = totalComments;
+        document.getElementById('summaryEdit').textContent = edited;
+    }
+
+    function openWriteModal() {
+        document.getElementById('modalTitle').textContent = '글 작성';
+        document.getElementById('postId').value = '';
+        document.getElementById('postTitle').value = '';
+        document.getElementById('postCategory').value = '업무매뉴얼';
+        document.getElementById('postAuthor').value = '김영환';
+        document.getElementById('postTags').value = '';
+        document.getElementById('postContent').value = '';
+        openModal('postModal');
+    }
+
+    function openEditModal(id) {
+        const post = posts.find(p => p.id === id);
+        if (!post) return;
+        document.getElementById('modalTitle').textContent = '글 수정';
+        document.getElementById('postId').value = post.id;
+        document.getElementById('postTitle').value = post.title;
+        document.getElementById('postCategory').value = post.category;
+        document.getElementById('postAuthor').value = post.author;
+        document.getElementById('postTags').value = post.tags.join(', ');
+        document.getElementById('postContent').value = post.content;
+        openModal('postModal');
+    }
+
+    function savePost() {
+        const idValue = document.getElementById('postId').value;
+        const title = document.getElementById('postTitle').value.trim();
+        const category = document.getElementById('postCategory').value;
+        const author = document.getElementById('postAuthor').value.trim() || '작성자 없음';
+        const tags = document.getElementById('postTags').value.split(',').map(t => t.trim()).filter(Boolean);
+        const content = document.getElementById('postContent').value.trim();
+
+        if (!title) {
+            showToast('제목을 입력하세요.');
+            return;
+        }
+        if (!content) {
+            showToast('내용을 입력하세요.');
+            return;
+        }
+
+        if (idValue) {
+            const post = posts.find(p => p.id === Number(idValue));
+            post.title = title;
+            post.category = category;
+            post.author = author;
+            post.tags = tags;
+            post.content = content;
+            post.edited = true;
+            post.date = today;
+            showToast('글이 수정되었습니다.');
+        } else {
+            posts.unshift({
+                id: Date.now(),
+                category,
+                title,
+                author,
+                content,
+                tags,
+                date: today,
+                views: 0,
+                comments: 0,
+                edited: false
+            });
+            showToast('글이 작성되었습니다.');
+        }
+
+        closePostModal();
+        renderPostList();
+    }
+
+    function deletePost(id) {
+        const post = posts.find(p => p.id === id);
+        if (!post) return;
+        if (!confirm(`'${post.title}' 글을 삭제하시겠습니까?`)) return;
+        posts = posts.filter(p => p.id !== id);
+        renderPostList();
+        showToast('글이 삭제되었습니다.');
+    }
+
+    function openDetailModal(id) {
+        const post = posts.find(p => p.id === id);
+        if (!post) return;
+        post.views += 1;
+        document.getElementById('detailCategory').textContent = post.category;
+        document.getElementById('detailTitle').textContent = post.title;
+        document.getElementById('detailMeta').textContent = `작성자 ${post.author} · 작성일 ${post.date} · 조회 ${post.views} · 댓글 ${post.comments}`;
+        document.getElementById('detailTags').innerHTML = post.tags.map(tag => `<span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500">#${escapeHtml(tag)}</span>`).join('');
+        document.getElementById('detailContent').textContent = post.content;
+        openModal('detailModal');
+        renderPostList();
+    }
+
+    function closePostModal() {
+        closeModal('postModal');
+    }
+
+    function closeDetailModal() {
+        closeModal('detailModal');
+    }
+
+    function openModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        lucide.createIcons();
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function categoryColor(category) {
+        if (category === '업무매뉴얼') return 'bg-indigo-100 text-indigo-700';
+        if (category === '회의록') return 'bg-emerald-100 text-emerald-700';
+        if (category === '공지사항') return 'bg-rose-100 text-rose-700';
+        if (category === '검토자료') return 'bg-amber-100 text-amber-700';
+        return 'bg-slate-100 text-slate-700';
+    }
+
+    function escapeHtml(text) {
+        return String(text)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.remove('hidden');
+        clearTimeout(window.toastTimer);
+        window.toastTimer = setTimeout(() => toast.classList.add('hidden'), 1800);
+    }
+
+    resetSampleData();
+    lucide.createIcons();
+</script>
+</body>
+</html>

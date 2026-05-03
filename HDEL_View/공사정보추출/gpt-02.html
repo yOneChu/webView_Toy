@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PLM E/L 3D 현장 검색</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        plm: {
+                            navy: '#0F172A',
+                            blue: '#2563EB',
+                            cyan: '#06B6D4',
+                            green: '#10B981'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { overflow: hidden; }
+        #threeCanvas { width: 100%; height: 100%; display: block; }
+        .glass {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(14px);
+        }
+        .dark-glass {
+            background: rgba(15, 23, 42, 0.86);
+            backdrop-filter: blur(16px);
+        }
+        .scrollbar-thin::-webkit-scrollbar { width: 7px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-800">
+
+<div class="h-screen w-screen grid grid-cols-[410px_1fr]">
+
+    <!-- 좌측 검색 패널 -->
+    <aside class="h-screen bg-white border-r border-slate-200 flex flex-col shadow-2xl z-20">
+
+        <div class="px-6 py-5 bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center ring-1 ring-white/20">
+                    <i class="fa-solid fa-cube text-2xl text-cyan-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight">E/L 3D 현장 검색</h1>
+                    <p class="text-xs text-blue-100 mt-1">PLM Search + Three.js Visual Navigator</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto scrollbar-thin px-5 py-5 space-y-5">
+
+            <!-- 제품 구분 -->
+            <section class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </span>
+                    <h2 class="font-bold text-slate-900">제품 구분</h2>
+                </div>
+
+                <select id="productType" class="w-full h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="엘리베이터">엘리베이터</option>
+                    <option value="에스컬레이터">에스컬레이터</option>
+                    <option value="무빙워크">무빙워크</option>
+                </select>
+            </section>
+
+            <!-- 3D 시각화 기준 -->
+            <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center">
+                        <i class="fa-solid fa-vr-cardboard"></i>
+                    </span>
+                    <h2 class="font-bold text-slate-900">3D 표시 기준</h2>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="block">
+                        <span class="text-xs font-bold text-slate-500">현장 분류</span>
+                        <select id="viewMode" onchange="applyViewMode()" class="mt-1 w-full h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="speed">속도 기준</option>
+                            <option value="floor">층수 기준</option>
+                            <option value="status">상태 기준</option>
+                        </select>
+                    </label>
+
+                    <label class="flex items-center justify-between gap-3 rounded-xl bg-slate-50 border border-slate-200 px-3 py-3">
+                        <span class="text-sm font-semibold text-slate-700">검색 결과와 3D 연동</span>
+                        <input id="sync3d" type="checkbox" checked class="w-5 h-5 accent-blue-600">
+                    </label>
+                </div>
+            </section>
+
+            <!-- 영업사양 -->
+            <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                            <i class="fa-solid fa-sliders"></i>
+                        </span>
+                        <h2 class="font-bold text-slate-900">영업사양 조건</h2>
+                    </div>
+                    <button onclick="addSpecRow()" class="text-xs font-bold px-3 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700">
+                        <i class="fa-solid fa-plus mr-1"></i>추가
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-[1fr_1fr_34px] gap-2 text-xs font-bold text-slate-500 mb-2 px-1">
+                    <div>특성 CODE</div>
+                    <div>값 CODE</div>
+                    <div></div>
+                </div>
+
+                <div id="specContainer" class="space-y-2"></div>
+
+                <div class="mt-4 grid grid-cols-2 gap-2">
+                    <button onclick="quickPreset('highSpeed')" class="h-10 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-sm font-bold">고속 E/L</button>
+                    <button onclick="quickPreset('mrl')" class="h-10 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-sm font-bold">MRL</button>
+                    <button onclick="quickPreset('domestic')" class="h-10 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-sm font-bold">국내</button>
+                    <button onclick="quickPreset('overseas')" class="h-10 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-sm font-bold">해외</button>
+                </div>
+            </section>
+
+            <!-- 기간 조건 -->
+            <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
+                        <i class="fa-regular fa-calendar-days"></i>
+                    </span>
+                    <h2 class="font-bold text-slate-900">기간 조건</h2>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <label>
+                        <span class="text-xs font-bold text-slate-500">START DATE</span>
+                        <input id="startDate" type="date" class="mt-1 w-full h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </label>
+                    <label>
+                        <span class="text-xs font-bold text-slate-500">END DATE</span>
+                        <input id="endDate" type="date" class="mt-1 w-full h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </label>
+                </div>
+
+                <label class="flex items-center gap-2 mt-4 text-sm font-semibold cursor-pointer">
+                    <input id="oneYearCheck" type="checkbox" onchange="setOneYearDate()" class="w-4 h-4 accent-blue-600">
+                    최근 1년 기준 조회
+                </label>
+            </section>
+        </div>
+
+        <div class="p-5 border-t border-slate-200 bg-white">
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="resetSearch()" class="h-12 rounded-xl border border-slate-300 font-bold hover:bg-slate-100">
+                    <i class="fa-solid fa-rotate-left mr-2"></i>초기화
+                </button>
+                <button onclick="searchProject()" class="h-12 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-200">
+                    <i class="fa-solid fa-magnifying-glass mr-2"></i>Search
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 우측 3D + 결과 영역 -->
+    <main class="relative h-screen overflow-hidden">
+        <canvas id="threeCanvas"></canvas>
+
+        <!-- 상단 HUD -->
+        <div class="absolute left-6 right-6 top-5 z-10 flex items-start justify-between gap-4">
+            <div class="dark-glass text-white rounded-3xl px-6 py-5 shadow-2xl border border-white/10 max-w-[650px]">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-cyan-400/20 text-cyan-300 flex items-center justify-center">
+                        <i class="fa-solid fa-building text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-extrabold">3D 현장 탐색 뷰</h2>
+                        <p class="text-sm text-slate-300 mt-1">현장을 3D 빌딩 카드로 배치하여 속도, 층수, 상태를 직관적으로 비교합니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-3 min-w-[560px]">
+                <div class="glass rounded-2xl px-4 py-3 shadow-xl border border-white/50">
+                    <p class="text-xs font-bold text-slate-500">TOTAL</p>
+                    <p id="totalCount" class="text-2xl font-extrabold text-slate-900">0</p>
+                </div>
+                <div class="glass rounded-2xl px-4 py-3 shadow-xl border border-white/50">
+                    <p class="text-xs font-bold text-slate-500">DOMESTIC</p>
+                    <p id="domesticCount" class="text-2xl font-extrabold text-blue-600">0</p>
+                </div>
+                <div class="glass rounded-2xl px-4 py-3 shadow-xl border border-white/50">
+                    <p class="text-xs font-bold text-slate-500">OVERSEAS</p>
+                    <p id="overseasCount" class="text-2xl font-extrabold text-emerald-600">0</p>
+                </div>
+                <div class="glass rounded-2xl px-4 py-3 shadow-xl border border-white/50">
+                    <p class="text-xs font-bold text-slate-500">SPEC</p>
+                    <p id="conditionCount" class="text-2xl font-extrabold text-purple-600">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3D 조작 안내 -->
+        <div class="absolute left-6 bottom-6 z-10 dark-glass text-white rounded-3xl px-5 py-4 shadow-2xl border border-white/10 w-[360px]">
+            <h3 class="font-extrabold mb-2"><i class="fa-solid fa-computer-mouse mr-2 text-cyan-300"></i>3D 조작 방법</h3>
+            <div class="text-sm text-slate-300 leading-7">
+                <p>마우스 드래그: 회전</p>
+                <p>휠: 확대 / 축소</p>
+                <p>빌딩 클릭: 현장 상세 정보 확인</p>
+            </div>
+        </div>
+
+        <!-- 우측 상세 패널 -->
+        <section id="detailPanel" class="absolute right-6 top-[132px] bottom-6 z-10 w-[410px] glass rounded-3xl shadow-2xl border border-white/60 overflow-hidden flex flex-col">
+            <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="font-extrabold text-slate-900">
+                    <i class="fa-solid fa-list-check mr-2 text-blue-600"></i>현장 상세 / 결과
+                </h3>
+                <button onclick="focusAllProjects()" class="text-xs font-bold px-3 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800">전체 보기</button>
+            </div>
+
+            <div id="selectedProject" class="p-5 border-b border-slate-200 bg-white/70">
+                <p class="text-sm text-slate-500">3D 빌딩을 클릭하면 현장 상세 정보가 표시됩니다.</p>
+            </div>
+
+            <div class="px-5 py-3 bg-slate-50/70 border-b border-slate-200">
+                <div class="relative">
+                    <input id="resultKeyword" oninput="filterResultList()" type="text" placeholder="결과 내 검색: 현장번호, 현장명" class="w-full h-10 rounded-xl border border-slate-300 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
+                </div>
+            </div>
+
+            <div id="resultList" class="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-3">
+                <div class="text-center text-slate-400 py-16">
+                    <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
+                    <p>Search 버튼을 클릭하면 결과가 표시됩니다.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script>
+    const specContainer = document.getElementById('specContainer');
+    let projects = [];
+    let filteredProjects = [];
+
+    let scene, camera, renderer, controls, raycaster, mouse;
+    let projectGroup;
+    let projectMeshes = [];
+    let selectedMesh = null;
+
+    const statusPalette = {
+        '설계진행': 0x2563eb,
+        'BOM완료': 0x10b981,
+        '검토중': 0xf59e0b,
+        '보류': 0xef4444
+    };
+
+    function initThree() {
+        const canvas = document.getElementById('threeCanvas');
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a);
+        scene.fog = new THREE.Fog(0x0f172a, 30, 95);
+
+        camera = new THREE.PerspectiveCamera(55, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+        camera.position.set(22, 24, 32);
+
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.maxPolarAngle = Math.PI / 2.1;
+        controls.minDistance = 14;
+        controls.maxDistance = 80;
+
+        raycaster = new THREE.Raycaster();
+        mouse = new THREE.Vector2();
+
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334155, 0.75);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
+        dirLight.position.set(16, 28, 14);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        const ambient = new THREE.AmbientLight(0x60a5fa, 0.22);
+        scene.add(ambient);
+
+        createGridFloor();
+        createAxisLabels();
+
+        projectGroup = new THREE.Group();
+        scene.add(projectGroup);
+
+        window.addEventListener('resize', onWindowResize);
+        renderer.domElement.addEventListener('click', onCanvasClick);
+
+        animate();
+    }
+
+    function createGridFloor() {
+        const floorGeo = new THREE.PlaneGeometry(90, 90);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.95, metalness: 0.1 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        const grid = new THREE.GridHelper(90, 45, 0x2563eb, 0x1e293b);
+        grid.position.y = 0.02;
+        scene.add(grid);
+    }
+
+    function createAxisLabels() {
+        const rings = [8, 16, 24, 32];
+        rings.forEach((r) => {
+            const curve = new THREE.EllipseCurve(0, 0, r, r, 0, Math.PI * 2);
+            const points = curve.getPoints(100).map(p => new THREE.Vector3(p.x, 0.04, p.y));
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color: 0x1d4ed8, transparent: true, opacity: 0.25 });
+            const line = new THREE.LineLoop(geometry, material);
+            scene.add(line);
+        });
+    }
+
+    function clearProjects3D() {
+        projectMeshes.forEach(item => {
+            projectGroup.remove(item.group);
+            item.group.traverse(obj => {
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) obj.material.dispose();
+            });
+        });
+        projectMeshes = [];
+        selectedMesh = null;
+    }
+
+    function renderProjects3D(data) {
+        clearProjects3D();
+
+        const viewMode = document.getElementById('viewMode').value;
+        const count = data.length;
+        const radius = Math.max(10, count * 1.65);
+
+        data.forEach((project, index) => {
+            const angle = (index / count) * Math.PI * 2;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            const height = getBuildingHeight(project, viewMode);
+            const color = getBuildingColor(project, viewMode);
+
+            const group = new THREE.Group();
+            group.position.set(x, 0, z);
+            group.userData.project = project;
+
+            const baseGeo = new THREE.CylinderGeometry(1.55, 1.55, 0.28, 32);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.75, metalness: 0.2 });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = 0.14;
+            base.castShadow = true;
+            base.receiveShadow = true;
+            group.add(base);
+
+            const bodyGeo = new THREE.BoxGeometry(1.9, height, 1.9);
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color,
+                roughness: 0.38,
+                metalness: 0.18,
+                emissive: color,
+                emissiveIntensity: 0.08
+            });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = height / 2 + 0.28;
+            body.castShadow = true;
+            body.receiveShadow = true;
+            body.userData.project = project;
+            body.userData.type = 'project-building';
+            group.add(body);
+
+            addBuildingWindows(group, height);
+            addElevatorCore(group, height);
+            addProjectLabel(group, project.projectNo);
+
+            const markerGeo = new THREE.SphereGeometry(0.22, 16, 16);
+            const markerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: color, emissiveIntensity: 0.7 });
+            const marker = new THREE.Mesh(markerGeo, markerMat);
+            marker.position.set(0, height + 0.9, 0);
+            marker.userData.project = project;
+            marker.userData.type = 'project-marker';
+            group.add(marker);
+
+            projectGroup.add(group);
+            projectMeshes.push({ group, body, marker, project, originalColor: color });
+        });
+    }
+
+    function addBuildingWindows(group, height) {
+        const rows = Math.max(3, Math.floor(height / 0.8));
+        const windowMat = new THREE.MeshStandardMaterial({ color: 0xe0f2fe, emissive: 0x38bdf8, emissiveIntensity: 0.18 });
+
+        for (let i = 0; i < rows; i++) {
+            const y = 0.85 + i * 0.72;
+            [-0.52, 0.52].forEach(x => {
+                const winGeo = new THREE.BoxGeometry(0.36, 0.18, 0.035);
+                const win = new THREE.Mesh(winGeo, windowMat);
+                win.position.set(x, y, 0.972);
+                group.add(win);
+            });
+        }
+    }
+
+    function addElevatorCore(group, height) {
+        const coreGeo = new THREE.BoxGeometry(0.46, height + 0.1, 0.08);
+        const coreMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, emissive: 0x93c5fd, emissiveIntensity: 0.16 });
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        core.position.set(0, height / 2 + 0.32, 1.02);
+        group.add(core);
+    }
+
+    function addProjectLabel(group, text) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'rgba(15,23,42,0.82)';
+        roundRect(ctx, 20, 20, 472, 88, 22);
+        ctx.fill();
+        ctx.font = 'bold 40px Arial';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 256, 66);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const sprite = new THREE.Sprite(material);
+        sprite.position.set(0, 0.25, 2.05);
+        sprite.scale.set(4.4, 1.1, 1);
+        group.add(sprite);
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+
+    function getBuildingHeight(project, mode) {
+        if (mode === 'floor') return Math.max(2.5, project.floorCount * 0.22);
+        if (mode === 'speed') return Math.max(2.5, project.speedValue * 0.055);
+        if (project.status === 'BOM완료') return 7;
+        if (project.status === '설계진행') return 5.5;
+        if (project.status === '검토중') return 4.5;
+        return 3.5;
+    }
+
+    function getBuildingColor(project, mode) {
+        if (mode === 'status') return statusPalette[project.status] || 0x64748b;
+        if (mode === 'speed') {
+            if (project.speedValue >= 150) return 0xef4444;
+            if (project.speedValue >= 105) return 0x2563eb;
+            return 0x10b981;
+        }
+        if (project.floorCount >= 35) return 0x8b5cf6;
+        if (project.floorCount >= 20) return 0x2563eb;
+        return 0x10b981;
+    }
+
+    function onCanvasClick(event) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const clickableObjects = [];
+        projectMeshes.forEach(item => {
+            clickableObjects.push(item.body);
+            clickableObjects.push(item.marker);
+        });
+
+        const intersects = raycaster.intersectObjects(clickableObjects, false);
+        if (intersects.length > 0) {
+            const project = intersects[0].object.userData.project;
+            selectProject(project.projectNo);
+        }
+    }
+
+    function selectProject(projectNo) {
+        const item = projectMeshes.find(x => x.project.projectNo === projectNo);
+        if (!item) return;
+
+        if (selectedMesh) {
+            selectedMesh.body.scale.set(1, 1, 1);
+            selectedMesh.marker.scale.set(1, 1, 1);
+        }
+
+        selectedMesh = item;
+        item.body.scale.set(1.16, 1.04, 1.16);
+        item.marker.scale.set(1.7, 1.7, 1.7);
+
+        const worldPosition = new THREE.Vector3();
+        item.group.getWorldPosition(worldPosition);
+        controls.target.copy(worldPosition);
+
+        renderSelectedProject(item.project);
+        highlightResultCard(projectNo);
+    }
+
+    function renderSelectedProject(project) {
+        document.getElementById('selectedProject').innerHTML = `
+            <div class="space-y-4">
+                <div>
+                    <p class="text-xs font-bold text-blue-600">SELECTED PROJECT</p>
+                    <h4 class="text-xl font-extrabold text-slate-900 mt-1">${project.projectNo}</h4>
+                    <p class="text-sm text-slate-600 mt-1">${project.projectName}</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                        <p class="text-xs font-bold text-slate-500">기종</p>
+                        <p class="font-bold text-slate-900 mt-1">${project.model}</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                        <p class="text-xs font-bold text-slate-500">속도</p>
+                        <p class="font-bold text-slate-900 mt-1">${project.speed}</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                        <p class="text-xs font-bold text-slate-500">층수</p>
+                        <p class="font-bold text-slate-900 mt-1">${project.floor}</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                        <p class="text-xs font-bold text-slate-500">상태</p>
+                        <p class="font-bold text-slate-900 mt-1">${project.status}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function highlightResultCard(projectNo) {
+        document.querySelectorAll('.project-card').forEach(card => {
+            card.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
+            if (card.dataset.projectNo === projectNo) {
+                card.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    }
+
+    function focusAllProjects() {
+        controls.target.set(0, 0, 0);
+        camera.position.set(22, 24, 32);
+        if (selectedMesh) {
+            selectedMesh.body.scale.set(1, 1, 1);
+            selectedMesh.marker.scale.set(1, 1, 1);
+            selectedMesh = null;
+        }
+        document.getElementById('selectedProject').innerHTML = '<p class="text-sm text-slate-500">3D 빌딩을 클릭하면 현장 상세 정보가 표시됩니다.</p>';
+    }
+
+    function onWindowResize() {
+        const canvas = document.getElementById('threeCanvas');
+        camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        projectMeshes.forEach((item, index) => {
+            item.marker.position.y += Math.sin(Date.now() * 0.002 + index) * 0.0009;
+        });
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    function addSpecRow(code = '', value = '') {
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-[1fr_1fr_34px] gap-2';
+        row.innerHTML = `
+            <input type="text" value="${code}" placeholder="예: SPEED" class="spec-code h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <input type="text" value="${value}" placeholder="예: 105" class="spec-value h-10 rounded-xl border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button onclick="removeSpecRow(this)" class="h-10 rounded-xl bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        `;
+        specContainer.appendChild(row);
+    }
+
+    function removeSpecRow(button) {
+        button.parentElement.remove();
+        if (specContainer.children.length === 0) addSpecRow();
+    }
+
+    function getSpecConditions() {
+        const codes = document.querySelectorAll('.spec-code');
+        const values = document.querySelectorAll('.spec-value');
+        const conditions = [];
+
+        codes.forEach((codeInput, index) => {
+            const code = codeInput.value.trim();
+            const value = values[index].value.trim();
+            if (code || value) conditions.push({ code, value });
+        });
+        return conditions;
+    }
+
+    function searchProject() {
+        const conditions = getSpecConditions();
+        document.getElementById('conditionCount').innerText = conditions.length;
+
+        projects = makeSampleProjects();
+        filteredProjects = applyLocalFilter(projects, conditions);
+
+        updateSummary(filteredProjects);
+        renderResultList(filteredProjects);
+        renderProjects3D(filteredProjects);
+        focusAllProjects();
+
+        console.log('서버 전송용 검색 조건', {
+            productType: document.getElementById('productType').value,
+            startDate: document.getElementById('startDate').value,
+            endDate: document.getElementById('endDate').value,
+            conditions
+        });
+
+        /*
+        실제 PLM 연동 예시
+
+        fetch('/plm/el/search3d', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                productType: document.getElementById('productType').value,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
+                viewMode: document.getElementById('viewMode').value,
+                conditions
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            projects = data;
+            filteredProjects = data;
+            updateSummary(data);
+            renderResultList(data);
+            renderProjects3D(data);
+        });
+        */
+    }
+
+    function applyLocalFilter(data, conditions) {
+        if (conditions.length === 0) return data;
+
+        return data.filter(project => {
+            return conditions.every(cond => {
+                const code = cond.code.toUpperCase();
+                const value = cond.value.toUpperCase();
+
+                if (!code && !value) return true;
+                if (code === 'SPEED') return String(project.speedValue).includes(value);
+                if (code === 'NATION') return project.nation.toUpperCase().includes(value);
+                if (code === 'MODEL') return project.model.toUpperCase().includes(value);
+                if (code === 'STATUS') return project.status.toUpperCase().includes(value);
+                if (code === 'MRL') return project.model.toUpperCase().includes('MRL');
+
+                return true;
+            });
+        });
+    }
+
+    function updateSummary(data) {
+        document.getElementById('totalCount').innerText = data.length;
+        document.getElementById('domesticCount').innerText = data.filter(x => x.region === '국내').length;
+        document.getElementById('overseasCount').innerText = data.filter(x => x.region === '해외').length;
+    }
+
+    function renderResultList(data) {
+        const list = document.getElementById('resultList');
+        if (data.length === 0) {
+            list.innerHTML = '<div class="text-center text-slate-400 py-16"><i class="fa-regular fa-face-frown text-4xl mb-3"></i><p>조회된 현장이 없습니다.</p></div>';
+            return;
+        }
+
+        list.innerHTML = data.map(project => `
+            <button data-project-no="${project.projectNo}" onclick="selectProject('${project.projectNo}')" class="project-card text-left w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md hover:border-blue-300 transition">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold text-blue-600">${project.projectNo}</p>
+                        <h4 class="font-extrabold text-slate-900 mt-1">${project.projectName}</h4>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-extrabold ${getStatusClass(project.status)}">${project.status}</span>
+                </div>
+                <div class="grid grid-cols-4 gap-2 mt-4 text-xs">
+                    <div class="rounded-xl bg-slate-50 p-2">
+                        <p class="text-slate-400 font-bold">기종</p>
+                        <p class="font-bold text-slate-800 mt-1">${project.model}</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 p-2">
+                        <p class="text-slate-400 font-bold">속도</p>
+                        <p class="font-bold text-slate-800 mt-1">${project.speed}</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 p-2">
+                        <p class="text-slate-400 font-bold">층수</p>
+                        <p class="font-bold text-slate-800 mt-1">${project.floorCount}F</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 p-2">
+                        <p class="text-slate-400 font-bold">지역</p>
+                        <p class="font-bold text-slate-800 mt-1">${project.region}</p>
+                    </div>
+                </div>
+            </button>
+        `).join('');
+    }
+
+    function getStatusClass(status) {
+        if (status === '설계진행') return 'bg-blue-100 text-blue-700';
+        if (status === 'BOM완료') return 'bg-emerald-100 text-emerald-700';
+        if (status === '검토중') return 'bg-orange-100 text-orange-700';
+        return 'bg-red-100 text-red-700';
+    }
+
+    function filterResultList() {
+        const keyword = document.getElementById('resultKeyword').value.trim().toLowerCase();
+        const data = filteredProjects.filter(x =>
+            x.projectNo.toLowerCase().includes(keyword) ||
+            x.projectName.toLowerCase().includes(keyword)
+        );
+        renderResultList(data);
+        if (document.getElementById('sync3d').checked) renderProjects3D(data);
+    }
+
+    function applyViewMode() {
+        if (filteredProjects.length > 0) renderProjects3D(filteredProjects);
+    }
+
+    function quickPreset(type) {
+        specContainer.innerHTML = '';
+        if (type === 'highSpeed') {
+            addSpecRow('SPEED', '150');
+            addSpecRow('MODEL', 'WBHS');
+        } else if (type === 'mrl') {
+            addSpecRow('MODEL', 'MRL');
+        } else if (type === 'domestic') {
+            addSpecRow('NATION', 'KR');
+        } else if (type === 'overseas') {
+            addSpecRow('NATION', 'OVERSEA');
+        }
+    }
+
+    function resetSearch() {
+        document.getElementById('productType').value = '엘리베이터';
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = formatDate(new Date());
+        document.getElementById('oneYearCheck').checked = false;
+        document.getElementById('viewMode').value = 'speed';
+        document.getElementById('resultKeyword').value = '';
+
+        specContainer.innerHTML = '';
+        for (let i = 0; i < 4; i++) addSpecRow();
+
+        projects = [];
+        filteredProjects = [];
+        updateSummary([]);
+        document.getElementById('conditionCount').innerText = '0';
+        clearProjects3D();
+        focusAllProjects();
+        document.getElementById('resultList').innerHTML = '<div class="text-center text-slate-400 py-16"><i class="fa-regular fa-folder-open text-4xl mb-3"></i><p>Search 버튼을 클릭하면 결과가 표시됩니다.</p></div>';
+    }
+
+    function setOneYearDate() {
+        if (!document.getElementById('oneYearCheck').checked) return;
+        const end = new Date();
+        const start = new Date();
+        start.setFullYear(end.getFullYear() - 1);
+        document.getElementById('startDate').value = formatDate(start);
+        document.getElementById('endDate').value = formatDate(end);
+    }
+
+    function formatDate(date) {
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function makeSampleProjects() {
+        return [
+            { projectNo: 'N27799L01', projectName: '서울 강남 오피스', model: 'WBSS', speed: '105 m/min', speedValue: 105, floor: 'B3~25F', floorCount: 25, region: '국내', nation: 'KR', status: '설계진행' },
+            { projectNo: 'N27801L02', projectName: '부산 복합타워', model: 'WBHS', speed: '150 m/min', speedValue: 150, floor: 'B5~42F', floorCount: 42, region: '국내', nation: 'KR', status: 'BOM완료' },
+            { projectNo: 'E55120L01', projectName: 'Vietnam Office Tower', model: 'MRL', speed: '90 m/min', speedValue: 90, floor: 'B2~18F', floorCount: 18, region: '해외', nation: 'OVERSEA', status: '검토중' },
+            { projectNo: 'E55121L02', projectName: 'Saudi Metro Station', model: 'WBHS', speed: '180 m/min', speedValue: 180, floor: 'B4~38F', floorCount: 38, region: '해외', nation: 'OVERSEA', status: '설계진행' },
+            { projectNo: 'N27915L01', projectName: '판교 R&D 센터', model: 'MRL', speed: '60 m/min', speedValue: 60, floor: 'B2~12F', floorCount: 12, region: '국내', nation: 'KR', status: '검토중' },
+            { projectNo: 'N28001L03', projectName: '송도 바이오 캠퍼스', model: 'WBSS', speed: '120 m/min', speedValue: 120, floor: 'B3~30F', floorCount: 30, region: '국내', nation: 'KR', status: 'BOM완료' },
+            { projectNo: 'E55230L01', projectName: 'Indonesia Mall', model: 'MRL', speed: '75 m/min', speedValue: 75, floor: 'B1~10F', floorCount: 10, region: '해외', nation: 'OVERSEA', status: '보류' },
+            { projectNo: 'N28111L01', projectName: '대전 스마트 병원', model: 'WBSS', speed: '105 m/min', speedValue: 105, floor: 'B2~22F', floorCount: 22, region: '국내', nation: 'KR', status: '설계진행' }
+        ];
+    }
+
+    window.onload = function () {
+        initThree();
+        resetSearch();
+    };
+</script>
+</body>
+</html>

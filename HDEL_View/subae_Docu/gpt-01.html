@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>팀 문서 공유 게시판 UI 샘플</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef6ff',
+                            100: '#d9ebff',
+                            500: '#2f80ed',
+                            600: '#1f6fd2',
+                            700: '#185bb0'
+                        }
+                    },
+                    boxShadow: {
+                        soft: '0 18px 45px rgba(15, 23, 42, 0.08)'
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="hidden w-72 shrink-0 border-r border-slate-200 bg-white/90 p-6 lg:block">
+        <div class="mb-8 flex items-center gap-3">
+            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-600 text-lg font-black text-white shadow-lg">D</div>
+            <div>
+                <h1 class="text-lg font-bold text-slate-900">DocBoard</h1>
+                <p class="text-xs text-slate-500">팀 문서 작성 · 공유</p>
+            </div>
+        </div>
+
+        <button class="mb-6 w-full rounded-2xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/20 transition hover:bg-brand-700" onclick="openEditor()">
+            + 새 문서 작성
+        </button>
+
+        <nav class="space-y-1 text-sm">
+            <button class="flex w-full items-center justify-between rounded-xl bg-brand-50 px-4 py-3 font-semibold text-brand-700">
+                <span>전체 문서</span><span class="rounded-full bg-white px-2 py-0.5 text-xs">128</span>
+            </button>
+            <button class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-slate-600 hover:bg-slate-50">
+                <span>공지 / 표준</span><span class="text-xs text-slate-400">21</span>
+            </button>
+            <button class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-slate-600 hover:bg-slate-50">
+                <span>업무 매뉴얼</span><span class="text-xs text-slate-400">43</span>
+            </button>
+            <button class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-slate-600 hover:bg-slate-50">
+                <span>회의록</span><span class="text-xs text-slate-400">34</span>
+            </button>
+            <button class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-slate-600 hover:bg-slate-50">
+                <span>검토 요청</span><span class="text-xs text-slate-400">12</span>
+            </button>
+        </nav>
+
+        <div class="mt-8 rounded-3xl bg-slate-900 p-5 text-white shadow-soft">
+            <p class="text-sm font-semibold">이번 주 문서 활동</p>
+            <div class="mt-4 grid grid-cols-2 gap-3">
+                <div class="rounded-2xl bg-white/10 p-3">
+                    <p class="text-2xl font-bold">18</p>
+                    <p class="text-xs text-slate-300">신규 작성</p>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-3">
+                    <p class="text-2xl font-bold">46</p>
+                    <p class="text-xs text-slate-300">댓글</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 p-4 md:p-8">
+        <!-- Header -->
+        <header class="mb-6 rounded-3xl bg-white p-5 shadow-soft md:p-6">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                    <p class="text-sm font-medium text-brand-600">Team Collaboration Workspace</p>
+                    <h2 class="mt-1 text-2xl font-black text-slate-950 md:text-3xl">문서 공유 게시판</h2>
+                    <p class="mt-2 text-sm text-slate-500">업무 문서, 매뉴얼, 회의록, 검토 요청을 한 화면에서 관리합니다.</p>
+                </div>
+                <div class="flex flex-col gap-3 sm:flex-row">
+                    <div class="relative">
+                        <input id="searchInput" type="text" placeholder="문서명, 작성자, 태그 검색" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pl-10 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100 sm:w-80" oninput="filterDocs()" />
+                        <span class="absolute left-3 top-3 text-slate-400">⌕</span>
+                    </div>
+                    <button class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50" onclick="toggleView()">보기 전환</button>
+                </div>
+            </div>
+
+            <!-- Filter chips -->
+            <div class="mt-5 flex flex-wrap gap-2">
+                <button class="filter-chip active rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white" data-filter="all" onclick="setFilter('all')">전체</button>
+                <button class="filter-chip rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200" data-filter="검토중" onclick="setFilter('검토중')">검토중</button>
+                <button class="filter-chip rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200" data-filter="승인완료" onclick="setFilter('승인완료')">승인완료</button>
+                <button class="filter-chip rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200" data-filter="임시저장" onclick="setFilter('임시저장')">임시저장</button>
+                <button class="filter-chip rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200" data-filter="중요" onclick="setFilter('중요')">중요</button>
+            </div>
+        </header>
+
+        <!-- Summary cards -->
+        <section class="mb-6 grid gap-4 md:grid-cols-4">
+            <article class="rounded-3xl bg-white p-5 shadow-soft">
+                <p class="text-sm text-slate-500">전체 문서</p>
+                <p class="mt-2 text-3xl font-black text-slate-950">128</p>
+                <p class="mt-2 text-xs text-emerald-600">이번 달 +14건</p>
+            </article>
+            <article class="rounded-3xl bg-white p-5 shadow-soft">
+                <p class="text-sm text-slate-500">검토 대기</p>
+                <p class="mt-2 text-3xl font-black text-slate-950">12</p>
+                <p class="mt-2 text-xs text-amber-600">우선 확인 필요</p>
+            </article>
+            <article class="rounded-3xl bg-white p-5 shadow-soft">
+                <p class="text-sm text-slate-500">최근 수정</p>
+                <p class="mt-2 text-3xl font-black text-slate-950">37</p>
+                <p class="mt-2 text-xs text-blue-600">7일 기준</p>
+            </article>
+            <article class="rounded-3xl bg-white p-5 shadow-soft">
+                <p class="text-sm text-slate-500">미확인 댓글</p>
+                <p class="mt-2 text-3xl font-black text-slate-950">9</p>
+                <p class="mt-2 text-xs text-rose-600">답변 필요</p>
+            </article>
+        </section>
+
+        <div class="grid gap-6 xl:grid-cols-[1fr_380px]">
+            <!-- Document list -->
+            <section class="rounded-3xl bg-white p-4 shadow-soft md:p-6">
+                <div class="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h3 class="text-lg font-black text-slate-950">최근 문서</h3>
+                        <p class="text-sm text-slate-500">클릭하면 오른쪽 상세 영역에서 내용을 확인합니다.</p>
+                    </div>
+                    <select id="sortSelect" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none" onchange="sortDocs()">
+                        <option value="latest">최신순</option>
+                        <option value="comment">댓글 많은순</option>
+                        <option value="view">조회 많은순</option>
+                    </select>
+                </div>
+
+                <div id="documentList" class="grid gap-4"></div>
+            </section>
+
+            <!-- Detail panel -->
+            <aside class="rounded-3xl bg-white p-5 shadow-soft">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-black text-slate-950">문서 상세</h3>
+                    <button class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200" onclick="openEditor(selectedDoc)">수정</button>
+                </div>
+
+                <div id="detailPanel"></div>
+            </aside>
+        </div>
+    </main>
+</div>
+
+<!-- Editor Modal -->
+<div id="editorModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+    <div class="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <div class="flex items-center justify-between border-b border-slate-200 p-5">
+            <div>
+                <h3 class="text-xl font-black text-slate-950">문서 작성</h3>
+                <p class="text-sm text-slate-500">제목, 분류, 태그, 내용을 입력한 뒤 저장합니다.</p>
+            </div>
+            <button class="rounded-full bg-slate-100 px-3 py-2 text-slate-500 hover:bg-slate-200" onclick="closeEditor()">✕</button>
+        </div>
+
+        <div class="grid max-h-[76vh] gap-5 overflow-y-auto p-5 md:grid-cols-[1fr_280px]">
+            <div class="space-y-4">
+                <input id="editTitle" type="text" placeholder="문서 제목" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-lg font-bold outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100" />
+
+                <div class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                    <button class="rounded-xl bg-white px-3 py-2 text-sm font-semibold shadow-sm">B</button>
+                    <button class="rounded-xl bg-white px-3 py-2 text-sm font-semibold shadow-sm">I</button>
+                    <button class="rounded-xl bg-white px-3 py-2 text-sm font-semibold shadow-sm">목록</button>
+                    <button class="rounded-xl bg-white px-3 py-2 text-sm font-semibold shadow-sm">표</button>
+                    <button class="rounded-xl bg-white px-3 py-2 text-sm font-semibold shadow-sm">첨부</button>
+                </div>
+
+                <textarea id="editContent" rows="15" placeholder="문서 내용을 입력하세요. 예: 목적, 배경, 처리 절차, 주의사항, 담당자 등" class="w-full resize-none rounded-2xl border border-slate-200 p-4 text-sm leading-7 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"></textarea>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="mb-2 block text-sm font-bold text-slate-700">분류</label>
+                    <select id="editCategory" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none">
+                        <option>업무 매뉴얼</option>
+                        <option>회의록</option>
+                        <option>검토 요청</option>
+                        <option>공지 / 표준</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-bold text-slate-700">상태</label>
+                    <select id="editStatus" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none">
+                        <option>검토중</option>
+                        <option>승인완료</option>
+                        <option>임시저장</option>
+                        <option>중요</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-bold text-slate-700">태그</label>
+                    <input id="editTags" type="text" placeholder="예: PLM, BOM, 매뉴얼" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none" />
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-bold text-slate-700">공유 대상</label>
+                    <div class="space-y-2 rounded-2xl bg-slate-50 p-3 text-sm">
+                        <label class="flex items-center gap-2"><input type="checkbox" checked /> 설계팀</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" /> IT팀</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" /> 임원/팀장</label>
+                    </div>
+                </div>
+                <button class="w-full rounded-2xl bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-brand-500/20 hover:bg-brand-700" onclick="saveDoc()">저장하기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const docs = [
+        {
+            id: 1,
+            title: 'BOM 계산 검증 자동화 업무 시나리오',
+            category: '업무 매뉴얼',
+            status: '검토중',
+            author: '김영환',
+            date: '2026.05.03',
+            views: 324,
+            comments: 8,
+            important: true,
+            tags: ['BOM', '자동화', '검증'],
+            summary: 'BOM 계산 및 검증 업무에서 반복되는 수작업 TEST, 비교, 오류 확인을 자동화하기 위한 업무 흐름 정리 문서입니다.',
+            content: '1. 목적: 반복 검증 업무를 자동화하여 업무 시간을 단축한다.\n2. 범위: BOM 계산 결과 비교, 변경 라인 추적, 오류 후보 추출.\n3. 기대효과: 수작업 오류 감소, 검증 속도 향상, 변경 이력 추적 강화.'
+        },
+        {
+            id: 2,
+            title: 'PLM 레이아웃 사양 비교 검증 회의록',
+            category: '회의록',
+            status: '승인완료',
+            author: '홍재민',
+            date: '2026.05.02',
+            views: 188,
+            comments: 3,
+            important: false,
+            tags: ['PLM', '레이아웃', 'ECO'],
+            summary: '레이아웃도면 사양과 영업사양 비교 검증 기능의 연계 방식과 수행 트리거를 정리한 회의록입니다.',
+            content: '회의 주요 내용:\n- ECO 상신 전 사양 검증 필요\n- CRM/SAP 사양 DB와 PLM 사양값 비교 방안 검토\n- 검증 이력 저장 필요'
+        },
+        {
+            id: 3,
+            title: '로직 버전별 비교분석 기능 사용 가이드',
+            category: '업무 매뉴얼',
+            status: '중요',
+            author: '이서연',
+            date: '2026.05.01',
+            views: 412,
+            comments: 14,
+            important: true,
+            tags: ['로직', '버전비교', '가이드'],
+            summary: '로직 변경 시 수정·추가·삭제된 라인을 빠르게 확인하기 위한 기능 사용 방법입니다.',
+            content: '사용 절차:\n1. 이전 버전과 현재 버전을 선택한다.\n2. 비교 실행 버튼을 클릭한다.\n3. 변경 라인을 확인하고 영향 범위를 검토한다.'
+        },
+        {
+            id: 4,
+            title: '부품 연계 자재 분석 화면 기획안',
+            category: '검토 요청',
+            status: '임시저장',
+            author: '박민수',
+            date: '2026.04.30',
+            views: 97,
+            comments: 1,
+            important: false,
+            tags: ['자재', '분석', 'UI'],
+            summary: '하나의 자재가 수배될 때 함께 수배되는 연계 자재를 분석하기 위한 화면 기획 초안입니다.',
+            content: '기획 방향:\n- 자재 중심 네트워크 조회\n- 영업사양 조건별 연계 자재 분석\n- 설계자와 임원이 빠르게 이해할 수 있는 시각화 제공'
+        }
+    ];
+
+    let currentFilter = 'all';
+    let selectedDoc = docs[0];
+    let cardView = true;
+
+    const statusClass = {
+        '검토중': 'bg-amber-100 text-amber-700',
+        '승인완료': 'bg-emerald-100 text-emerald-700',
+        '임시저장': 'bg-slate-100 text-slate-600',
+        '중요': 'bg-rose-100 text-rose-700'
+    };
+
+    function renderDocs(list = docs) {
+        const container = document.getElementById('documentList');
+        container.innerHTML = '';
+
+        if (list.length === 0) {
+            container.innerHTML = `<div class="rounded-3xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500">검색 결과가 없습니다.</div>`;
+            return;
+        }
+
+        list.forEach(doc => {
+            const item = document.createElement('article');
+            item.className = cardView
+                ? 'cursor-pointer rounded-3xl border border-slate-200 bg-white p-5 transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lg'
+                : 'cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-brand-200 hover:shadow-md';
+            item.onclick = () => selectDoc(doc.id);
+
+            item.innerHTML = `
+          <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div class="min-w-0">
+              <div class="mb-2 flex flex-wrap items-center gap-2">
+                ${doc.important ? '<span class="rounded-full bg-rose-50 px-2 py-1 text-xs font-bold text-rose-600">중요</span>' : ''}
+                <span class="rounded-full ${statusClass[doc.status]} px-2 py-1 text-xs font-bold">${doc.status}</span>
+                <span class="rounded-full bg-brand-50 px-2 py-1 text-xs font-bold text-brand-700">${doc.category}</span>
+              </div>
+              <h4 class="truncate text-lg font-black text-slate-950">${doc.title}</h4>
+              <p class="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">${doc.summary}</p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                ${doc.tags.map(tag => `<span class="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-500">#${tag}</span>`).join('')}
+              </div>
+            </div>
+            <div class="shrink-0 text-left text-xs text-slate-500 md:text-right">
+              <p class="font-semibold text-slate-700">${doc.author}</p>
+              <p>${doc.date}</p>
+              <p class="mt-3">조회 ${doc.views} · 댓글 ${doc.comments}</p>
+            </div>
+          </div>`;
+            container.appendChild(item);
+        });
+    }
+
+    function renderDetail() {
+        const panel = document.getElementById('detailPanel');
+        panel.innerHTML = `
+        <div class="rounded-3xl bg-slate-50 p-5">
+          <div class="mb-3 flex flex-wrap gap-2">
+            <span class="rounded-full ${statusClass[selectedDoc.status]} px-2 py-1 text-xs font-bold">${selectedDoc.status}</span>
+            <span class="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-600">${selectedDoc.category}</span>
+          </div>
+          <h4 class="text-xl font-black leading-8 text-slate-950">${selectedDoc.title}</h4>
+          <p class="mt-3 text-sm leading-6 text-slate-600">${selectedDoc.summary}</p>
+        </div>
+
+        <div class="mt-5 grid grid-cols-3 gap-3 text-center text-sm">
+          <div class="rounded-2xl bg-slate-50 p-3"><p class="text-lg font-black">${selectedDoc.views}</p><p class="text-xs text-slate-500">조회</p></div>
+          <div class="rounded-2xl bg-slate-50 p-3"><p class="text-lg font-black">${selectedDoc.comments}</p><p class="text-xs text-slate-500">댓글</p></div>
+          <div class="rounded-2xl bg-slate-50 p-3"><p class="text-lg font-black">${selectedDoc.tags.length}</p><p class="text-xs text-slate-500">태그</p></div>
+        </div>
+
+        <div class="mt-5 space-y-3 text-sm">
+          <div class="flex justify-between border-b border-slate-100 pb-3"><span class="text-slate-500">작성자</span><span class="font-semibold">${selectedDoc.author}</span></div>
+          <div class="flex justify-between border-b border-slate-100 pb-3"><span class="text-slate-500">작성일</span><span class="font-semibold">${selectedDoc.date}</span></div>
+          <div class="flex justify-between border-b border-slate-100 pb-3"><span class="text-slate-500">공유상태</span><span class="font-semibold text-brand-600">팀 공유</span></div>
+        </div>
+
+        <div class="mt-5 rounded-3xl border border-slate-200 p-4">
+          <p class="mb-3 text-sm font-black text-slate-950">본문 미리보기</p>
+          <pre class="whitespace-pre-wrap rounded-2xl bg-slate-50 p-4 text-sm leading-7 text-slate-600">${selectedDoc.content}</pre>
+        </div>
+
+        <div class="mt-5">
+          <p class="mb-3 text-sm font-black text-slate-950">댓글</p>
+          <div class="space-y-3">
+            <div class="rounded-2xl bg-slate-50 p-3 text-sm"><b>IT팀</b><p class="mt-1 text-slate-600">검증 트리거 조건을 조금 더 구체화하면 좋겠습니다.</p></div>
+            <div class="rounded-2xl bg-slate-50 p-3 text-sm"><b>설계팀</b><p class="mt-1 text-slate-600">현업 사용 절차 기준으로 보완하겠습니다.</p></div>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <input type="text" placeholder="댓글 입력" class="min-w-0 flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-brand-500" />
+            <button class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white">등록</button>
+          </div>
+        </div>`;
+    }
+
+    function selectDoc(id) {
+        selectedDoc = docs.find(doc => doc.id === id);
+        renderDetail();
+    }
+
+    function setFilter(filter) {
+        currentFilter = filter;
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.className = 'filter-chip rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200';
+        });
+        document.querySelector(`[data-filter="${filter}"]`).className = 'filter-chip active rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white';
+        filterDocs();
+    }
+
+    function filterDocs() {
+        const keyword = document.getElementById('searchInput').value.toLowerCase();
+        let filtered = docs.filter(doc => {
+            const text = `${doc.title} ${doc.author} ${doc.category} ${doc.status} ${doc.tags.join(' ')} ${doc.summary}`.toLowerCase();
+            const matchedKeyword = text.includes(keyword);
+            const matchedFilter = currentFilter === 'all' || doc.status === currentFilter || (currentFilter === '중요' && doc.important);
+            return matchedKeyword && matchedFilter;
+        });
+        renderDocs(filtered);
+    }
+
+    function sortDocs() {
+        const type = document.getElementById('sortSelect').value;
+        if (type === 'comment') docs.sort((a, b) => b.comments - a.comments);
+        if (type === 'view') docs.sort((a, b) => b.views - a.views);
+        if (type === 'latest') docs.sort((a, b) => b.id - a.id);
+        filterDocs();
+    }
+
+    function toggleView() {
+        cardView = !cardView;
+        filterDocs();
+    }
+
+    function openEditor(doc = null) {
+        document.getElementById('editorModal').classList.remove('hidden');
+        document.getElementById('editorModal').classList.add('flex');
+        document.getElementById('editTitle').value = doc ? doc.title : '';
+        document.getElementById('editContent').value = doc ? doc.content : '';
+        document.getElementById('editCategory').value = doc ? doc.category : '업무 매뉴얼';
+        document.getElementById('editStatus').value = doc ? doc.status : '검토중';
+        document.getElementById('editTags').value = doc ? doc.tags.join(', ') : '';
+    }
+
+    function closeEditor() {
+        document.getElementById('editorModal').classList.add('hidden');
+        document.getElementById('editorModal').classList.remove('flex');
+    }
+
+    function saveDoc() {
+        alert('샘플 UI입니다. 실제 저장은 백엔드 API 연동이 필요합니다.');
+        closeEditor();
+    }
+
+    renderDocs();
+    renderDetail();
+</script>
+</body>
+</html>
