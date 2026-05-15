@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>엘리베이터 정보 조회</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Handsontable CSS & JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.3.0/dist/handsontable.full.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.3.0/dist/handsontable.full.min.js"></script>
+
+    <style>
+        body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; }
+        .handsontable {
+            font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+            font-size: 13px;
+        }
+        .base-info-col { background-color: #f9fafb !important; }
+        .extra-info-col { background-color: #f0fdf4 !important; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+<div class="max-w-full mx-auto p-6">
+    <!-- 헤더 -->
+    <div class="mb-4">
+        <h1 class="text-2xl font-bold text-gray-800">엘리베이터 정보 조회</h1>
+        <p class="text-sm text-gray-500 mt-1">기본 정보를 조회한 후, 추가 정보를 항목별로 조회하여 같은 행의 열에 데이터를 추가합니다.</p>
+    </div>
+
+    <!-- 기본 검색조건 영역 -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 mb-4">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-gray-700 border-l-4 border-blue-500 pl-2">기본 검색 조건</h2>
+            <button id="btnAddBaseCondition"
+                    class="px-3 py-1 bg-blue-50 border border-blue-300 text-blue-700 text-xs rounded hover:bg-blue-100">
+                + 조건 추가
+            </button>
+        </div>
+
+        <!-- 동적으로 추가되는 검색조건 컨테이너 -->
+        <div id="baseConditionContainer" class="space-y-2">
+            <!-- 검색조건 행이 여기에 추가됩니다 -->
+        </div>
+
+        <div class="flex justify-end mt-4 gap-2">
+            <button id="btnReset"
+                    class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50">
+                초기화
+            </button>
+            <button id="btnSearch"
+                    class="px-5 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 font-medium">
+                조회
+            </button>
+        </div>
+    </div>
+
+    <!-- 추가 정보 검색조건 영역 -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 mb-4">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-gray-700 border-l-4 border-green-500 pl-2">
+                추가 정보 검색 조건
+                <span class="text-xs font-normal text-gray-500 ml-2">
+                        (조회 항목을 추가하면 표 우측에 컬럼이 추가됩니다)
+                    </span>
+            </h2>
+            <button id="btnAddExtraCondition"
+                    class="px-3 py-1 bg-green-50 border border-green-300 text-green-700 text-xs rounded hover:bg-green-100">
+                + 조건 추가
+            </button>
+        </div>
+
+        <!-- 동적으로 추가되는 추가정보 조회조건 컨테이너 -->
+        <div id="extraConditionContainer" class="space-y-2">
+            <!-- 추가정보 조회조건 행이 여기에 추가됩니다 -->
+        </div>
+
+        <div class="flex justify-between items-center mt-4">
+            <div class="text-xs text-gray-500">
+                ※ 좌측 표에서 행을 선택하면 해당 행에만 적용되며, 선택 없을 시 전체 행에 적용됩니다.<br>
+                ※ 조건 미입력 시 해당 항목의 전체 데이터를 조회합니다.
+            </div>
+            <div class="flex gap-2">
+                <button id="btnExtraReset"
+                        class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50">
+                    조건 초기화
+                </button>
+                <button id="btnExtraSearch"
+                        class="px-5 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 font-medium">
+                    추가 정보 조회
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 조회 결과 영역 -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-gray-700 border-l-4 border-gray-500 pl-2">
+                조회 결과 <span id="resultCount" class="text-xs font-normal text-gray-500 ml-1">(0건)</span>
+            </h2>
+            <div class="flex gap-2">
+                <button id="btnExport"
+                        class="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs rounded hover:bg-gray-50">
+                    CSV 내보내기
+                </button>
+            </div>
+        </div>
+        <div id="resultTable" class="border border-gray-200"></div>
+    </div>
+</div>
+
+<script>
+    /* ========================================================
+     * 1. 기본 검색조건 필드 정의 (사용자가 추가할 수 있는 조건 목록)
+     *    type: 'text' | 'select' | 'dateRange' | 'numberRange'
+     * ======================================================== */
+    const baseFieldDef = {
+        buildingName: { label: '건물명',  type: 'text',   placeholder: '예: 강남빌딩' },
+        unitNo:       { label: '호기',    type: 'text',   placeholder: '예: 1호기' },
+        region:       { label: '지역',    type: 'select', options: ['서울', '경기', '인천', '충북', '기타'] },
+        status:       { label: '상태',    type: 'select', options: ['운행중', '점검중', '고장'] },
+        manufacturer: { label: '제조사',  type: 'select', options: ['현대엘리베이터', 'OTIS', '티센크루프', '미쓰비시'] },
+        model:        { label: '모델명',  type: 'text',   placeholder: '예: HVS-2000' },
+        installDate:  { label: '설치일',  type: 'dateRange' },
+        capacity:     { label: '정원(인승)', type: 'numberRange' }
+    };
+
+    /* ========================================================
+     * 2. 추가 정보 검색조건 필드 정의
+     * ======================================================== */
+    const extraFieldDef = {
+        lastInspection: { label: '최근 점검일',         type: 'dateRange' },
+        nextInspection: { label: '차기 점검 예정일',     type: 'dateRange' },
+        manager:        { label: '담당 관리자',          type: 'text',   placeholder: '관리자명' },
+        contractEnd:    { label: '유지보수 계약 만료일', type: 'dateRange' },
+        failCount:      { label: '최근 1년 고장 건수',   type: 'numberRange' },
+        partsStatus:    { label: '주요 부품 상태',       type: 'select', options: ['양호', '주의', '교체필요'] }
+    };
+
+    // 추가 정보 컬럼 정의 (표시용)
+    const extraColumnsDef = {
+        lastInspection: { data: 'lastInspection',  title: '최근 점검일',         width: 110, readOnly: true, className: 'htCenter extra-info-col' },
+        nextInspection: { data: 'nextInspection',  title: '차기 점검 예정일',     width: 130, readOnly: true, className: 'htCenter extra-info-col' },
+        manager:        { data: 'manager',         title: '담당 관리자',          width: 110, readOnly: true, className: 'extra-info-col' },
+        contractEnd:    { data: 'contractEnd',     title: '유지보수 계약 만료일', width: 150, readOnly: true, className: 'htCenter extra-info-col' },
+        failCount:      { data: 'failCount',       title: '최근 1년 고장 건수',   width: 130, readOnly: true, className: 'htRight extra-info-col' },
+        partsStatus:    { data: 'partsStatus',     title: '주요 부품 상태',       width: 130, readOnly: true, className: 'htCenter extra-info-col' }
+    };
+
+    const baseColumns = [
+        { data: 'no',          title: 'No',         width: 50,  readOnly: true, className: 'htCenter base-info-col' },
+        { data: 'buildingName',title: '건물명',      width: 150, readOnly: true, className: 'base-info-col' },
+        { data: 'unitNo',      title: '호기',        width: 80,  readOnly: true, className: 'htCenter base-info-col' },
+        { data: 'model',       title: '모델명',      width: 140, readOnly: true, className: 'base-info-col' },
+        { data: 'manufacturer',title: '제조사',      width: 110, readOnly: true, className: 'base-info-col' },
+        { data: 'installDate', title: '설치일',      width: 110, readOnly: true, className: 'htCenter base-info-col' },
+        { data: 'capacity',    title: '정원(인승)',  width: 90,  readOnly: true, className: 'htRight base-info-col' },
+        { data: 'floors',      title: '운행 층',     width: 90,  readOnly: true, className: 'htCenter base-info-col' },
+        { data: 'region',      title: '지역',        width: 80,  readOnly: true, className: 'htCenter base-info-col' },
+        { data: 'status',      title: '상태',        width: 80,  readOnly: true, className: 'htCenter base-info-col' }
+    ];
+
+    let currentColumns = [...baseColumns];
+    const addedExtraCols = new Set();
+    let hot = null;
+    let currentData = [];
+    let conditionUidCounter = 0; // 동적 조건 row의 고유 ID
+
+    /* ========================================================
+     * 3. Handsontable 초기화
+     * ======================================================== */
+    function initTable() {
+        const container = document.getElementById('resultTable');
+        hot = new Handsontable(container, {
+            data: [],
+            columns: currentColumns,
+            colHeaders: currentColumns.map(c => c.title),
+            rowHeaders: true,
+            width: '100%',
+            height: 500,
+            stretchH: 'none',
+            manualColumnResize: true,
+            manualRowResize: true,
+            contextMenu: true,
+            filters: true,
+            dropdownMenu: true,
+            columnSorting: true,
+            selectionMode: 'multiple',
+            fixedColumnsStart: 3,
+            licenseKey: 'non-commercial-and-evaluation'
+        });
+    }
+
+    function rebuildColumns() {
+        hot.updateSettings({
+            columns: currentColumns,
+            colHeaders: currentColumns.map(c => c.title)
+        });
+    }
+
+    /* ========================================================
+     * 4. 조건 입력 행 생성 (공통)
+     *    type: 'base' | 'extra'
+     * ======================================================== */
+    function createConditionRow(type) {
+        const fieldDef = type === 'base' ? baseFieldDef : extraFieldDef;
+        const containerId = type === 'base' ? 'baseConditionContainer' : 'extraConditionContainer';
+        const uid = `cond_${type}_${++conditionUidCounter}`;
+
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2 condition-row';
+        row.dataset.uid = uid;
+        row.dataset.type = type;
+
+        // 1) 필드 선택 셀렉트박스
+        const fieldSelect = document.createElement('select');
+        fieldSelect.className = 'field-select w-40 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400';
+        fieldSelect.innerHTML = '<option value="">-- 항목 선택 --</option>' +
+            Object.entries(fieldDef).map(([key, def]) =>
+                `<option value="${key}">${def.label}</option>`
+            ).join('');
+        row.appendChild(fieldSelect);
+
+        // 2) 값 입력 영역 (필드 선택 시 동적 생성)
+        const valueWrap = document.createElement('div');
+        valueWrap.className = 'value-wrap flex-1 flex items-center gap-2';
+        row.appendChild(valueWrap);
+
+        // 3) 삭제 버튼
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'px-2 py-1 bg-white border border-red-300 text-red-600 text-xs rounded hover:bg-red-50';
+        removeBtn.textContent = '✕ 삭제';
+        removeBtn.addEventListener('click', () => row.remove());
+        row.appendChild(removeBtn);
+
+        // 필드 선택 변경 시 입력 UI 갱신
+        fieldSelect.addEventListener('change', () => {
+            valueWrap.innerHTML = '';
+            const fieldKey = fieldSelect.value;
+            if (!fieldKey) return;
+            const def = fieldDef[fieldKey];
+            renderValueInput(valueWrap, def);
+        });
+
+        document.getElementById(containerId).appendChild(row);
+    }
+
+    /* ========================================================
+     * 5. 값 입력 UI 렌더링 (필드 타입에 따라)
+     * ======================================================== */
+    function renderValueInput(wrap, def) {
+        switch (def.type) {
+            case 'text': {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'val-input flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400';
+                input.placeholder = def.placeholder || '';
+                input.dataset.role = 'value';
+                wrap.appendChild(input);
+                break;
+            }
+            case 'select': {
+                const sel = document.createElement('select');
+                sel.className = 'val-input flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400';
+                sel.dataset.role = 'value';
+                sel.innerHTML = '<option value="">전체</option>' +
+                    def.options.map(o => `<option value="${o}">${o}</option>`).join('');
+                wrap.appendChild(sel);
+                break;
+            }
+            case 'dateRange': {
+                const from = document.createElement('input');
+                from.type = 'date';
+                from.className = 'val-input px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400';
+                from.dataset.role = 'from';
+                const sep = document.createElement('span');
+                sep.className = 'text-gray-500 text-sm';
+                sep.textContent = '~';
+                const to = document.createElement('input');
+                to.type = 'date';
+                to.className = 'val-input px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400';
+                to.dataset.role = 'to';
+                wrap.appendChild(from);
+                wrap.appendChild(sep);
+                wrap.appendChild(to);
+                break;
+            }
+            case 'numberRange': {
+                const min = document.createElement('input');
+                min.type = 'number';
+                min.min = '0';
+                min.placeholder = '최소';
+                min.className = 'val-input w-28 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400';
+                min.dataset.role = 'min';
+                const sep = document.createElement('span');
+                sep.className = 'text-gray-500 text-sm';
+                sep.textContent = '~';
+                const max = document.createElement('input');
+                max.type = 'number';
+                max.min = '0';
+                max.placeholder = '최대';
+                max.className = 'val-input w-28 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400';
+                max.dataset.role = 'max';
+                wrap.appendChild(min);
+                wrap.appendChild(sep);
+                wrap.appendChild(max);
+                break;
+            }
+        }
+    }
+
+    /* ========================================================
+     * 6. 조건 행에서 조건 값 추출
+     * ======================================================== */
+    function extractConditions(containerId, fieldDef) {
+        const conditions = {};
+        document.querySelectorAll(`#${containerId} .condition-row`).forEach(row => {
+            const fieldSelect = row.querySelector('.field-select');
+            const fieldKey = fieldSelect.value;
+            if (!fieldKey) return;
+            const def = fieldDef[fieldKey];
+            const cond = {};
+
+            switch (def.type) {
+                case 'text':
+                case 'select': {
+                    const v = row.querySelector('[data-role="value"]')?.value.trim() ?? '';
+                    if (v) cond.value = v;
+                    break;
+                }
+                case 'dateRange': {
+                    const from = row.querySelector('[data-role="from"]')?.value ?? '';
+                    const to   = row.querySelector('[data-role="to"]')?.value ?? '';
+                    if (from) cond.from = from;
+                    if (to)   cond.to   = to;
+                    break;
+                }
+                case 'numberRange': {
+                    const min = row.querySelector('[data-role="min"]')?.value ?? '';
+                    const max = row.querySelector('[data-role="max"]')?.value ?? '';
+                    if (min !== '') cond.min = Number(min);
+                    if (max !== '') cond.max = Number(max);
+                    break;
+                }
+            }
+
+            // 동일 필드가 여러번 선택되면 마지막 조건만 적용 (또는 병합 가능)
+            conditions[fieldKey] = { ...(conditions[fieldKey] || {}), ...cond, type: def.type };
+        });
+        return conditions;
+    }
+
+    /* ========================================================
+     * 7. 기본 조회 데이터 (Mock - 실제 API 호출로 대체)
+     * ======================================================== */
+    function fetchBaseData(conditions) {
+        const allData = [
+            { no: 1, buildingName: '강남빌딩',   unitNo: '1호기', model: 'HVS-2000',  manufacturer: '현대엘리베이터', installDate: '2015-03-12', capacity: 15, floors: 'B2-20F', region: '서울', status: '운행중' },
+            { no: 2, buildingName: '강남빌딩',   unitNo: '2호기', model: 'HVS-2000',  manufacturer: '현대엘리베이터', installDate: '2015-03-12', capacity: 15, floors: 'B2-20F', region: '서울', status: '운행중' },
+            { no: 3, buildingName: '판교타워',   unitNo: '1호기', model: 'OTIS-Gen2', manufacturer: 'OTIS',           installDate: '2018-08-25', capacity: 20, floors: 'B3-25F', region: '경기', status: '운행중' },
+            { no: 4, buildingName: '판교타워',   unitNo: '2호기', model: 'OTIS-Gen2', manufacturer: 'OTIS',           installDate: '2018-08-25', capacity: 20, floors: 'B3-25F', region: '경기', status: '점검중' },
+            { no: 5, buildingName: '인천스퀘어', unitNo: '1호기', model: 'TK-Synergy', manufacturer: '티센크루프',    installDate: '2020-11-03', capacity: 13, floors: '1-15F',  region: '인천', status: '운행중' },
+            { no: 6, buildingName: '충주센터',   unitNo: '1호기', model: 'MS-Premier',manufacturer: '미쓰비시',        installDate: '2019-06-18', capacity: 17, floors: 'B1-18F', region: '충북', status: '고장'   },
+            { no: 7, buildingName: '충주센터',   unitNo: '2호기', model: 'MS-Premier',manufacturer: '미쓰비시',        installDate: '2019-06-18', capacity: 17, floors: 'B1-18F', region: '충북', status: '운행중' }
+        ];
+
+        return allData.filter(row => {
+            for (const [fieldKey, cond] of Object.entries(conditions)) {
+                if (!applyCondition(row[fieldKey], cond)) return false;
+            }
+            return true;
+        });
+    }
+
+    /* ========================================================
+     * 8. 조건 적용 공통 함수
+     * ======================================================== */
+    function applyCondition(value, cond) {
+        if (value === undefined || value === null) return false;
+        switch (cond.type) {
+            case 'text':
+                if (cond.value && !String(value).includes(cond.value)) return false;
+                return true;
+            case 'select':
+                if (cond.value && value !== cond.value) return false;
+                return true;
+            case 'dateRange':
+                if (cond.from && value < cond.from) return false;
+                if (cond.to   && value > cond.to)   return false;
+                return true;
+            case 'numberRange':
+                if (cond.min !== undefined && Number(value) < cond.min) return false;
+                if (cond.max !== undefined && Number(value) > cond.max) return false;
+                return true;
+            default:
+                return true;
+        }
+    }
+
+    /* ========================================================
+     * 9. 추가 정보 데이터 (Mock)
+     * ======================================================== */
+    const mockExtraData = {
+        lastInspection: { 1:'2026-04-15', 2:'2026-04-15', 3:'2026-03-22', 4:'2026-05-01', 5:'2026-04-08', 6:'2026-05-10', 7:'2026-04-30' },
+        nextInspection: { 1:'2026-10-15', 2:'2026-10-15', 3:'2026-09-22', 4:'2026-11-01', 5:'2026-10-08', 6:'2026-11-10', 7:'2026-10-30' },
+        manager:        { 1:'김철수', 2:'김철수', 3:'이영희', 4:'이영희', 5:'박민수', 6:'정수진', 7:'정수진' },
+        contractEnd:    { 1:'2027-03-11', 2:'2027-03-11', 3:'2028-08-24', 4:'2028-08-24', 5:'2027-11-02', 6:'2026-06-17', 7:'2026-06-17' },
+        failCount:      { 1:1, 2:0, 3:2, 4:3, 5:0, 6:5, 7:1 },
+        partsStatus:    { 1:'양호', 2:'양호', 3:'양호', 4:'주의', 5:'양호', 6:'교체필요', 7:'양호' }
+    };
+
+    function fetchExtraValue(rowNo, colKey, cond) {
+        const value = mockExtraData[colKey]?.[rowNo];
+        if (value === undefined || value === null) return '';
+        // 조건이 있고 조건에 부합하지 않으면 빈 문자열 반환
+        if (cond && !applyCondition(value, cond)) return '';
+        return value;
+    }
+
+    /* ========================================================
+     * 10. 이벤트 - 조건 추가 버튼
+     * ======================================================== */
+    document.getElementById('btnAddBaseCondition').addEventListener('click', () => {
+        createConditionRow('base');
+    });
+    document.getElementById('btnAddExtraCondition').addEventListener('click', () => {
+        createConditionRow('extra');
+    });
+
+    /* ========================================================
+     * 11. 이벤트 - 기본 조회
+     * ======================================================== */
+    document.getElementById('btnSearch').addEventListener('click', () => {
+        const conditions = extractConditions('baseConditionContainer', baseFieldDef);
+        currentData = fetchBaseData(conditions);
+
+        // 추가 컬럼 초기화 (새 조회 시)
+        currentColumns = [...baseColumns];
+        addedExtraCols.clear();
+        rebuildColumns();
+
+        hot.loadData(currentData);
+        document.getElementById('resultCount').textContent = `(${currentData.length}건)`;
+    });
+
+    /* ========================================================
+     * 12. 이벤트 - 기본조건 초기화
+     * ======================================================== */
+    document.getElementById('btnReset').addEventListener('click', () => {
+        document.getElementById('baseConditionContainer').innerHTML = '';
+        createConditionRow('base');
+    });
+
+    /* ========================================================
+     * 13. 이벤트 - 추가 정보 조회
+     *     => 기존 표의 같은 행에, 우측에 컬럼을 추가하여 채움
+     * ======================================================== */
+    document.getElementById('btnExtraSearch').addEventListener('click', () => {
+        if (currentData.length === 0) {
+            alert('먼저 기본 조회를 실행해주세요.');
+            return;
+        }
+
+        const conditions = extractConditions('extraConditionContainer', extraFieldDef);
+        const targetCols = Object.keys(conditions);
+
+        if (targetCols.length === 0) {
+            alert('조회할 항목을 하나 이상 추가해주세요.');
+            return;
+        }
+
+        // 선택된 행 확인 (없으면 전체 행)
+        const selected = hot.getSelected();
+        let targetRows = [];
+        if (selected && selected.length > 0) {
+            const rowSet = new Set();
+            selected.forEach(range => {
+                const [r1, , r2] = range;
+                const from = Math.min(r1, r2);
+                const to   = Math.max(r1, r2);
+                for (let r = from; r <= to; r++) rowSet.add(r);
+            });
+            targetRows = [...rowSet];
+        } else {
+            targetRows = currentData.map((_, idx) => idx);
+        }
+
+        // 표에 컬럼이 없으면 우측에 추가
+        let columnsAdded = false;
+        targetCols.forEach(colKey => {
+            if (!addedExtraCols.has(colKey)) {
+                currentColumns.push(extraColumnsDef[colKey]);
+                addedExtraCols.add(colKey);
+                columnsAdded = true;
+            }
+        });
+        if (columnsAdded) rebuildColumns();
+
+        // 각 행 × 각 컬럼에 대해 데이터 조회 후 셀 업데이트
+        const changes = [];
+        targetRows.forEach(rowIdx => {
+            const rowData = hot.getSourceDataAtRow(rowIdx);
+            if (!rowData) return;
+            targetCols.forEach(colKey => {
+                const v = fetchExtraValue(rowData.no, colKey, conditions[colKey]);
+                changes.push([rowIdx, colKey, v]);
+            });
+        });
+
+        if (changes.length > 0) {
+            hot.setDataAtRowProp(changes);
+        }
+    });
+
+    /* ========================================================
+     * 14. 이벤트 - 추가조건 초기화
+     * ======================================================== */
+    document.getElementById('btnExtraReset').addEventListener('click', () => {
+        document.getElementById('extraConditionContainer').innerHTML = '';
+        createConditionRow('extra');
+    });
+
+    /* ========================================================
+     * 15. CSV 내보내기
+     * ======================================================== */
+    document.getElementById('btnExport').addEventListener('click', () => {
+        if (!hot || currentData.length === 0) {
+            alert('내보낼 데이터가 없습니다.');
+            return;
+        }
+        const headers = currentColumns.map(c => c.title);
+        const keys = currentColumns.map(c => c.data);
+        const rows = [];
+        for (let i = 0; i < hot.countRows(); i++) {
+            const r = hot.getSourceDataAtRow(i);
+            rows.push(keys.map(k => r[k] ?? ''));
+        }
+        const csv = [headers, ...rows]
+            .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `엘리베이터_조회결과_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    /* ========================================================
+     * 16. 초기 실행
+     * ======================================================== */
+    initTable();
+    // 페이지 로드 시 기본 조건 행 1개씩 미리 추가
+    createConditionRow('base');
+    createConditionRow('extra');
+</script>
+</body>
+</html>
