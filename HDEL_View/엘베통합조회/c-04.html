@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>엘리베이터 정보 Analystic </title>
+    <title>엘리베이터 정보 조회</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -19,15 +19,16 @@
             font-size: 13px;
         }
         .base-info-col { background-color: #f9fafb !important; }
-        .extra-info-col { background-color: #f0fdf4 !important; }
+        .part-col { background-color: #fef3c7 !important; }  /* 부품 컬럼 - 연한 노랑 */
+        .pid-col  { background-color: #dbeafe !important; }  /* PID 컬럼 - 연한 파랑 */
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
 <div class="max-w-full mx-auto p-6">
     <!-- 헤더 -->
     <div class="mb-4">
-        <h1 class="text-2xl font-bold text-gray-800">엘리베이터 정보 Analystic</h1>
-        <p class="text-sm text-gray-500 mt-1">기본 정보를 조회한 후, 추가 정보를 항목별로 조회하여 같은 행의 열에 데이터를 추가합니다.</p>
+        <h1 class="text-2xl font-bold text-gray-800">엘리베이터 정보 조회</h1>
+        <p class="text-sm text-gray-500 mt-1">기본 정보를 조회한 후, 부품/PID 정보를 추가 조회하여 같은 행의 열에 데이터를 추가합니다.</p>
     </div>
 
     <!-- 기본 검색조건 영역 -->
@@ -58,7 +59,7 @@
             <h2 class="text-sm font-semibold text-gray-700 border-l-4 border-green-500 pl-2">
                 추가 정보 검색 조건
                 <span class="text-xs font-normal text-gray-500 ml-2">
-                        (조회 항목을 추가하면 표 우측에 컬럼이 추가됩니다)
+                        (입력한 BLOCKNO / PID명이 헤더가 되어 표 우측에 컬럼이 추가됩니다)
                     </span>
             </h2>
             <button id="btnAddExtraCondition"
@@ -70,7 +71,8 @@
         <div class="flex justify-between items-center mt-4">
             <div class="text-xs text-gray-500">
                 ※ 좌측 표에서 행을 선택하면 해당 행에만 적용되며, 선택 없을 시 전체 행에 적용됩니다.<br>
-                ※ 조건 미입력 시 해당 항목의 전체 데이터를 조회합니다.
+                ※ 부품 조회: BLOCKNO에 해당하는 부품 값을 조회합니다.<br>
+                ※ PID 조회: PID명에 해당하는 값을 조회하며, RESULT값 입력 시 해당 값과 일치하는 경우만 표시됩니다.
             </div>
             <div class="flex gap-2">
                 <button id="btnExtraReset"
@@ -104,65 +106,45 @@
 
 <script>
     /* ========================================================
-     * 1. 연산자 정의
-     *    필드 타입별로 사용 가능한 연산자 목록을 정의
-     *    inputCount: 값 입력 컨트롤 개수 (0=값 불필요, 1=단일값, 2=범위)
+     * [기본 검색 조건] 연산자 정의 - 기존과 동일
      * ======================================================== */
     const operatorDef = {
-        eq:       { label: '같음',     inputCount: 1 },
-        ne:       { label: '같지 않음', inputCount: 1 },
-        contains: { label: '포함',     inputCount: 1 },
-        notContains: { label: '미포함', inputCount: 1 },
-        startsWith:  { label: '시작',  inputCount: 1 },
-        endsWith:    { label: '끝',    inputCount: 1 },
-        gt:       { label: '초과 (>)',   inputCount: 1 },
-        gte:      { label: '이상 (≥)',   inputCount: 1 },
-        lt:       { label: '미만 (<)',   inputCount: 1 },
-        lte:      { label: '이하 (≤)',   inputCount: 1 },
-        between:  { label: '범위',      inputCount: 2 },
-        notBetween: { label: '범위 외', inputCount: 2 },
-        isEmpty:  { label: '값 없음',   inputCount: 0 },
-        isNotEmpty: { label: '값 있음', inputCount: 0 }
+        eq:          { label: '같음',       inputCount: 1 },
+        ne:          { label: '같지 않음',   inputCount: 1 },
+        contains:    { label: '포함',       inputCount: 1 },
+        notContains: { label: '미포함',     inputCount: 1 },
+        startsWith:  { label: '시작',       inputCount: 1 },
+        endsWith:    { label: '끝',         inputCount: 1 },
+        gt:          { label: '초과 (>)',   inputCount: 1 },
+        gte:         { label: '이상 (≥)',   inputCount: 1 },
+        lt:          { label: '미만 (<)',   inputCount: 1 },
+        lte:         { label: '이하 (≤)',   inputCount: 1 },
+        between:     { label: '범위',       inputCount: 2 },
+        notBetween:  { label: '범위 외',     inputCount: 2 },
+        isEmpty:     { label: '값 없음',     inputCount: 0 },
+        isNotEmpty:  { label: '값 있음',     inputCount: 0 }
     };
 
-    // 필드 타입별 사용 가능한 연산자 목록 (UI 표시 순서)
     const operatorsByType = {
-        text:        ['contains', 'notContains', 'eq', 'ne', 'startsWith', 'endsWith', 'isEmpty', 'isNotEmpty'],
-        select:      ['eq', 'ne', 'isEmpty', 'isNotEmpty'],
-        date:        ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'between', 'notBetween', 'isEmpty', 'isNotEmpty'],
-        number:      ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'between', 'notBetween', 'isEmpty', 'isNotEmpty']
+        text:   ['contains', 'notContains', 'eq', 'ne', 'startsWith', 'endsWith', 'isEmpty', 'isNotEmpty'],
+        select: ['eq', 'ne', 'isEmpty', 'isNotEmpty'],
+        date:   ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'between', 'notBetween', 'isEmpty', 'isNotEmpty'],
+        number: ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'between', 'notBetween', 'isEmpty', 'isNotEmpty']
     };
 
-    /* ========================================================
-     * 2. 기본/추가 검색조건 필드 정의
-     *    type: 'text' | 'select' | 'date' | 'number'
-     * ======================================================== */
     const baseFieldDef = {
-        ABRAND:       { label: '브랜드',     type: 'select', options: ['NEX','NEX_MR', 'NEX_MRL', 'NEO_MRL', 'NEWYZER', 'LUXEN', 'LUXEN_1', 'LUXEN_2', 'IXEL', 'THEEL'] },
-        ASPSCD:       {label: '생산거점(설계)', type: 'select', options: ['KR00','KC01','KC02','GAL_HD'] },
-        ATYP:         {label: '기종',        type: 'select', options: ['GTLX','GTLX_R','GTLX_E','GTSS','GTSS_E','SSVF','WBSS','SUVF'] },
-        ETM:          { label: '권상기',     type: 'text',   placeholder: '예: GH35C' },
-        ACAPA:        { label: '용량',       type: 'number'},
-        AUSE:         { label: '용도',       type: 'select', options: ['PC', 'HC', 'EP', 'EH', 'OB','OH','BD','ND','FT','BH'] },
-        status:       { label: '상태',       type: 'select', options: ['Released', 'wip'] },
-        EOPBP:        { label: 'OPB; 위치',     type: 'text',   placeholder: '예: HVS-2000' },
-        EMFD:      { label: '◎ MC FOUND;방향',     type: 'select',   options: ['90','SL','SR'] },
-        modDate:      { label: '수정일',     type: 'number' },
+        buildingName: { label: '건물명',     type: 'text',   placeholder: '예: 강남빌딩' },
+        unitNo:       { label: '호기',       type: 'text',   placeholder: '예: 1호기' },
+        region:       { label: '지역',       type: 'select', options: ['서울', '경기', '인천', '충북', '기타'] },
+        status:       { label: '상태',       type: 'select', options: ['운행중', '점검중', '고장'] },
+        manufacturer: { label: '제조사',     type: 'select', options: ['현대엘리베이터', 'OTIS', '티센크루프', '미쓰비시'] },
+        model:        { label: '모델명',     type: 'text',   placeholder: '예: HVS-2000' },
         installDate:  { label: '설치일',     type: 'date' },
         capacity:     { label: '정원(인승)', type: 'number' }
     };
 
-    const extraFieldDef = {
-        lastInspection: { label: '최근 점검일',         type: 'date' },
-        nextInspection: { label: '차기 점검 예정일',     type: 'date' },
-        manager:        { label: '담당 관리자',          type: 'text', placeholder: '관리자명' },
-        contractEnd:    { label: '유지보수 계약 만료일', type: 'date' },
-        failCount:      { label: '최근 1년 고장 건수',   type: 'number' },
-        partsStatus:    { label: '주요 부품 상태',       type: 'select', options: ['양호', '주의', '교체필요'] }
-    };
-
     /* ========================================================
-     * 3. 표 컬럼 정의
+     * [기본 표 컬럼]
      * ======================================================== */
     const baseColumns = [
         { data: 'no',          title: 'No',         width: 50,  readOnly: true, className: 'htCenter base-info-col' },
@@ -177,23 +159,15 @@
         { data: 'status',      title: '상태',        width: 80,  readOnly: true, className: 'htCenter base-info-col' }
     ];
 
-    const extraColumnsDef = {
-        lastInspection: { data: 'lastInspection',  title: '최근 점검일',         width: 110, readOnly: true, className: 'htCenter extra-info-col' },
-        nextInspection: { data: 'nextInspection',  title: '차기 점검 예정일',     width: 130, readOnly: true, className: 'htCenter extra-info-col' },
-        manager:        { data: 'manager',         title: '담당 관리자',          width: 110, readOnly: true, className: 'extra-info-col' },
-        contractEnd:    { data: 'contractEnd',     title: '유지보수 계약 만료일', width: 150, readOnly: true, className: 'htCenter extra-info-col' },
-        failCount:      { data: 'failCount',       title: '최근 1년 고장 건수',   width: 130, readOnly: true, className: 'htRight extra-info-col' },
-        partsStatus:    { data: 'partsStatus',     title: '주요 부품 상태',       width: 130, readOnly: true, className: 'htCenter extra-info-col' }
-    };
-
     let currentColumns = [...baseColumns];
+    // 추가된 컬럼 추적 - key는 'part:BLOCKNO값' 또는 'pid:PID명' 형태
     const addedExtraCols = new Set();
     let hot = null;
     let currentData = [];
     let conditionUidCounter = 0;
 
     /* ========================================================
-     * 4. Handsontable 초기화
+     * Handsontable 초기화
      * ======================================================== */
     function initTable() {
         const container = document.getElementById('resultTable');
@@ -225,49 +199,38 @@
     }
 
     /* ========================================================
-     * 5. 조건 입력 행 생성
-     *    [필드 선택] [연산자 선택] [값 입력] [삭제]
+     * [기본 검색 조건] 조건 행 생성 - 기존과 동일
      * ======================================================== */
-    function createConditionRow(type) {
-        const fieldDef = type === 'base' ? baseFieldDef : extraFieldDef;
-        const containerId = type === 'base' ? 'baseConditionContainer' : 'extraConditionContainer';
-        const uid = `cond_${type}_${++conditionUidCounter}`;
-
+    function createBaseConditionRow() {
+        const uid = `cond_base_${++conditionUidCounter}`;
         const row = document.createElement('div');
         row.className = 'flex items-center gap-2 condition-row';
         row.dataset.uid = uid;
-        row.dataset.type = type;
 
-        // 1) 필드 선택
         const fieldSelect = document.createElement('select');
         fieldSelect.className = 'field-select w-40 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400';
         fieldSelect.innerHTML = '<option value="">-- 항목 선택 --</option>' +
-            Object.entries(fieldDef).map(([key, def]) =>
+            Object.entries(baseFieldDef).map(([key, def]) =>
                 `<option value="${key}">${def.label}</option>`
             ).join('');
         row.appendChild(fieldSelect);
 
-        // 2) 연산자 선택
         const opSelect = document.createElement('select');
         opSelect.className = 'op-select w-32 px-2 py-1.5 border border-gray-300 rounded text-sm bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-400';
         opSelect.disabled = true;
         opSelect.innerHTML = '<option value="">연산자</option>';
         row.appendChild(opSelect);
 
-        // 3) 값 입력 영역
         const valueWrap = document.createElement('div');
         valueWrap.className = 'value-wrap flex-1 flex items-center gap-2';
         row.appendChild(valueWrap);
 
-        // 4) 삭제 버튼
         const removeBtn = document.createElement('button');
         removeBtn.className = 'px-2 py-1 bg-white border border-red-300 text-red-600 text-xs rounded hover:bg-red-50';
         removeBtn.textContent = '✕';
-        removeBtn.title = '삭제';
         removeBtn.addEventListener('click', () => row.remove());
         row.appendChild(removeBtn);
 
-        // 필드 선택 시 연산자 목록 갱신
         fieldSelect.addEventListener('change', () => {
             const fieldKey = fieldSelect.value;
             valueWrap.innerHTML = '';
@@ -276,10 +239,8 @@
                 opSelect.disabled = true;
                 return;
             }
-            const def = fieldDef[fieldKey];
+            const def = baseFieldDef[fieldKey];
             const opList = operatorsByType[def.type] || [];
-
-            // 텍스트는 '포함'을, 그 외는 '같음'을 기본 연산자로
             const defaultOp = def.type === 'text' ? 'contains' : 'eq';
 
             opSelect.disabled = false;
@@ -287,31 +248,24 @@
             opSelect.innerHTML = opList.map(op =>
                 `<option value="${op}" ${op === defaultOp ? 'selected' : ''}>${operatorDef[op].label}</option>`
             ).join('');
-
-            renderValueInput(valueWrap, def, opSelect.value);
+            renderBaseValueInput(valueWrap, def, opSelect.value);
         });
 
-        // 연산자 변경 시 값 입력 UI 갱신 (inputCount가 달라질 수 있음)
         opSelect.addEventListener('change', () => {
             const fieldKey = fieldSelect.value;
             if (!fieldKey) return;
-            const def = fieldDef[fieldKey];
+            const def = baseFieldDef[fieldKey];
             valueWrap.innerHTML = '';
-            renderValueInput(valueWrap, def, opSelect.value);
+            renderBaseValueInput(valueWrap, def, opSelect.value);
         });
 
-        document.getElementById(containerId).appendChild(row);
+        document.getElementById('baseConditionContainer').appendChild(row);
     }
 
-    /* ========================================================
-     * 6. 값 입력 UI 렌더링 (필드 타입 + 연산자 inputCount에 따라)
-     * ======================================================== */
-    function renderValueInput(wrap, def, op) {
+    function renderBaseValueInput(wrap, def, op) {
         const opInfo = operatorDef[op];
         if (!opInfo) return;
         const count = opInfo.inputCount;
-
-        // 값 입력이 필요 없는 연산자 (isEmpty / isNotEmpty)
         if (count === 0) {
             const note = document.createElement('span');
             note.className = 'text-xs text-gray-500';
@@ -319,8 +273,6 @@
             wrap.appendChild(note);
             return;
         }
-
-        // 입력 컨트롤 생성 헬퍼
         const makeInput = (role, placeholder) => {
             let el;
             switch (def.type) {
@@ -348,11 +300,9 @@
             el.dataset.role = role;
             return el;
         };
-
         if (count === 1) {
             wrap.appendChild(makeInput('value'));
         } else if (count === 2) {
-            // 범위 입력: from ~ to
             wrap.appendChild(makeInput('from', '시작'));
             const sep = document.createElement('span');
             sep.className = 'text-gray-500 text-sm';
@@ -362,28 +312,23 @@
         }
     }
 
-    /* ========================================================
-     * 7. 조건 행에서 조건 값 추출
-     * ======================================================== */
-    function extractConditions(containerId, fieldDef) {
+    function extractBaseConditions() {
         const conditions = [];
-        document.querySelectorAll(`#${containerId} .condition-row`).forEach(row => {
+        document.querySelectorAll('#baseConditionContainer .condition-row').forEach(row => {
             const fieldKey = row.querySelector('.field-select')?.value;
             const op = row.querySelector('.op-select')?.value;
             if (!fieldKey || !op) return;
-
-            const def = fieldDef[fieldKey];
+            const def = baseFieldDef[fieldKey];
             const opInfo = operatorDef[op];
             const cond = { field: fieldKey, op, type: def.type };
-
             if (opInfo.inputCount === 1) {
                 const v = row.querySelector('[data-role="value"]')?.value ?? '';
-                if (v === '') return; // 값 없으면 조건 무시
+                if (v === '') return;
                 cond.value = v;
             } else if (opInfo.inputCount === 2) {
                 const from = row.querySelector('[data-role="from"]')?.value ?? '';
                 const to   = row.querySelector('[data-role="to"]')?.value ?? '';
-                if (from === '' || to === '') return; // 범위 둘 다 필요
+                if (from === '' || to === '') return;
                 cond.from = from;
                 cond.to = to;
             }
@@ -392,20 +337,12 @@
         return conditions;
     }
 
-    /* ========================================================
-     * 8. 조건 적용 (단일 조건 평가)
-     *    return: true = 통과, false = 제외
-     * ======================================================== */
     function applyOperator(rawValue, cond) {
         const { op, type } = cond;
-
-        // 빈 값 검사
         const isEmpty = rawValue === undefined || rawValue === null || rawValue === '';
         if (op === 'isEmpty')    return isEmpty;
         if (op === 'isNotEmpty') return !isEmpty;
-        if (isEmpty) return false; // 다른 연산자는 값이 비어있으면 false
-
-        // 타입별 비교
+        if (isEmpty) return false;
         if (type === 'number') {
             const v = Number(rawValue);
             if (op === 'between')    return v >= Number(cond.from) && v <= Number(cond.to);
@@ -420,7 +357,6 @@
                 case 'lte': return v <= cv;
             }
         } else if (type === 'date') {
-            // 날짜는 'YYYY-MM-DD' 문자열 비교로 충분
             const v = String(rawValue);
             if (op === 'between')    return v >= cond.from && v <= cond.to;
             if (op === 'notBetween') return !(v >= cond.from && v <= cond.to);
@@ -433,7 +369,6 @@
                 case 'lte': return v <= cond.value;
             }
         } else {
-            // text, select
             const v = String(rawValue);
             const cv = String(cond.value);
             switch (op) {
@@ -449,7 +384,112 @@
     }
 
     /* ========================================================
-     * 9. 기본 조회 (Mock - 실제 API 호출로 대체)
+     * ★ [추가 정보 검색 조건] 부품 / PID 조회 ★
+     * ======================================================== */
+    const extraTypeDef = {
+        part: { label: '부품' },
+        pid:  { label: 'PID' }
+    };
+
+    /**
+     * 추가 정보 검색 조건 행 생성
+     * - 부품 선택: [구분 ▼] [BLOCKNO 입력] [✕]
+     * - PID 선택:  [구분 ▼] [PID명 입력] [RESULT값 입력] [✕]
+     */
+    function createExtraConditionRow() {
+        const uid = `cond_extra_${++conditionUidCounter}`;
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2 condition-row';
+        row.dataset.uid = uid;
+
+        // 1) 구분 셀렉트박스 (부품 / PID)
+        const typeSelect = document.createElement('select');
+        typeSelect.className = 'extra-type-select w-32 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-green-400';
+        typeSelect.innerHTML = '<option value="">-- 구분 --</option>' +
+            Object.entries(extraTypeDef).map(([k, v]) =>
+                `<option value="${k}">${v.label}</option>`
+            ).join('');
+        row.appendChild(typeSelect);
+
+        // 2) 입력 영역 (구분에 따라 동적 생성)
+        const inputWrap = document.createElement('div');
+        inputWrap.className = 'extra-input-wrap flex-1 flex items-center gap-2';
+        row.appendChild(inputWrap);
+
+        // 3) 삭제 버튼
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'px-2 py-1 bg-white border border-red-300 text-red-600 text-xs rounded hover:bg-red-50';
+        removeBtn.textContent = '✕';
+        removeBtn.addEventListener('click', () => row.remove());
+        row.appendChild(removeBtn);
+
+        // 구분 변경 시 입력 영역 갱신
+        typeSelect.addEventListener('change', () => {
+            inputWrap.innerHTML = '';
+            const t = typeSelect.value;
+            if (t === 'part') {
+                // BLOCKNO 입력만
+                const blockno = document.createElement('input');
+                blockno.type = 'text';
+                blockno.placeholder = 'BLOCKNO 입력 (예: B-1001)';
+                blockno.className = 'val-input flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-green-400';
+                blockno.dataset.role = 'blockno';
+                inputWrap.appendChild(blockno);
+            } else if (t === 'pid') {
+                // PID명 + RESULT값
+                const pidName = document.createElement('input');
+                pidName.type = 'text';
+                pidName.placeholder = 'PID명 입력 (예: TEMP_01)';
+                pidName.className = 'val-input flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-green-400';
+                pidName.dataset.role = 'pidName';
+                inputWrap.appendChild(pidName);
+
+                const sep = document.createElement('span');
+                sep.className = 'text-gray-500 text-sm';
+                sep.textContent = '=';
+                inputWrap.appendChild(sep);
+
+                const resultVal = document.createElement('input');
+                resultVal.type = 'text';
+                resultVal.placeholder = 'RESULT값 (선택, 미입력 시 전체)';
+                resultVal.className = 'val-input flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-green-400';
+                resultVal.dataset.role = 'resultVal';
+                inputWrap.appendChild(resultVal);
+            }
+        });
+
+        document.getElementById('extraConditionContainer').appendChild(row);
+    }
+
+    /**
+     * 추가 정보 검색 조건들을 배열로 추출
+     * 반환 형태:
+     *   [
+     *     { type: 'part', blockno: 'B-1001' },
+     *     { type: 'pid',  pidName: 'TEMP_01', resultVal: '정상' }
+     *   ]
+     */
+    function extractExtraConditions() {
+        const conditions = [];
+        document.querySelectorAll('#extraConditionContainer .condition-row').forEach(row => {
+            const t = row.querySelector('.extra-type-select')?.value;
+            if (!t) return;
+            if (t === 'part') {
+                const blockno = row.querySelector('[data-role="blockno"]')?.value.trim() ?? '';
+                if (blockno === '') return;
+                conditions.push({ type: 'part', blockno });
+            } else if (t === 'pid') {
+                const pidName = row.querySelector('[data-role="pidName"]')?.value.trim() ?? '';
+                const resultVal = row.querySelector('[data-role="resultVal"]')?.value.trim() ?? '';
+                if (pidName === '') return;
+                conditions.push({ type: 'pid', pidName, resultVal });
+            }
+        });
+        return conditions;
+    }
+
+    /* ========================================================
+     * 기본 조회 데이터 (Mock - 실제 API로 대체)
      * ======================================================== */
     function fetchBaseData(conditions) {
         const allData = [
@@ -461,49 +501,69 @@
             { no: 6, buildingName: '충주센터',   unitNo: '1호기', model: 'MS-Premier',manufacturer: '미쓰비시',        installDate: '2019-06-18', capacity: 17, floors: 'B1-18F', region: '충북', status: '고장'   },
             { no: 7, buildingName: '충주센터',   unitNo: '2호기', model: 'MS-Premier',manufacturer: '미쓰비시',        installDate: '2019-06-18', capacity: 17, floors: 'B1-18F', region: '충북', status: '운행중' }
         ];
-
-        // 모든 조건(AND)에 맞는 행만 반환
-        return allData.filter(row => {
-            return conditions.every(cond => applyOperator(row[cond.field], cond));
-        });
+        return allData.filter(row =>
+            conditions.every(cond => applyOperator(row[cond.field], cond))
+        );
     }
 
     /* ========================================================
-     * 10. 추가 정보 데이터 (Mock)
+     * 부품 조회 Mock 데이터
+     *   { 엘리베이터 no: { BLOCKNO: 부품정보 } }
      * ======================================================== */
-    const mockExtraData = {
-        lastInspection: { 1:'2026-04-15', 2:'2026-04-15', 3:'2026-03-22', 4:'2026-05-01', 5:'2026-04-08', 6:'2026-05-10', 7:'2026-04-30' },
-        nextInspection: { 1:'2026-10-15', 2:'2026-10-15', 3:'2026-09-22', 4:'2026-11-01', 5:'2026-10-08', 6:'2026-11-10', 7:'2026-10-30' },
-        manager:        { 1:'김철수', 2:'김철수', 3:'이영희', 4:'이영희', 5:'박민수', 6:'정수진', 7:'정수진' },
-        contractEnd:    { 1:'2027-03-11', 2:'2027-03-11', 3:'2028-08-24', 4:'2028-08-24', 5:'2027-11-02', 6:'2026-06-17', 7:'2026-06-17' },
-        failCount:      { 1:1, 2:0, 3:2, 4:3, 5:0, 6:5, 7:1 },
-        partsStatus:    { 1:'양호', 2:'양호', 3:'양호', 4:'주의', 5:'양호', 6:'교체필요', 7:'양호' }
+    const mockPartData = {
+        1: { 'B-1001': '도어모터-DM200', 'B-1002': '와이어로프-WR8',  'B-2001': '제어보드-CB100' },
+        2: { 'B-1001': '도어모터-DM200', 'B-1002': '와이어로프-WR8',  'B-2001': '제어보드-CB100' },
+        3: { 'B-1001': '도어모터-DM350', 'B-1002': '와이어로프-WR10', 'B-2001': '제어보드-CB200' },
+        4: { 'B-1001': '도어모터-DM350', 'B-1002': '와이어로프-WR10', 'B-2001': '제어보드-CB200' },
+        5: { 'B-1001': '도어모터-TK100', 'B-1002': '와이어로프-WR8',  'B-2001': '제어보드-CB150' },
+        6: { 'B-1001': '도어모터-MS50',  'B-1002': '와이어로프-WR9',  'B-2001': '제어보드-CB180' },
+        7: { 'B-1001': '도어모터-MS50',  'B-1002': '와이어로프-WR9',  'B-2001': '제어보드-CB180' }
+    };
+
+    /* ========================================================
+     * PID 조회 Mock 데이터
+     *   { 엘리베이터 no: { PID명: 측정값 } }
+     * ======================================================== */
+    const mockPidData = {
+        1: { 'TEMP_01': '정상', 'SPEED_01': '1.0m/s', 'VIB_01': '0.12' },
+        2: { 'TEMP_01': '정상', 'SPEED_01': '1.0m/s', 'VIB_01': '0.15' },
+        3: { 'TEMP_01': '정상', 'SPEED_01': '1.5m/s', 'VIB_01': '0.08' },
+        4: { 'TEMP_01': '경고', 'SPEED_01': '1.5m/s', 'VIB_01': '0.25' },
+        5: { 'TEMP_01': '정상', 'SPEED_01': '1.0m/s', 'VIB_01': '0.10' },
+        6: { 'TEMP_01': '경고', 'SPEED_01': '0.0m/s', 'VIB_01': '0.45' },
+        7: { 'TEMP_01': '정상', 'SPEED_01': '1.2m/s', 'VIB_01': '0.14' }
     };
 
     /**
-     * 특정 행에 대해 추가정보 컬럼 값 조회
-     * conds: 해당 컬럼에 적용할 조건 배열 (여러 조건 모두 통과해야 값 반환)
+     * 부품 정보 조회: BLOCKNO에 대한 부품 정보 반환
      */
-    function fetchExtraValue(rowNo, colKey, conds) {
-        const raw = mockExtraData[colKey]?.[rowNo];
-        if (raw === undefined || raw === null) return '';
-        if (!conds || conds.length === 0) return raw;
-        // 모든 조건 통과 시 값 반환
-        const pass = conds.every(cond => applyOperator(raw, cond));
-        return pass ? raw : '';
+    function fetchPartValue(rowNo, blockno) {
+        return mockPartData[rowNo]?.[blockno] ?? '';
+    }
+
+    /**
+     * PID 정보 조회: PID명에 대한 측정값 반환
+     *  - resultVal이 입력된 경우: 측정값과 일치하면 값 반환, 아니면 빈 문자열
+     *  - resultVal이 빈 경우: 측정값 그대로 반환
+     */
+    function fetchPidValue(rowNo, pidName, resultVal) {
+        const v = mockPidData[rowNo]?.[pidName];
+        if (v === undefined || v === null) return '';
+        if (resultVal !== '' && String(v) !== String(resultVal)) return '';
+        return v;
     }
 
     /* ========================================================
-     * 11. 이벤트 - 조건 추가 버튼
+     * 이벤트 - 조건 추가 버튼
      * ======================================================== */
-    document.getElementById('btnAddBaseCondition').addEventListener('click', () => createConditionRow('base'));
-    document.getElementById('btnAddExtraCondition').addEventListener('click', () => createConditionRow('extra'));
+    document.getElementById('btnAddBaseCondition').addEventListener('click', createBaseConditionRow);
+    document.getElementById('btnAddExtraCondition').addEventListener('click', createExtraConditionRow);
 
     /* ========================================================
-     * 12. 이벤트 - 기본 조회
+     * 이벤트 - 기본 조회
      * ======================================================== */
     document.getElementById('btnSearch').addEventListener('click', () => {
-        const conditions = extractConditions('baseConditionContainer', baseFieldDef);
+        const conditions = extractBaseConditions();
         currentData = fetchBaseData(conditions);
 
         currentColumns = [...baseColumns];
@@ -515,36 +575,26 @@
     });
 
     /* ========================================================
-     * 13. 이벤트 - 기본조건 초기화
+     * 이벤트 - 기본조건 초기화
      * ======================================================== */
     document.getElementById('btnReset').addEventListener('click', () => {
         document.getElementById('baseConditionContainer').innerHTML = '';
-        createConditionRow('base');
+        createBaseConditionRow();
     });
 
     /* ========================================================
-     * 14. 이벤트 - 추가 정보 조회
-     *      => 기존 표의 같은 행에, 우측에 컬럼을 추가하여 채움
+     * 이벤트 - 추가 정보 조회
+     *   사용자가 입력한 BLOCKNO 또는 PID명을 헤더로 하는
+     *   컬럼이 표 우측에 추가되고, 각 행에 해당 값이 채워진다.
      * ======================================================== */
     document.getElementById('btnExtraSearch').addEventListener('click', () => {
         if (currentData.length === 0) {
             alert('먼저 기본 조회를 실행해주세요.');
             return;
         }
-
-        const conditions = extractConditions('extraConditionContainer', extraFieldDef);
-
-        // 조회 대상 컬럼: 조건이 있는 경우 → 조건의 필드 / 조건이 없으면 종료
-        // 같은 필드에 여러 조건이 걸린 경우 그룹핑
-        const condsByField = {};
-        conditions.forEach(c => {
-            if (!condsByField[c.field]) condsByField[c.field] = [];
-            condsByField[c.field].push(c);
-        });
-
-        const targetCols = Object.keys(condsByField);
-        if (targetCols.length === 0) {
-            alert('조회할 항목을 하나 이상 추가해주세요.');
+        const conditions = extractExtraConditions();
+        if (conditions.length === 0) {
+            alert('조회할 항목을 하나 이상 추가해주세요.\n(부품: BLOCKNO 입력 / PID: PID명 입력)');
             return;
         }
 
@@ -564,40 +614,64 @@
             targetRows = currentData.map((_, idx) => idx);
         }
 
-        // 표에 컬럼 추가
+        // 각 조건마다 컬럼을 추가하고, 해당 컬럼에 값 채움
+        const allChanges = [];
         let columnsAdded = false;
-        targetCols.forEach(colKey => {
+
+        conditions.forEach(cond => {
+            // 컬럼 식별 키와 컬럼 정의
+            let colKey, colTitle, colClass;
+            if (cond.type === 'part') {
+                colKey   = `part__${cond.blockno}`;
+                colTitle = cond.blockno;                 // 사용자 입력 BLOCKNO가 헤더
+                colClass = 'htCenter part-col';
+            } else { // pid
+                colKey   = `pid__${cond.pidName}`;
+                colTitle = cond.pidName;                 // 사용자 입력 PID명이 헤더
+                colClass = 'htCenter pid-col';
+            }
+
+            // 이미 같은 컬럼이 추가되어 있지 않으면 추가
             if (!addedExtraCols.has(colKey)) {
-                currentColumns.push(extraColumnsDef[colKey]);
+                currentColumns.push({
+                    data: colKey,
+                    title: colTitle,
+                    width: 130,
+                    readOnly: true,
+                    className: colClass
+                });
                 addedExtraCols.add(colKey);
                 columnsAdded = true;
             }
-        });
-        if (columnsAdded) rebuildColumns();
 
-        // 각 행 × 각 컬럼에 데이터 채움
-        const changes = [];
-        targetRows.forEach(rowIdx => {
-            const rowData = hot.getSourceDataAtRow(rowIdx);
-            if (!rowData) return;
-            targetCols.forEach(colKey => {
-                const v = fetchExtraValue(rowData.no, colKey, condsByField[colKey]);
-                changes.push([rowIdx, colKey, v]);
+            // 각 대상 행에 값 채움
+            targetRows.forEach(rowIdx => {
+                const rowData = hot.getSourceDataAtRow(rowIdx);
+                if (!rowData) return;
+                let v = '';
+                if (cond.type === 'part') {
+                    v = fetchPartValue(rowData.no, cond.blockno);
+                } else {
+                    v = fetchPidValue(rowData.no, cond.pidName, cond.resultVal);
+                }
+                allChanges.push([rowIdx, colKey, v]);
             });
         });
-        if (changes.length > 0) hot.setDataAtRowProp(changes);
+
+        if (columnsAdded) rebuildColumns();
+        if (allChanges.length > 0) hot.setDataAtRowProp(allChanges);
     });
 
     /* ========================================================
-     * 15. 이벤트 - 추가조건 초기화
+     * 이벤트 - 추가조건 초기화
      * ======================================================== */
     document.getElementById('btnExtraReset').addEventListener('click', () => {
         document.getElementById('extraConditionContainer').innerHTML = '';
-        createConditionRow('extra');
+        createExtraConditionRow();
     });
 
     /* ========================================================
-     * 16. CSV 내보내기
+     * CSV 내보내기
      * ======================================================== */
     document.getElementById('btnExport').addEventListener('click', () => {
         if (!hot || currentData.length === 0) {
@@ -614,7 +688,6 @@
         const csv = [headers, ...rows]
             .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
             .join('\n');
-
         const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -625,11 +698,11 @@
     });
 
     /* ========================================================
-     * 17. 초기 실행
+     * 초기 실행
      * ======================================================== */
     initTable();
-    createConditionRow('base');
-    createConditionRow('extra');
+    createBaseConditionRow();
+    createExtraConditionRow();
 </script>
 </body>
 </html>
