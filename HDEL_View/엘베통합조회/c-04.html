@@ -133,12 +133,28 @@
     };
 
     const baseFieldDef = {
+        codeVal: { label: '코드',     type: 'text',   placeholder: '예: 강남빌딩' },
         buildingName: { label: '건물명',     type: 'text',   placeholder: '예: 강남빌딩' },
         unitNo:       { label: '호기',       type: 'text',   placeholder: '예: 1호기' },
-        region:       { label: '지역',       type: 'select', options: ['서울', '경기', '인천', '충북', '기타'] },
+        ASPSCD:       { label: '생산거점',   type: 'select', options: ['KC01', 'KC02', 'KR00', 'GAL', 'HD'] },
+        ATYP:       { label: '기종',   type: 'select', options: ['GTLX', 'GTLX_E','GTLX_R','GTLX','GTSS','GTSS_E','GTSS_R',
+                'SSVF','WBSS','WBLX','LXVF','SUVF','WBST'] },
         status:       { label: '상태',       type: 'select', options: ['운행중', '점검중', '고장'] },
-        manufacturer: { label: '제조사',     type: 'select', options: ['현대엘리베이터', 'OTIS', '티센크루프', '미쓰비시'] },
-        model:        { label: '모델명',     type: 'text',   placeholder: '예: HVS-2000' },
+        manufacturer: { label: '용도',     type: 'select', options: ['PS','HC','EP','EH','OB','OH','BD','ND','BH','NH','HF','RS','RH','PI'] },
+        ETHRU : {label: '관통', type: 'text', placeholder : 'Y, N'},
+        ETM:        { label: '권상기',     type: 'text',   placeholder: '예: GA75C' },
+        ETMD:        { label: 'TM;방향',     type: 'text',   placeholder: '예: GA75C' },
+        ACAPA:        { label: '용량',     type: 'text',   placeholder: '예: GA75C' },
+        AOPEN:        { label: '열림',     type: 'text',   placeholder: '예: GA75C' },
+        ASPC:        { label: '시방서',     type: 'text',   placeholder: '예: GA75C' },
+        ASPD:        { label: '속도',     type: 'text',   placeholder: '예: GA75C' },
+        DEHL:        { label: '승강로사다리',     type: 'text',   placeholder: '예: GA75C' },
+        ECRL:        { label: 'CAR RAIL',     type: 'text',   placeholder: '예: GA75C' },
+        ECWTP:        { label: 'CWT위치',     type: 'text',   placeholder: '예: GA75C' },
+        ERPD:        { label: 'ROPE/BELT직경',     type: 'text',   placeholder: '예: GA75C' },
+        ERPR:        { label: 'ROPE/BELT;ROPING',     type: 'text',   placeholder: '예: GA75C' },
+        ERPW:        { label: 'ROPE본수',     type: 'text',   placeholder: '예: GA75C' },
+        ECWTP:        { label: 'CWT위치',     type: 'text',   placeholder: '예: GA75C' },
         installDate:  { label: '설치일',     type: 'date' },
         capacity:     { label: '정원(인승)', type: 'number' }
     };
