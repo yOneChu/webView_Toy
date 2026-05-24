@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>엘리베이터 영업사양 조회</title>
 
-    <script>
-        if(localStorage.getItem('theme')==='dark') document.documentElement.classList.add('dark');
-    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.3.0/dist/handsontable.full.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/handsontable@14.3.0/dist/handsontable.full.min.js"></script>
@@ -167,7 +164,6 @@
         /* ── Key-Value Condition ── */
         .kv-row-inner { display: flex; align-items: flex-start; gap: 8px; }
         .kv-select { width: 210px; flex-shrink: 0; }
-        .kv-op-select { width: 114px; flex-shrink: 0; }
         .kv-values-box {
             display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
             min-height: 38px; padding: 3px 8px; flex: 1;
@@ -187,7 +183,7 @@
             flex: 1; min-width: 90px; height: 28px; border: none; outline: none;
             font-size: 13px; color: #1C1C1E; background: transparent;
         }
-        .kv-hint-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 5px; padding-left: 340px; }
+        .kv-hint-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 5px; padding-left: 218px; }
         .kv-hint-chip {
             display: inline-flex; align-items: center; height: 22px; padding: 0 10px;
             border-radius: 999px; font-size: 11px; font-weight: 500; cursor: pointer;
@@ -215,112 +211,6 @@
         /* ── Loading spinner ── */
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner { animation: spin .8s linear infinite; }
-
-        /* ── Theme Toggle Button ── */
-        .theme-btn {
-            position: relative; flex-shrink: 0;
-            width: 58px; height: 30px; border-radius: 999px;
-            border: none; cursor: pointer; padding: 0; outline: none;
-            background: linear-gradient(135deg, #FFD60A 0%, #FF9500 100%);
-            box-shadow: 0 2px 10px rgba(255,149,0,.50), inset 0 1px 0 rgba(255,255,255,.35);
-            transition: background .4s, box-shadow .4s;
-        }
-        .theme-btn:hover { box-shadow: 0 4px 16px rgba(255,149,0,.65), inset 0 1px 0 rgba(255,255,255,.35); }
-        html.dark .theme-btn {
-            background: linear-gradient(135deg, #1C1C3A 0%, #3634A3 60%, #5856D6 100%);
-            box-shadow: 0 2px 10px rgba(88,86,214,.55), inset 0 1px 0 rgba(255,255,255,.08);
-        }
-        html.dark .theme-btn:hover { box-shadow: 0 4px 16px rgba(88,86,214,.75), inset 0 1px 0 rgba(255,255,255,.08); }
-        .theme-btn-thumb {
-            position: absolute; top: 3px; left: 3px;
-            width: 24px; height: 24px; border-radius: 50%; background: #fff;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 1px 5px rgba(0,0,0,.22);
-            transition: transform .38s cubic-bezier(.34,1.56,.64,1);
-        }
-        html.dark .theme-btn-thumb { transform: translateX(28px); }
-        .icon-sun, .icon-moon {
-            position: absolute;
-            transition: opacity .28s, transform .28s;
-        }
-        .icon-sun  { opacity: 1; transform: rotate(0deg) scale(1); }
-        .icon-moon { opacity: 0; transform: rotate(-50deg) scale(.5); }
-        html.dark .icon-sun  { opacity: 0; transform: rotate(50deg) scale(.5); }
-        html.dark .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
-
-        /* ── Dark Mode overrides ── */
-        html.dark body { background: #1C1C1E; }
-
-        html.dark header {
-            background: rgba(28,28,30,.92) !important;
-            border-color: #38383A !important;
-        }
-        html.dark header .text-gray-900 { color: #F5F5F7 !important; }
-        html.dark header .text-apple-gray1 { color: #8E8E93 !important; }
-
-        html.dark section.bg-white,
-        html.dark #resultCard,
-        html.dark #emptyState { background: #2C2C2E !important; }
-        html.dark .stat-card  { background: #2C2C2E !important; box-shadow: 0 2px 16px rgba(0,0,0,.35) !important; }
-
-        html.dark .text-gray-800,
-        html.dark .text-gray-900 { color: #F5F5F7 !important; }
-        html.dark .text-apple-gray1 { color: #8E8E93 !important; }
-        html.dark .text-apple-gray2 { color: #636366 !important; }
-        html.dark .field-label { color: #8E8E93 !important; }
-        html.dark .range-sep   { color: #636366 !important; }
-
-        html.dark .form-input,
-        html.dark .form-select {
-            background: #3A3A3C !important;
-            border-color: #48484A !important;
-            color: #F5F5F7 !important;
-        }
-        html.dark .form-input::placeholder { color: #636366 !important; }
-        html.dark .form-input:focus,
-        html.dark .form-select:focus {
-            border-color: #007AFF !important;
-            box-shadow: 0 0 0 3px rgba(0,122,255,.22) !important;
-        }
-
-        html.dark .chip {
-            background: #3A3A3C !important; border-color: #48484A !important; color: #EBEBF5 !important;
-        }
-        html.dark .chip.active {
-            background: #007AFF !important; border-color: #007AFF !important; color: #fff !important;
-        }
-
-        html.dark .btn-ghost {
-            background: #3A3A3C !important; border-color: #48484A !important; color: #007AFF !important;
-        }
-        html.dark .btn-ghost:hover { background: #48484A !important; }
-
-        html.dark .border-apple-gray5,
-        html.dark .border-b { border-color: #38383A !important; }
-
-        html.dark .kv-values-box  { background: #3A3A3C !important; border-color: #48484A !important; }
-        html.dark .kv-text-input  { color: #F5F5F7 !important; }
-        html.dark .kv-text-input::placeholder { color: #636366 !important; }
-        html.dark .kv-del-btn     { background: #3A3A3C !important; border-color: #48484A !important; color: #8E8E93 !important; }
-        html.dark .kv-hint-chip   { background: #3A3A3C !important; border-color: #48484A !important; color: #AEAEB2 !important; }
-        html.dark #kv-empty-hint  { border-color: #48484A !important; color: #636366 !important; }
-
-        html.dark #hot-wrapper .handsontable th {
-            background: #242426 !important; color: #AEAEB2 !important;
-            border-bottom-color: #48484A !important;
-        }
-        html.dark #hot-wrapper .handsontable td {
-            background: #2C2C2E !important; color: #E5E5EA !important; border-color: #38383A !important;
-        }
-        html.dark #hot-wrapper .handsontable tr:hover td { background: rgba(0,122,255,.12) !important; }
-        html.dark #hot-wrapper .handsontable .htCore tr:nth-child(even) td { background: #242426 !important; }
-        html.dark #hot-wrapper .handsontable .htCore tr:nth-child(even):hover td { background: rgba(0,122,255,.12) !important; }
-
-        html.dark ::-webkit-scrollbar-thumb { background: #48484A; }
-
-        html.dark #loadingRow span { color: #8E8E93 !important; }
-        html.dark #emptyState .text-apple-gray1 { color: #8E8E93 !important; }
-        html.dark #emptyState .text-apple-gray2 { color: #636366 !important; }
     </style>
 </head>
 
@@ -343,29 +233,15 @@
                 <p class="text-sm font-semibold text-gray-900 leading-none">영업사양 조회</p>
             </div>
         </div>
-        <div class="flex items-center gap-3">
-            <span class="text-xs text-apple-gray1">
-              <span id="current-date"></span>
-            </span>
+        <div class="flex items-center gap-2">
+        <span class="text-xs text-apple-gray1">
+          <span id="current-date"></span>
+        </span>
             <div class="w-7 h-7 rounded-full bg-apple-blue/10 flex items-center justify-center">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
                 </svg>
             </div>
-            <!-- Theme toggle -->
-            <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="라이트 / 다크 모드 전환">
-                <span class="theme-btn-thumb">
-                    <!-- Sun -->
-                    <svg class="icon-sun" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FF9500" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="4"/>
-                        <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-                    </svg>
-                    <!-- Moon -->
-                    <svg class="icon-moon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5856D6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
-                    </svg>
-                </span>
-            </button>
         </div>
     </div>
 </header>
@@ -621,15 +497,6 @@
 <!-- ──────────── SCRIPT ──────────── -->
 <script>
     /* ─────────────────────────────────────────
-       Theme Toggle
-    ───────────────────────────────────────── */
-    function toggleTheme(){
-        const isDark = document.documentElement.classList.toggle('dark');
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        if(hot) hot.render();
-    }
-
-    /* ─────────────────────────────────────────
        Mock Data Generator
     ───────────────────────────────────────── */
     const USAGES  = ['주거용 (아파트)','주거용 (오피스텔)','업무용 (오피스)','상업용 (쇼핑몰)','산업용 (공장·물류)','의료용 (병원)','호텔·리조트'];
@@ -818,14 +685,7 @@
             if(capMin!==null   && r['정원']     < capMin)   return false;
             if(capMax!==null   && r['정원']     > capMax)   return false;
             for(const cond of kvConds){
-                const attrVal = (r['_attrs']?.[cond.key] ?? '').toLowerCase();
-                if(cond.op === 'like'){
-                    if(!cond.values.some(v => attrVal.includes(v.toLowerCase()))) return false;
-                } else if(cond.op === 'not_like'){
-                    if(cond.values.some(v => attrVal.includes(v.toLowerCase()))) return false;
-                } else {
-                    if(!cond.values.includes(r['_attrs']?.[cond.key])) return false;
-                }
+                if(!cond.values.includes(r['_attrs']?.[cond.key])) return false;
             }
             return true;
         });
@@ -977,11 +837,6 @@
               <option value="">코드 선택</option>
               ${keyOptions}
             </select>
-            <select class="form-select kv-op-select kv-op">
-              <option value="like">LIKE</option>
-              <option value="not_like">NOT LIKE</option>
-              <option value="eq">= (일치)</option>
-            </select>
             <div class="kv-values-box" onclick="this.querySelector('.kv-text-input').focus()">
               <input class="kv-text-input" placeholder="값 입력 후 Enter" />
             </div>
@@ -1062,7 +917,6 @@
         return [...document.querySelectorAll('.kv-row')]
             .map(row=>({
                 key:    row.querySelector('.kv-key').value,
-                op:     row.querySelector('.kv-op').value,
                 values: [...row.querySelectorAll('.kv-tag')].map(t=>t.dataset.value),
             }))
             .filter(c=>c.key && c.values.length>0);
