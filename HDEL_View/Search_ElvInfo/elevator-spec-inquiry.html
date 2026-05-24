@@ -441,35 +441,19 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-x-5 gap-y-4 mb-5">
                     <div>
                         <label class="field-label">정격 속도 (m/min)</label>
-                        <div class="range-wrap">
-                            <input id="f-speed-min" type="number" class="form-input" placeholder="최소" min="30" max="600" step="30" />
-                            <span class="range-sep">–</span>
-                            <input id="f-speed-max" type="number" class="form-input" placeholder="최대" min="30" max="600" step="30" />
-                        </div>
+                        <input id="f-speed" type="number" class="form-input" placeholder="예) 120" min="30" max="600" step="30" />
                     </div>
                     <div>
                         <label class="field-label">정격 하중 (kg)</label>
-                        <div class="range-wrap">
-                            <input id="f-load-min" type="number" class="form-input" placeholder="최소" />
-                            <span class="range-sep">–</span>
-                            <input id="f-load-max" type="number" class="form-input" placeholder="최대" />
-                        </div>
+                        <input id="f-load" type="number" class="form-input" placeholder="예) 1000" />
                     </div>
                     <div>
                         <label class="field-label">운행 층수</label>
-                        <div class="range-wrap">
-                            <input id="f-floor-min" type="number" class="form-input" placeholder="최저" />
-                            <span class="range-sep">–</span>
-                            <input id="f-floor-max" type="number" class="form-input" placeholder="최고" />
-                        </div>
+                        <input id="f-floor" type="number" class="form-input" placeholder="예) 20" />
                     </div>
                     <div>
                         <label class="field-label">정원 (인)</label>
-                        <div class="range-wrap">
-                            <input id="f-cap-min" type="number" class="form-input" placeholder="최소" />
-                            <span class="range-sep">–</span>
-                            <input id="f-cap-max" type="number" class="form-input" placeholder="최대" />
-                        </div>
+                        <input id="f-cap" type="number" class="form-input" placeholder="예) 13" />
                     </div>
                 </div>
 
@@ -750,8 +734,7 @@
        Reset
     ───────────────────────────────────────── */
     function resetFilters(){
-        ['f-code','f-speed-min','f-speed-max','f-load-min','f-load-max',
-            'f-floor-min','f-floor-max','f-cap-min','f-cap-max'].forEach(id=>{
+        ['f-code','f-speed','f-load','f-floor','f-cap'].forEach(id=>{
             document.getElementById(id).value='';
         });
         ['f-usage','f-drive','f-door'].forEach(id=>{
@@ -776,14 +759,10 @@
         const usage    = val('f-usage');
         const drive    = val('f-drive');
         const door     = val('f-door');
-        const speedMin = numVal('f-speed-min');
-        const speedMax = numVal('f-speed-max');
-        const loadMin  = numVal('f-load-min');
-        const loadMax  = numVal('f-load-max');
-        const floorMin = numVal('f-floor-min');
-        const floorMax = numVal('f-floor-max');
-        const capMin   = numVal('f-cap-min');
-        const capMax   = numVal('f-cap-max');
+        const speed    = numVal('f-speed');
+        const load     = numVal('f-load');
+        const floor    = numVal('f-floor');
+        const cap      = numVal('f-cap');
         const mr       = getChip('chipMR');
         const status   = getChip('chipStatus');
 
@@ -792,10 +771,10 @@
         // 활성 조건 카운트
         let cnt=0;
         if(code)cnt++; if(usage)cnt++; if(drive)cnt++; if(door)cnt++;
-        if(speedMin!==null||speedMax!==null)cnt++;
-        if(loadMin!==null||loadMax!==null)cnt++;
-        if(floorMin!==null||floorMax!==null)cnt++;
-        if(capMin!==null||capMax!==null)cnt++;
+        if(speed!==null)cnt++;
+        if(load!==null)cnt++;
+        if(floor!==null)cnt++;
+        if(cap!==null)cnt++;
         if(mr)cnt++; if(status)cnt++;
         kvConds.forEach(c=>{ if(c.values.length>0) cnt++; });
         const badge=document.getElementById('active-filter-count');
@@ -809,14 +788,10 @@
             if(door   && r['도어형식'] !== door)  return false;
             if(mr     && r['기계실']   !== mr)    return false;
             if(status && r['상태']     !== status)return false;
-            if(speedMin!==null && r['정격속도'] < speedMin) return false;
-            if(speedMax!==null && r['정격속도'] > speedMax) return false;
-            if(loadMin!==null  && r['정격하중'] < loadMin)  return false;
-            if(loadMax!==null  && r['정격하중'] > loadMax)  return false;
-            if(floorMin!==null && r['운행층수'] < floorMin) return false;
-            if(floorMax!==null && r['운행층수'] > floorMax) return false;
-            if(capMin!==null   && r['정원']     < capMin)   return false;
-            if(capMax!==null   && r['정원']     > capMax)   return false;
+            if(speed!==null && r['정격속도'] !== speed) return false;
+            if(load!==null  && r['정격하중'] !== load)  return false;
+            if(floor!==null && r['운행층수'] !== floor) return false;
+            if(cap!==null   && r['정원']     !== cap)   return false;
             for(const cond of kvConds){
                 const attrVal = (r['_attrs']?.[cond.key] ?? '').toLowerCase();
                 if(cond.op === 'like'){
@@ -944,6 +919,9 @@
             showToast(`${fmt(filtered.length)}건이 조회되었습니다.`);
 
         }, 480);
+
+
+
     }
 
     /* ─────────────────────────────────────────
