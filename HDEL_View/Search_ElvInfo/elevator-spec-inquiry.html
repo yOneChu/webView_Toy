@@ -403,26 +403,56 @@
                         <input id="f-code" type="text" class="form-input" placeholder="예) EV-2024-001" />
                     </div>
                     <div>
-                        <label class="field-label">건물 용도</label>
-                        <select id="f-usage" class="form-select">
+                        <label class="field-label">년도</label>
+                        <select id="f-year" class="form-select">
                             <option value="">전체</option>
-                            <option>주거용 (아파트)</option>
-                            <option>주거용 (오피스텔)</option>
-                            <option>업무용 (오피스)</option>
-                            <option>상업용 (쇼핑몰)</option>
-                            <option>산업용 (공장·물류)</option>
-                            <option>의료용 (병원)</option>
-                            <option>호텔·리조트</option>
+                            <option>2026</option>
+                            <option>2025</option>
                         </select>
                     </div>
                     <div>
-                        <label class="field-label">구동 방식</label>
+                        <label class="field-label">브랜드(EL_ABRAND)</label>
+                        <select id="f-brand" class="form-select">
+                            <option value="">전체</option>
+                            <option>NEX_MR</option>
+                            <option>NEX_MRL</option>
+                            <option>NEO_MRL</option>
+                            <option>NEWYZER</option>
+                            <option>SPACESAVER</option>
+                            <option>LUXEN_1</option>
+                            <option>LUXEN_2</option>
+                            <option>IXEL</option>
+                            <option>THEEL</option>
+                            <option>NOBRAND</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label">기종(EL_ATYP)</label>
+                        <select id="f-usage" class="form-select">
+                            <option value="">전체</option>
+                            <option>GTLX</option>
+                            <option>GTLX_E</option>
+                            <option>GTLX_R</option>
+                            <option>GTSS</option>
+                            <option>GTSS_E</option>
+                            <option>GTSS_R</option>
+                            <option>SSVF</option>
+                            <option>WBSS</option>
+                            <option>LXVF</option>
+                            <option>WBLX</option>
+                            <option>SUVF</option>
+                            <option>WBST1_(STVF)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label">생산거점(설계)_EL_ASPSCD</label>
                         <select id="f-drive" class="form-select">
                             <option value="">전체</option>
-                            <option>MRL (기계실 없음)</option>
-                            <option>로프식 (기계실)</option>
-                            <option>유압식</option>
-                            <option>선형유도 (LIM)</option>
+                            <option>KR00</option>
+                            <option>KC01</option>
+                            <option>KC02</option>
+                            <option>GAL_HD</option>
+                            <option>HD_HD</option>
                         </select>
                     </div>
                     <div>
@@ -444,7 +474,7 @@
                         <input id="f-speed" type="number" class="form-input" placeholder="예) 120" min="30" max="600" step="30" />
                     </div>
                     <div>
-                        <label class="field-label">정격 하중 (kg)</label>
+                        <label class="field-label">용량(EL_ACAPA)</label>
                         <input id="f-load" type="number" class="form-input" placeholder="예) 1000" />
                     </div>
                     <div>
@@ -616,21 +646,23 @@
     /* ─────────────────────────────────────────
        Mock Data Generator
     ───────────────────────────────────────── */
-    const USAGES  = ['주거용 (아파트)','주거용 (오피스텔)','업무용 (오피스)','상업용 (쇼핑몰)','산업용 (공장·물류)','의료용 (병원)','호텔·리조트'];
+    const BRAND  = ['NEX_MR','NEX_MRL','NEO_MRL','NEWYZER','LUXEN_1','LUXEN_2','IXEL','THEEL','NOBRAND',];
+    const USAGES  = ['GTLX','GTLX_E','GTLX_R','GTSS','GTSS_E','GTSS_R','SSVF','WBSS','LXVF','WBLX','SUVF','WBST1_(STVF)'];
+    //const USAGES  = ['주거용 (아파트)','주거용 (오피스텔)','업무용 (오피스)','상업용 (쇼핑몰)','산업용 (공장·물류)','의료용 (병원)','호텔·리조트'];
     const DRIVES  = ['MRL (기계실 없음)','로프식 (기계실)','유압식','선형유도 (LIM)'];
     const DOORS   = ['CO (중앙열기)','SO (한쪽열기)','2S (2단 측면)','2C (2단 중앙)'];
     const SPEEDS  = [45, 60, 90, 105, 120, 150, 180, 210, 240, 300, 360];
-    const LOADS   = [450, 600, 750, 900, 1000, 1150, 1350, 1600, 2000, 2500];
+    const LOADS   = [800, 1000, 1200, 1500];
     const CAPS    = [6, 8, 9, 11, 13, 15, 17, 20, 24, 30];
     const STATUSES= ['활성','활성','활성','검토중','단종'];
 
     /* ── 영업 사양 Key-Value 코드 정의 ── */
     const KV_CODES = {
         'EL_ATYP':     { label: '엘리베이터 타입', values: ['NEX','LUXEN','SUVF','PRIME','STANDARD'] },
-        'EL_CTRL':     { label: '제어 방식',        values: ['MCP','SCP','VVF'] },
-        'EL_DOOR_MAT': { label: '도어 재질',        values: ['SS','HP','MIRROR','GLASS'] },
-        'EL_CAR_MAT':  { label: '카 내장재',        values: ['SS_HAIRLINE','MARBLE','WOOD','GLASS'] },
-        'EL_SIGNAL':   { label: '신호 방식',        values: ['DIGITAL','LED','DOT'] },
+        'EL_CTRL':     { label: '제어 방식', values: ['MCP','SCP','VVF'] },
+        'EL_DOOR_MAT': { label: '도어 재질', values: ['SS','HP','MIRROR','GLASS'] },
+        'EL_CAR_MAT':  { label: '카 내장재', values: ['SS_HAIRLINE','MARBLE','WOOD','GLASS'] },
+        'EL_SIGNAL':   { label: '신호 방식', values: ['DIGITAL','LED','DOT'] },
     };
 
     function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
@@ -639,6 +671,7 @@
 
     function genData(n=200){
         return Array.from({length:n},(_,i)=>{
+            const brand = pick(BRAND);
             const load  = pick(LOADS);
             const cap   = pick(CAPS);
             const speed = pick(SPEEDS);
@@ -660,11 +693,12 @@
             );
             return {
                 '사양코드':    `EV-${yr}-${String(i+1).padStart(4,'0')}`,
-                '건물용도':    pick(USAGES),
-                '구동방식':    drive,
+                'EL_ABRAND':    pick(BRAND),
+                '기종':    pick(USAGES),
+                '설계거점(설계)':  drive,
                 '기계실':      mr,
                 '정격속도':    speed,
-                '정격하중':    load,
+                'EL_ACAPA':    load,
                 '정원':        cap,
                 '운행층수':    floors,
                 '도어형식':    pick(DOORS),
