@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BOM 검증 - 엘리베이터 기종/버전 비교</title>
+
+    <!-- TailwindCSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // 다크모드: class 전략 사용 (최근 작업과 동일하게 다크모드 지원)
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { mr: '#2563eb', mrl: '#0d9488', luxen: '#9333ea' }
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif; }
+        /* 비교 결과 상태 색상 (CDN @apply 미사용 → 순수 CSS로 작성) */
+        .st-add     { background-color: #ecfdf5; }   /* emerald-50 */
+        .st-remove  { background-color: #fff1f2; }   /* rose-50   */
+        .st-change  { background-color: #fffbeb; }   /* amber-50  */
+        .dark .st-add    { background-color: rgba(6,78,59,0.30); }
+        .dark .st-remove { background-color: rgba(136,19,55,0.30); }
+        .dark .st-change { background-color: rgba(120,53,15,0.30); }
+        .st-missing { color: #d1d5db; font-style: italic; }
+        .dark .st-missing { color: #4b5563; }
+        /* 고정 헤더 */
+        thead th { position: sticky; top: 0; z-index: 10; }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 min-h-screen">
+
+<div class="max-w-7xl mx-auto p-4 md:p-6">
+
+    <!-- ───────── 헤더 ───────── -->
+    <header class="flex items-center justify-between mb-5">
+        <div>
+            <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+                🛗 BOM 검증 시스템
+                <span class="text-xs font-normal px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700">PLM</span>
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                엘리베이터 기종(NEX_MR / NEX_MRL / LUXEN) 간 BOM 비교 및 버전 이력 비교
+            </p>
+        </div>
+        <button id="darkToggle"
+                class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm">
+            🌙 <span id="darkLabel">다크</span>
+        </button>
+    </header>
+
+    <!-- ───────── 모드 탭 ───────── -->
+    <div class="flex gap-2 mb-4 border-b border-gray-200 dark:border-gray-700">
+        <button data-tab="cross"
+                class="tab-btn px-4 py-2 -mb-px border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 font-semibold">
+            기종 간 비교
+        </button>
+        <button data-tab="version"
+                class="tab-btn px-4 py-2 -mb-px border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+            버전 간 비교
+        </button>
+    </div>
+
+    <!-- ═══════════ 1. 기종 간 비교 ═══════════ -->
+    <section id="tab-cross">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
+            <div class="flex flex-wrap items-center gap-4">
+                <span class="text-sm font-semibold">비교 기종</span>
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" class="cross-brand accent-blue-600" value="NEX_MR" checked>
+                    <span class="w-3 h-3 rounded-full bg-brand-mr inline-block"></span> NEX_MR
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" class="cross-brand accent-teal-600" value="NEX_MRL" checked>
+                    <span class="w-3 h-3 rounded-full bg-brand-mrl inline-block"></span> NEX_MRL
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" class="cross-brand accent-purple-600" value="LUXEN" checked>
+                    <span class="w-3 h-3 rounded-full bg-brand-luxen inline-block"></span> LUXEN
+                </label>
+
+                <div class="ml-auto flex items-center gap-2">
+                    <label class="flex items-center gap-1.5 text-sm">
+                        <input type="checkbox" id="onlyDiff" class="accent-amber-500">
+                        차이 항목만 보기
+                    </label>
+                    <input id="crossSearch" placeholder="품번/품명 검색"
+                           class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent">
+                </div>
+            </div>
+        </div>
+
+        <!-- 요약 카드 -->
+        <div id="crossSummary" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4"></div>
+
+        <!-- 비교 매트릭스 -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="overflow-auto max-h-[60vh]">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-100 dark:bg-gray-700 text-left">
+                        <tr id="crossHead"></tr>
+                    </thead>
+                    <tbody id="crossBody" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="flex gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-200 dark:bg-amber-700 inline-block"></span> 수량/사양 차이</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-rose-200 dark:bg-rose-700 inline-block"></span> 일부 기종에만 존재</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-200 dark:bg-emerald-700 inline-block"></span> 전 기종 공통</span>
+        </div>
+    </section>
+
+    <!-- ═══════════ 2. 버전 간 비교 ═══════════ -->
+    <section id="tab-version" class="hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
+            <div class="flex flex-wrap items-center gap-4">
+                <label class="flex items-center gap-2 text-sm">
+                    <span class="font-semibold">기종</span>
+                    <select id="verBrand" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent">
+                        <option>NEX_MR</option>
+                        <option>NEX_MRL</option>
+                        <option>LUXEN</option>
+                    </select>
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                    <span class="font-semibold">기준(이전)</span>
+                    <select id="verFrom" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent"></select>
+                </label>
+                <span class="text-gray-400">→</span>
+                <label class="flex items-center gap-2 text-sm">
+                    <span class="font-semibold">대상(최신)</span>
+                    <select id="verTo" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent"></select>
+                </label>
+                <button id="verRun" class="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">비교</button>
+            </div>
+        </div>
+
+        <div id="verSummary" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4"></div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="overflow-auto max-h-[60vh]">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-100 dark:bg-gray-700 text-left">
+                        <tr>
+                            <th class="px-3 py-2 font-semibold">상태</th>
+                            <th class="px-3 py-2 font-semibold">품번</th>
+                            <th class="px-3 py-2 font-semibold">품명</th>
+                            <th class="px-3 py-2 font-semibold">사양</th>
+                            <th class="px-3 py-2 font-semibold text-right">이전 수량</th>
+                            <th class="px-3 py-2 font-semibold text-right">최신 수량</th>
+                        </tr>
+                    </thead>
+                    <tbody id="verBody" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="flex gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-200 dark:bg-emerald-700 inline-block"></span> 추가</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-rose-200 dark:bg-rose-700 inline-block"></span> 삭제</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-200 dark:bg-amber-700 inline-block"></span> 변경</span>
+        </div>
+    </section>
+</div>
+
+<script>
+/*****************************************************************************
+ * 0) 다크모드 토글
+ *****************************************************************************/
+const html = document.documentElement;
+const darkLabel = document.getElementById('darkLabel');
+function applyDark(on) {
+    html.classList.toggle('dark', on);
+    darkLabel.textContent = on ? '라이트' : '다크';
+    localStorage.setItem('bom-dark', on ? '1' : '0');
+}
+applyDark(localStorage.getItem('bom-dark') === '1');
+document.getElementById('darkToggle').addEventListener('click',
+    () => applyDark(!html.classList.contains('dark')));
+
+/*****************************************************************************
+ * 1) 목(Mock) BOM 데이터
+ *    실제 PLM 연동 시 이 부분을 API 응답으로 교체하세요.
+ *    구조: BOM[브랜드][버전] = [ {pn, name, spec, qty, unit}, ... ]
+ *****************************************************************************/
+const UNITS = { '제어반':'EA','권상기':'EA','로프':'M','카도어':'SET','조작반':'EA',
+                '리미트SW':'EA','완충기':'EA','가이드레일':'M','인버터':'EA','센서':'EA',
+                'LED등':'EA','비상벨':'EA','자동착상장치':'EA','도어모터':'EA','균형추':'SET' };
+
+// 기종별 BOM (버전 이력 포함) — 데모용으로 일부만 다르게 구성
+const BOM = {
+    NEX_MR: {
+        'V1.0': [
+            P('CTL-100','제어반','MR 32bit',1),
+            P('TM-220','권상기','기어드 7.5kW',1),
+            P('RP-001','로프','8mm x 6본',36),
+            P('CD-300','카도어','센터오픈 800',1),
+            P('OP-010','조작반','버튼식 16층',1),
+            P('LS-005','리미트SW','상하한',2),
+            P('BF-700','완충기','유압식',2),
+            P('GR-900','가이드레일','T89 x 2열',60),
+            P('CW-880','균형추','주물 1.4T',1),
+        ],
+        'V1.1': [
+            P('CTL-110','제어반','MR 32bit',1),          // 변경(사양)
+            P('TM-220','권상기','기어드 7.5kW',1),
+            P('RP-001','로프','8mm x 6본',36),
+            P('CD-300','카도어','센터오픈 800',1),
+            P('OP-010','조작반','버튼식 16층',1),
+            P('LS-005','리미트SW','상하한',2),
+            P('BF-700','완충기','유압식',2),
+            P('GR-900','가이드레일','T89 x 2열',60),
+            P('CW-880','균형추','주물 1.4T',1),
+            P('EBL-001','비상벨','무선형',1),            // 추가
+        ],
+        'V2.0': [
+            P('CTL-110','제어반','MR 32bit',1),
+            P('TM-220','권상기','기어드 7.5kW',1),
+            P('RP-002','로프','10mm x 6본',38),          // 변경(품번/수량)
+            P('CD-300','카도어','센터오픈 800',1),
+            P('OP-020','조작반','터치식 16층',1),         // 변경
+            P('LS-005','리미트SW','상하한',2),
+            P('GR-900','가이드레일','T89 x 2열',60),
+            P('CW-880','균형추','주물 1.4T',1),
+            P('EBL-001','비상벨','무선형',1),
+            P('LED-050','LED등','천장 매립',4),           // 추가
+        ],
+    },
+    NEX_MRL: {
+        'V1.0': [
+            P('CTL-200','제어반','MRL 통합형',1),
+            P('PM-330','권상기','무기어 PM 5.5kW',1),
+            P('INV-400','인버터','벡터제어 11kW',1),
+            P('RP-001','로프','8mm x 6본',30),
+            P('CD-300','카도어','센터오픈 800',1),
+            P('OP-010','조작반','버튼식 16층',1),
+            P('LS-005','리미트SW','상하한',2),
+            P('GR-900','가이드레일','T89 x 2열',55),
+            P('SN-610','센서','착상 광센서',2),
+        ],
+        'V1.1': [
+            P('CTL-200','제어반','MRL 통합형',1),
+            P('PM-330','권상기','무기어 PM 5.5kW',1),
+            P('INV-410','인버터','벡터제어 11kW v2',1),  // 변경
+            P('RP-001','로프','8mm x 6본',30),
+            P('CD-300','카도어','센터오픈 800',1),
+            P('OP-010','조작반','버튼식 16층',1),
+            P('LS-005','리미트SW','상하한',2),
+            P('GR-900','가이드레일','T89 x 2열',55),
+            P('SN-610','센서','착상 광센서',2),
+            P('ALD-700','자동착상장치','정전대응',1),     // 추가
+        ],
+    },
+    LUXEN: {
+        'V1.0': [
+            P('CTL-300','제어반','LUXEN 프리미엄',1),
+            P('PM-340','권상기','무기어 PM 7.5kW',1),
+            P('INV-400','인버터','벡터제어 11kW',1),
+            P('RP-002','로프','10mm x 6본',32),
+            P('CD-310','카도어','와이드 센터오픈',1),
+            P('OP-030','조작반','풀터치 LCD',1),
+            P('LED-050','LED등','천장 매립',6),
+            P('GR-900','가이드레일','T89 x 2열',58),
+            P('SN-610','센서','착상 광센서',2),
+            P('DM-820','도어모터','BLDC 정밀',1),
+        ],
+        'V1.1': [
+            P('CTL-300','제어반','LUXEN 프리미엄',1),
+            P('PM-340','권상기','무기어 PM 7.5kW',1),
+            P('INV-400','인버터','벡터제어 11kW',1),
+            P('RP-002','로프','10mm x 6본',32),
+            P('CD-310','카도어','와이드 센터오픈',1),
+            P('OP-030','조작반','풀터치 LCD',1),
+            P('LED-051','LED등','천장 매립 디밍',6),     // 변경
+            P('GR-900','가이드레일','T89 x 2열',58),
+            P('SN-610','센서','착상 광센서',2),
+            P('DM-820','도어모터','BLDC 정밀',1),
+            P('ALD-700','자동착상장치','정전대응',1),     // 추가
+        ],
+    },
+};
+
+function P(pn, name, spec, qty) {
+    return { pn, name, spec, qty, unit: UNITS[name] || 'EA' };
+}
+// 각 기종의 최신 버전 키
+const latestVersion = b => Object.keys(BOM[b]).slice(-1)[0];
+
+/*****************************************************************************
+ * 2) 탭 전환
+ *****************************************************************************/
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            const on = b === btn;
+            b.classList.toggle('border-blue-600', on);
+            b.classList.toggle('text-blue-600', on);
+            b.classList.toggle('font-semibold', on);
+            b.classList.toggle('border-transparent', !on);
+            b.classList.toggle('text-gray-500', !on);
+        });
+        document.getElementById('tab-cross').classList.toggle('hidden', tab !== 'cross');
+        document.getElementById('tab-version').classList.toggle('hidden', tab !== 'version');
+    });
+});
+
+/*****************************************************************************
+ * 3) 기종 간 비교 (각 기종의 최신 버전 BOM을 품번 기준으로 매칭)
+ *****************************************************************************/
+function summaryCard(label, value, color) {
+    return `<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3">
+        <div class="text-2xl font-bold ${color}">${value}</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">${label}</div>
+    </div>`;
+}
+
+function renderCross() {
+    const brands = [...document.querySelectorAll('.cross-brand:checked')].map(c => c.value);
+    const onlyDiff = document.getElementById('onlyDiff').checked;
+    const q = document.getElementById('crossSearch').value.trim().toLowerCase();
+
+    // 품번 기준으로 모든 부품 통합
+    const map = new Map(); // pn -> { name, spec, perBrand:{brand:item} }
+    brands.forEach(b => {
+        BOM[b][latestVersion(b)].forEach(it => {
+            if (!map.has(it.pn)) map.set(it.pn, { pn: it.pn, name: it.name, perBrand: {} });
+            map.get(it.pn).perBrand[b] = it;
+        });
+    });
+
+    let rows = [...map.values()].sort((a, b) => a.pn.localeCompare(b.pn));
+
+    // 상태 판정
+    rows.forEach(r => {
+        const present = brands.filter(b => r.perBrand[b]);
+        const specs = present.map(b => r.perBrand[b].spec + '|' + r.perBrand[b].qty);
+        const allSame = new Set(specs).size === 1;
+        if (present.length === brands.length && allSame) r.status = 'common';
+        else if (present.length < brands.length) r.status = 'missing';
+        else r.status = 'change'; // 전 기종 존재하나 수량/사양 차이
+    });
+
+    // 필터
+    if (onlyDiff) rows = rows.filter(r => r.status !== 'common');
+    if (q) rows = rows.filter(r => (r.pn + r.name).toLowerCase().includes(q));
+
+    // 요약 카드
+    const all = [...map.values()];
+    const common = all.filter(r => {
+        const present = brands.filter(b => r.perBrand[b]);
+        return present.length === brands.length &&
+               new Set(present.map(b => r.perBrand[b].spec + '|' + r.perBrand[b].qty)).size === 1;
+    }).length;
+    const missing = all.filter(r => brands.filter(b => r.perBrand[b]).length < brands.length).length;
+    document.getElementById('crossSummary').innerHTML =
+        summaryCard('전체 품번', all.length, 'text-gray-800 dark:text-gray-100') +
+        summaryCard('전 기종 공통', common, 'text-emerald-600 dark:text-emerald-400') +
+        summaryCard('수량/사양 차이', all.length - common - missing, 'text-amber-600 dark:text-amber-400') +
+        summaryCard('일부 기종만', missing, 'text-rose-600 dark:text-rose-400');
+
+    // 헤더
+    document.getElementById('crossHead').innerHTML =
+        `<th class="px-3 py-2 font-semibold">품번</th>
+         <th class="px-3 py-2 font-semibold">품명</th>` +
+        brands.map(b => `<th class="px-3 py-2 font-semibold">${b}<br><span class="text-[10px] text-gray-400 font-normal">${latestVersion(b)}</span></th>`).join('');
+
+    // 본문
+    const cellBg = { common: 'st-add', change: 'st-change', missing: 'st-remove' };
+    document.getElementById('crossBody').innerHTML = rows.map(r => {
+        const cells = brands.map(b => {
+            const it = r.perBrand[b];
+            if (!it) return `<td class="px-3 py-2 st-missing">- 미적용 -</td>`;
+            return `<td class="px-3 py-2">
+                        <div>${it.spec}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">${it.qty} ${it.unit}</div>
+                    </td>`;
+        }).join('');
+        return `<tr class="${cellBg[r.status]}">
+                    <td class="px-3 py-2 font-mono text-xs">${r.pn}</td>
+                    <td class="px-3 py-2 font-medium">${r.name}</td>
+                    ${cells}
+                </tr>`;
+    }).join('') || `<tr><td colspan="9" class="px-3 py-6 text-center text-gray-400">표시할 항목이 없습니다.</td></tr>`;
+}
+
+document.querySelectorAll('.cross-brand').forEach(c => c.addEventListener('change', renderCross));
+document.getElementById('onlyDiff').addEventListener('change', renderCross);
+document.getElementById('crossSearch').addEventListener('input', renderCross);
+
+/*****************************************************************************
+ * 4) 버전 간 비교 (동일 기종의 두 버전 BOM diff)
+ *****************************************************************************/
+function fillVersionSelectors() {
+    const brand = document.getElementById('verBrand').value;
+    const versions = Object.keys(BOM[brand]);
+    const from = document.getElementById('verFrom');
+    const to = document.getElementById('verTo');
+    from.innerHTML = versions.map(v => `<option>${v}</option>`).join('');
+    to.innerHTML = versions.map(v => `<option>${v}</option>`).join('');
+    from.value = versions[Math.max(0, versions.length - 2)];
+    to.value = versions[versions.length - 1];
+}
+
+function renderVersion() {
+    const brand = document.getElementById('verBrand').value;
+    const vf = document.getElementById('verFrom').value;
+    const vt = document.getElementById('verTo').value;
+    const from = new Map(BOM[brand][vf].map(i => [i.pn, i]));
+    const to = new Map(BOM[brand][vt].map(i => [i.pn, i]));
+    const allPns = new Set([...from.keys(), ...to.keys()]);
+
+    const rows = [...allPns].sort().map(pn => {
+        const a = from.get(pn), b = to.get(pn);
+        let status, item = b || a;
+        if (a && !b) status = 'remove';
+        else if (!a && b) status = 'add';
+        else if (a.spec !== b.spec || a.qty !== b.qty) status = 'change';
+        else status = 'same';
+        return { pn, status, item, qFrom: a?.qty ?? '', qTo: b?.qty ?? '' };
+    });
+
+    const cnt = s => rows.filter(r => r.status === s).length;
+    document.getElementById('verSummary').innerHTML =
+        summaryCard('동일', cnt('same'), 'text-gray-800 dark:text-gray-100') +
+        summaryCard('추가', cnt('add'), 'text-emerald-600 dark:text-emerald-400') +
+        summaryCard('삭제', cnt('remove'), 'text-rose-600 dark:text-rose-400') +
+        summaryCard('변경', cnt('change'), 'text-amber-600 dark:text-amber-400');
+
+    const badge = {
+        same:   '<span class="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-600">동일</span>',
+        add:    '<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-100">추가</span>',
+        remove: '<span class="text-xs px-2 py-0.5 rounded-full bg-rose-200 text-rose-800 dark:bg-rose-800 dark:text-rose-100">삭제</span>',
+        change: '<span class="text-xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-100">변경</span>',
+    };
+    const rowBg = { add: 'st-add', remove: 'st-remove', change: 'st-change', same: '' };
+
+    document.getElementById('verBody').innerHTML = rows.map(r => {
+        const qtyChanged = r.status === 'change' && r.qFrom !== r.qTo;
+        return `<tr class="${rowBg[r.status]}">
+            <td class="px-3 py-2">${badge[r.status]}</td>
+            <td class="px-3 py-2 font-mono text-xs">${r.pn}</td>
+            <td class="px-3 py-2 font-medium">${r.item.name}</td>
+            <td class="px-3 py-2">${r.item.spec}</td>
+            <td class="px-3 py-2 text-right ${r.status==='add'?'st-missing':''}">${r.qFrom}</td>
+            <td class="px-3 py-2 text-right ${qtyChanged?'font-bold text-amber-600 dark:text-amber-400':''} ${r.status==='remove'?'st-missing':''}">${r.qTo}</td>
+        </tr>`;
+    }).join('');
+}
+
+document.getElementById('verBrand').addEventListener('change', () => { fillVersionSelectors(); renderVersion(); });
+document.getElementById('verRun').addEventListener('click', renderVersion);
+document.getElementById('verFrom').addEventListener('change', renderVersion);
+document.getElementById('verTo').addEventListener('change', renderVersion);
+
+/*****************************************************************************
+ * 5) 초기 렌더
+ *****************************************************************************/
+renderCross();
+fillVersionSelectors();
+renderVersion();
+</script>
+</body>
+</html>

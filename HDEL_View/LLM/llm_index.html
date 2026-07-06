@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대성 인텔리전스 | 경영 분석 어시스턴트</title>
+    <meta name="description" content="대성정밀공업 임원·팀장을 위한 대화형 데이터 분석 어시스턴트">
+
+    <!-- Pretendard 웹폰트 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+    <!-- Tailwind Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { DEFAULT: '#1e4e8c', dark: '#14376a' },
+                        accent:  { DEFAULT: '#ff7a00', dark: '#e66e00' },
+                        ink: '#1a2230',
+                        surface: '#f4f6f9',
+                        muted: '#5a6473',
+                        line: '#e3e8ef',
+                    },
+                    fontFamily: {
+                        sans: ['"Pretendard Variable"', 'Pretendard', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', '"Malgun Gothic"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        card: '0 6px 24px rgba(26,34,48,.06)',
+                        pop: '0 20px 48px rgba(20,55,106,.18)',
+                    },
+                },
+            },
+        };
+    </script>
+
+    <!-- 오픈소스: 마크다운 렌더링 + XSS 방지 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+
+    <style>
+        html, body { height: 100%; }
+        body { font-family: 'Pretendard Variable', Pretendard, -apple-system, sans-serif; }
+
+        /* 커스텀 스크롤바 */
+        .scroll-thin::-webkit-scrollbar { width: 8px; }
+        .scroll-thin::-webkit-scrollbar-thumb { background: #cdd5e0; border-radius: 8px; }
+        .scroll-thin::-webkit-scrollbar-thumb:hover { background: #b4becd; }
+        .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+
+        /* 어시스턴트 답변 마크다운 타이포 */
+        .md h1,.md h2,.md h3 { font-weight: 700; line-height: 1.35; margin: 1.1em 0 .5em; color: #14376a; }
+        .md h1 { font-size: 1.35rem; } .md h2 { font-size: 1.18rem; } .md h3 { font-size: 1.05rem; }
+        .md p { margin: .55em 0; }
+        .md ul,.md ol { margin: .55em 0; padding-left: 1.35em; }
+        .md ul { list-style: disc; } .md ol { list-style: decimal; }
+        .md li { margin: .28em 0; }
+        .md strong { font-weight: 700; color: #1a2230; }
+        .md code { background: #eef2f7; color: #14376a; padding: .1em .4em; border-radius: 6px; font-size: .88em; }
+        .md pre { background: #0f1b2d; color: #e6edf5; padding: 14px 16px; border-radius: 12px; overflow-x: auto; margin: .8em 0; }
+        .md pre code { background: transparent; color: inherit; padding: 0; }
+        .md table { border-collapse: collapse; width: 100%; margin: .8em 0; font-size: .92em; }
+        .md th,.md td { border: 1px solid #e3e8ef; padding: 8px 12px; text-align: left; }
+        .md th { background: #f4f6f9; font-weight: 700; }
+        .md a { color: #1e4e8c; text-decoration: underline; }
+        .md blockquote { border-left: 3px solid #ff7a00; padding-left: 14px; color: #5a6473; margin: .7em 0; }
+
+        /* 타이핑 커서 */
+        .typing::after { content: '▍'; color: #1e4e8c; animation: blink 1s steps(2) infinite; }
+        @keyframes blink { 0%,50% { opacity: 1; } 50.01%,100% { opacity: 0; } }
+
+        /* 메시지 등장 */
+        .msg-in { animation: msgIn .35s cubic-bezier(.16,1,.3,1); }
+        @keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        textarea { field-sizing: content; }
+    </style>
+</head>
+
+<body class="bg-surface text-ink antialiased">
+
+<div class="flex flex-col h-screen max-w-[980px] mx-auto bg-white shadow-card">
+
+    <!-- ===== 헤더 ===== -->
+    <header class="flex items-center justify-between gap-4 px-5 md:px-7 h-[68px] border-b border-line shrink-0 bg-white/95 backdrop-blur">
+        <div class="flex items-center gap-3">
+            <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary text-white font-extrabold tracking-tight shadow-sm">DS</span>
+            <div class="leading-tight">
+                <h1 class="font-extrabold text-[17px]">대성 인텔리전스</h1>
+                <p class="text-[12px] text-muted">경영 데이터 분석 어시스턴트</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+        <span id="statusDot" class="hidden sm:inline-flex items-center gap-1.5 text-[12px] font-semibold text-muted px-2.5 py-1 rounded-full bg-surface">
+          <span class="w-2 h-2 rounded-full bg-slate-300"></span><span id="statusText">API 키 미설정</span>
+        </span>
+            <button id="btnNew" title="새 대화" class="p-2.5 rounded-lg text-muted hover:text-primary hover:bg-surface transition-colors">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <button id="btnSettings" title="설정" class="p-2.5 rounded-lg text-muted hover:text-primary hover:bg-surface transition-colors">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- ===== 대화 영역 ===== -->
+    <main id="chatScroll" class="flex-1 overflow-y-auto scroll-thin px-5 md:px-8 py-6">
+        <!-- 웰컴 화면 -->
+        <div id="welcome" class="max-w-[720px] mx-auto pt-6 md:pt-12">
+            <div class="text-center mb-9">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-white text-2xl shadow-pop mb-5">📊</div>
+                <h2 class="text-2xl md:text-[28px] font-extrabold tracking-tight mb-3">무엇을 분석해 드릴까요?</h2>
+                <p class="text-muted text-[15px] leading-relaxed">
+                    분석할 데이터를 <b class="text-primary">＠ 멘션으로 첨부</b>한 뒤 질문하세요.<br>
+                    영업사양 · 비표준사양검토 · 제품 BOM 데이터를 기반으로 답변합니다.
+                </p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-3">
+                <button class="ex-card text-left p-4 rounded-xl border border-line hover:border-primary hover:shadow-card transition-all bg-white"
+                        data-mentions="sales" data-q="이번 분기 영업사양 중 수주 확정 건의 총 예상 매출과 상위 고객사를 정리해줘.">
+                    <span class="inline-block text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded mb-2">＠영업사양</span>
+                    <p class="text-[14px] font-semibold leading-snug">분기 수주 현황 & 상위 고객사 요약</p>
+                </button>
+                <button class="ex-card text-left p-4 rounded-xl border border-line hover:border-accent hover:shadow-card transition-all bg-white"
+                        data-mentions="nonstd" data-q="비표준사양검토 건 중 리스크가 높은 항목을 선별하고 검토 우선순위를 제안해줘.">
+                    <span class="inline-block text-[11px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded mb-2">＠비표준사양검토</span>
+                    <p class="text-[14px] font-semibold leading-snug">비표준 검토 리스크 우선순위</p>
+                </button>
+                <button class="ex-card text-left p-4 rounded-xl border border-line hover:border-emerald-500 hover:shadow-card transition-all bg-white"
+                        data-mentions="bom" data-q="제품 1레벨 BOM 기준 원가 비중이 높은 구성품 Top 5와 개선 포인트를 알려줘.">
+                    <span class="inline-block text-[11px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded mb-2">＠제품 1레벨 BOM</span>
+                    <p class="text-[14px] font-semibold leading-snug">BOM 원가 비중 & 개선 포인트</p>
+                </button>
+                <button class="ex-card text-left p-4 rounded-xl border border-line hover:border-primary hover:shadow-card transition-all bg-white"
+                        data-mentions="sales,nonstd,bom" data-q="세 데이터를 종합해서, 수익성이 낮은 수주 건과 그 원인(비표준·원가)을 교차 분석해줘.">
+                    <span class="inline-block text-[11px] font-bold text-ink bg-slate-200 px-2 py-0.5 rounded mb-2">＠전체 데이터</span>
+                    <p class="text-[14px] font-semibold leading-snug">수익성 저하 수주 교차 분석</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- 메시지가 여기에 추가됨 -->
+        <div id="messages" class="max-w-[760px] mx-auto space-y-6"></div>
+    </main>
+
+    <!-- ===== 입력 영역 ===== -->
+    <footer class="shrink-0 border-t border-line bg-white px-4 md:px-8 pt-3 pb-4">
+        <div class="max-w-[760px] mx-auto">
+
+            <!-- 첨부된 데이터 멘션 칩 -->
+            <div id="mentionBar" class="flex flex-wrap items-center gap-2 mb-2 empty:hidden"></div>
+
+            <div class="relative rounded-2xl border border-line focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 transition-all bg-white shadow-sm">
+                <!-- 데이터 첨부 버튼 + 팝오버 -->
+                <div class="absolute left-2.5 bottom-2.5">
+                    <button id="btnMention" title="분석 데이터 첨부" class="flex items-center gap-1 h-9 px-3 rounded-xl text-[13px] font-bold text-primary bg-primary/8 hover:bg-primary/15 transition-colors">
+                        <span class="text-[15px] leading-none">＠</span><span class="hidden sm:inline">데이터</span>
+                    </button>
+
+                    <!-- 팝오버: 체크박스 데이터 목록 -->
+                    <div id="mentionPop" class="hidden absolute bottom-12 left-0 w-[340px] max-w-[86vw] bg-white rounded-2xl border border-line shadow-pop p-2.5 z-30">
+                        <p class="text-[11px] font-bold text-muted px-2 pt-1 pb-2 tracking-wide">분석에 첨부할 데이터 (규칙 포함)</p>
+                        <div id="mentionList" class="space-y-1"></div>
+                    </div>
+                </div>
+
+                <textarea id="input" rows="1" placeholder="데이터를 첨부하고 질문을 입력하세요…  (Shift + Enter 줄바꿈)"
+                          class="w-full resize-none bg-transparent outline-none text-[15px] leading-relaxed pl-[124px] sm:pl-[132px] pr-14 py-3.5 max-h-44 scroll-thin placeholder:text-slate-400"></textarea>
+
+                <!-- 전송 -->
+                <button id="btnSend" class="absolute right-2.5 bottom-2.5 w-10 h-10 rounded-xl bg-primary hover:bg-primary-dark disabled:bg-slate-300 disabled:cursor-not-allowed text-white grid place-items-center transition-colors">
+                    <svg id="iconSend" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                    <svg id="iconStop" class="hidden" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                </button>
+            </div>
+            <p class="text-center text-[11px] text-slate-400 mt-2">AI가 생성한 분석은 참고용입니다. 중요한 의사결정 전 원본 데이터를 확인하세요.</p>
+        </div>
+    </footer>
+</div>
+
+<!-- ===== 설정 모달 ===== -->
+<div id="settingsModal" class="hidden fixed inset-0 z-50 grid place-items-center bg-ink/40 backdrop-blur-sm px-4">
+    <div class="w-full max-w-[460px] bg-white rounded-2xl shadow-pop p-6">
+        <div class="flex items-center justify-between mb-1">
+            <h3 class="text-lg font-extrabold">설정</h3>
+            <button id="btnCloseSettings" class="p-1.5 rounded-lg text-muted hover:bg-surface"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        </div>
+        <p class="text-[13px] text-muted mb-5">Anthropic API 키로 연동합니다. 키는 이 브라우저에만 저장됩니다.</p>
+
+        <label class="block text-[13px] font-bold mb-1.5">API 키</label>
+        <div class="relative mb-4">
+            <input id="apiKeyInput" type="password" placeholder="sk-ant-..." autocomplete="off"
+                   class="w-full h-11 rounded-xl border border-line px-3.5 pr-11 text-[14px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
+            <button id="btnToggleKey" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-muted hover:text-primary" title="표시/숨김">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+        </div>
+
+        <label class="block text-[13px] font-bold mb-1.5">모델</label>
+        <select id="modelSelect" class="w-full h-11 rounded-xl border border-line px-3 text-[14px] outline-none focus:border-primary bg-white mb-5">
+            <option value="claude-opus-4-8">Claude Opus 4.8 (최고 성능 · 권장)</option>
+            <option value="claude-sonnet-5">Claude Sonnet 5 (빠르고 경제적)</option>
+            <option value="claude-haiku-4-5">Claude Haiku 4.5 (초고속)</option>
+        </select>
+
+        <div class="flex items-center gap-2">
+            <button id="btnSaveSettings" class="flex-1 h-11 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold transition-colors">저장</button>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-3 leading-relaxed">
+            ※ 브라우저에서 직접 API를 호출하면 키가 노출될 수 있습니다. 실제 운영 환경에서는 사내 서버(프록시)를 통한 연동을 권장합니다.
+        </p>
+    </div>
+</div>
+
+<script>
+    /* =========================================================
+       대성 인텔리전스 — 대화형 데이터 분석 어시스턴트
+       ========================================================= */
+
+    // ---- 분석 데이터 정의 (체크박스 = 멘션 규칙 + 샘플 데이터) ----
+    // sampleData 부분을 실제 사내 시스템(ERP/PLM) 연동 데이터로 교체하세요.
+    const DATA_SOURCES = {
+        sales: {
+            label: '영업사양',
+            color: 'primary',
+            badge: 'text-primary bg-primary/10',
+            dot: 'bg-primary',
+            desc: '수주/견적 영업사양 데이터 및 매출·고객 분석',
+            rule: [
+                '[영업사양 분석 규칙]',
+                '- 통화 단위는 원(KRW), 금액은 천원 단위로 반올림하여 제시한다.',
+                '- 수주확정/견적진행/실주 상태를 구분하여 분석한다.',
+                '- 매출·수량·납기 관점을 우선 검토하고, 이상치는 별도 표기한다.',
+            ].join('\n'),
+            sampleData:
+                `제품코드,고객사,수량,단가(원),상태,납기,담당
+DS-A100,현대모비스,12000,8500,수주확정,2026-08,김영업
+DS-B220,한화정밀,3000,42000,견적진행,2026-09,이수주
+DS-C310,삼성전기,25000,3200,수주확정,2026-07,박세일
+DS-A100,만도,8000,8700,견적진행,2026-10,김영업
+DS-D050,LS일렉트릭,1500,61000,실주,2026-06,최상무`
+        },
+        nonstd: {
+            label: '비표준사양검토',
+            color: 'accent',
+            badge: 'text-accent bg-accent/10',
+            dot: 'bg-accent',
+            desc: '표준 외 사양 요청 건의 기술·품질·원가 리스크 검토',
+            rule: [
+                '[비표준사양검토 분석 규칙]',
+                '- 리스크 등급(상/중/하)을 기술난이도·품질·납기·추가원가 기준으로 판단한다.',
+                '- 검토 미완료 건은 반드시 우선순위와 사유를 함께 제시한다.',
+                '- 표준화 전환이 가능한 항목은 개선 제안으로 분리한다.',
+            ].join('\n'),
+            sampleData:
+                `검토번호,제품코드,요청내용,기술난이도,추가원가율,검토상태
+N-2401,DS-A100,공차 ±0.005mm 강화,높음,18%,미완료
+N-2402,DS-B220,특수 표면처리(무전해),중간,9%,완료
+N-2403,DS-C310,재질 변경(SUS316L),높음,22%,미완료
+N-2404,DS-D050,납기 2주 단축 요청,낮음,5%,검토중`
+        },
+        bom: {
+            label: '제품 1레벨 BOM',
+            color: 'emerald',
+            badge: 'text-emerald-600 bg-emerald-500/10',
+            dot: 'bg-emerald-500',
+            desc: '제품별 1레벨 BOM 구성품·원가·수급 구조',
+            rule: [
+                '[제품 1레벨 BOM 분석 규칙]',
+                '- 원가 비중(구성품 원가 합 대비 %)을 계산하여 높은 순으로 제시한다.',
+                '- 단일 공급사 의존 항목은 공급 리스크로 표기한다.',
+                '- 원가 절감/표준화 여지가 있는 구성품을 개선 포인트로 제안한다.',
+            ].join('\n'),
+            sampleData:
+                `제품코드,구성품,수량,단가(원),공급사구분
+DS-A100,정밀가공바디,1,4200,자사가공
+DS-A100,베어링유닛,2,900,단일공급
+DS-A100,표면처리,1,600,외주
+DS-A100,체결부품셋,1,300,다중공급
+DS-C310,사출하우징,1,1500,단일공급
+DS-C310,PCB어셈블리,1,1100,외주
+DS-C310,커넥터,3,90,다중공급`
+        },
+    };
+
+    // ---- 상태 ----
+    const state = {
+        apiKey: localStorage.getItem('ds_api_key') || '',
+        model: localStorage.getItem('ds_model') || 'claude-opus-4-8',
+        mentions: new Set(),      // 현재 첨부된 데이터 id
+        messages: [],             // {role, content}
+        streaming: false,
+        controller: null,
+    };
+
+    // ---- DOM ----
+    const $ = (id) => document.getElementById(id);
+    const els = {
+        chatScroll: $('chatScroll'), welcome: $('welcome'), messages: $('messages'),
+        input: $('input'), btnSend: $('btnSend'), iconSend: $('iconSend'), iconStop: $('iconStop'),
+        mentionBar: $('mentionBar'), btnMention: $('btnMention'), mentionPop: $('mentionPop'), mentionList: $('mentionList'),
+        btnSettings: $('btnSettings'), settingsModal: $('settingsModal'), btnCloseSettings: $('btnCloseSettings'),
+        apiKeyInput: $('apiKeyInput'), modelSelect: $('modelSelect'), btnSaveSettings: $('btnSaveSettings'),
+        btnToggleKey: $('btnToggleKey'), btnNew: $('btnNew'),
+        statusDot: $('statusDot'), statusText: $('statusText'),
+    };
+
+    // ---- 초기화 ----
+    marked.setOptions({ breaks: true, gfm: true });
+    renderMentionList();
+    updateStatus();
+    autoResize();
+
+    // ============ 상태/헤더 ============
+    function updateStatus() {
+        const ok = !!state.apiKey;
+        els.statusDot.querySelector('span').className = 'w-2 h-2 rounded-full ' + (ok ? 'bg-emerald-500' : 'bg-slate-300');
+        els.statusText.textContent = ok ? '연동됨 · ' + modelLabel(state.model) : 'API 키 미설정';
+        els.statusDot.classList.remove('hidden');
+        els.statusDot.classList.add('sm:inline-flex');
+    }
+    function modelLabel(m){ return ({'claude-opus-4-8':'Opus 4.8','claude-sonnet-5':'Sonnet 5','claude-haiku-4-5':'Haiku 4.5'})[m] || m; }
+
+    // ============ 멘션(데이터 첨부) ============
+    function renderMentionList() {
+        els.mentionList.innerHTML = '';
+        Object.entries(DATA_SOURCES).forEach(([id, d]) => {
+            const on = state.mentions.has(id);
+            const row = document.createElement('label');
+            row.className = 'flex items-start gap-2.5 p-2 rounded-xl cursor-pointer hover:bg-surface transition-colors';
+            row.innerHTML = `
+        <span class="mt-0.5 w-5 h-5 rounded-md border-2 grid place-items-center shrink-0 transition-colors ${on ? 'bg-primary border-primary' : 'border-line bg-white'}">
+          ${on ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : ''}
+        </span>
+        <span class="min-w-0">
+          <span class="flex items-center gap-1.5">
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${d.badge}">＠${d.label}</span>
+          </span>
+          <span class="block text-[12px] text-muted mt-1 leading-snug">${d.desc}</span>
+        </span>`;
+            row.querySelector('span').addEventListener('click', () => {}); // (label 클릭으로 처리)
+            row.addEventListener('click', (e) => { e.preventDefault(); toggleMention(id); });
+            els.mentionList.appendChild(row);
+        });
+    }
+
+    function toggleMention(id) {
+        state.mentions.has(id) ? state.mentions.delete(id) : state.mentions.add(id);
+        renderMentionList();
+        renderMentionBar();
+    }
+
+    function renderMentionBar() {
+        els.mentionBar.innerHTML = '';
+        state.mentions.forEach(id => {
+            const d = DATA_SOURCES[id];
+            const chip = document.createElement('span');
+            chip.className = `inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-lg text-[12px] font-bold ${d.badge}`;
+            chip.innerHTML = `＠${d.label}
+        <button class="w-4 h-4 grid place-items-center rounded hover:bg-black/10" title="제거">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>`;
+            chip.querySelector('button').addEventListener('click', () => toggleMention(id));
+            els.mentionBar.appendChild(chip);
+        });
+    }
+
+    els.btnMention.addEventListener('click', (e) => {
+        e.stopPropagation();
+        els.mentionPop.classList.toggle('hidden');
+    });
+    document.addEventListener('click', (e) => {
+        if (!els.mentionPop.contains(e.target) && e.target !== els.btnMention && !els.btnMention.contains(e.target))
+            els.mentionPop.classList.add('hidden');
+    });
+
+    // ============ 입력창 ============
+    function autoResize() {
+        els.input.style.height = 'auto';
+        els.input.style.height = Math.min(els.input.scrollHeight, 176) + 'px';
+    }
+    els.input.addEventListener('input', autoResize);
+    els.input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+
+    // ============ 예시 카드 ============
+    document.querySelectorAll('.ex-card').forEach(card => {
+        card.addEventListener('click', () => {
+            state.mentions = new Set(card.dataset.mentions.split(','));
+            renderMentionList(); renderMentionBar();
+            els.input.value = card.dataset.q;
+            autoResize();
+            els.input.focus();
+        });
+    });
+
+    // ============ 시스템 프롬프트 구성 ============
+    function buildSystemPrompt() {
+        let sys =
+            `당신은 '대성정밀공업'의 경영 데이터 분석 어시스턴트 '대성 인텔리전스'입니다.
+사용자는 임원 및 팀장급 의사결정자입니다. 다음 원칙을 지키세요.
+- 결론을 먼저 제시하고(핵심 요약), 근거·수치를 뒤에 정리합니다.
+- 표와 목록을 적극 활용해 한눈에 파악되게 합니다.
+- 데이터에 근거해 답하고, 추정이 필요하면 '추정'임을 명시합니다.
+- 한국어 존댓말로, 간결하고 전문적으로 답합니다.`;
+
+        const attached = [...state.mentions];
+        if (attached.length) {
+            sys += '\n\n===== 첨부된 분석 데이터 및 규칙 =====';
+            attached.forEach(id => {
+                const d = DATA_SOURCES[id];
+                sys += `\n\n### ＠${d.label}\n${d.rule}\n\n[데이터]\n${d.sampleData}`;
+            });
+            sys += '\n\n위 데이터 범위 안에서 분석하고, 첨부되지 않은 데이터가 필요하면 그 사실을 알려주세요.';
+        } else {
+            sys += '\n\n(현재 첨부된 데이터가 없습니다. 데이터 기반 분석이 필요하면 사용자에게 ＠데이터 첨부를 안내하세요.)';
+        }
+        return sys;
+    }
+
+    // ============ 메시지 렌더 ============
+    function pushMessageEl(role, mentionIds) {
+        els.welcome.classList.add('hidden');
+        const wrap = document.createElement('div');
+        wrap.className = 'msg-in ' + (role === 'user' ? 'flex justify-end' : 'flex justify-start');
+
+        if (role === 'user') {
+            const chips = (mentionIds || []).map(id => {
+                const d = DATA_SOURCES[id];
+                return `<span class="inline-block text-[11px] font-bold px-1.5 py-0.5 rounded ${d.badge}">＠${d.label}</span>`;
+            }).join(' ');
+            wrap.innerHTML = `
+        <div class="max-w-[85%]">
+          ${chips ? `<div class="flex flex-wrap gap-1 justify-end mb-1.5">${chips}</div>` : ''}
+          <div class="bg-primary text-white rounded-2xl rounded-tr-md px-4 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap break-words shadow-sm"></div>
+        </div>`;
+        } else {
+            wrap.innerHTML = `
+        <div class="flex gap-3 max-w-[92%]">
+          <span class="shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-dark text-white grid place-items-center text-[13px] font-extrabold">DS</span>
+          <div class="md text-[15px] leading-relaxed pt-0.5 min-w-0"></div>
+        </div>`;
+        }
+        els.messages.appendChild(wrap);
+        scrollToBottom();
+        return wrap.querySelector(role === 'user' ? '.bg-primary' : '.md');
+    }
+
+    function scrollToBottom() {
+        els.chatScroll.scrollTo({ top: els.chatScroll.scrollHeight, behavior: 'smooth' });
+    }
+
+    // ============ 전송 ============
+    async function send() {
+        if (state.streaming) { abort(); return; }
+        const text = els.input.value.trim();
+        if (!text) return;
+
+        if (!state.apiKey) { openSettings(); flashKeyField(); return; }
+
+        const attached = [...state.mentions];
+        const userEl = pushMessageEl('user', attached);
+        userEl.textContent = text;
+
+        state.messages.push({ role: 'user', content: text });
+        els.input.value = '';
+        autoResize();
+
+        const answerEl = pushMessageEl('assistant');
+        answerEl.classList.add('typing');
+        answerEl.dataset.raw = '';
+
+        setStreaming(true);
+        try {
+            await streamAnswer(answerEl);
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                answerEl.classList.remove('typing');
+                if (!answerEl.dataset.raw) answerEl.innerHTML = '<span class="text-muted italic">응답이 중단되었습니다.</span>';
+            } else {
+                answerEl.classList.remove('typing');
+                answerEl.innerHTML = `<div class="text-red-600 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5 text-[14px]">
+          <b>오류가 발생했습니다.</b><br><span class="text-[13px]">${escapeHtml(err.message)}</span></div>`;
+            }
+        } finally {
+            setStreaming(false);
+        }
+    }
+
+    async function streamAnswer(answerEl) {
+        state.controller = new AbortController();
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            signal: state.controller.signal,
+            headers: {
+                'content-type': 'application/json',
+                'x-api-key': state.apiKey,
+                'anthropic-version': '2023-06-01',
+                'anthropic-dangerous-direct-browser-access': 'true',
+            },
+            body: JSON.stringify({
+                model: state.model,
+                max_tokens: 4096,
+                system: buildSystemPrompt(),
+                stream: true,
+                messages: state.messages,
+            }),
+        });
+
+        if (!res.ok) {
+            let msg = `HTTP ${res.status}`;
+            try { const j = await res.json(); msg = j?.error?.message || msg; } catch (_) {}
+            if (res.status === 401) msg = 'API 키가 유효하지 않습니다. 설정에서 키를 확인해 주세요.';
+            throw new Error(msg);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '', acc = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                if (!line.startsWith('data:')) continue;
+                const data = line.slice(5).trim();
+                if (!data || data === '[DONE]') continue;
+                let evt; try { evt = JSON.parse(data); } catch { continue; }
+                if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+                    acc += evt.delta.text;
+                    answerEl.dataset.raw = acc;
+                    answerEl.innerHTML = DOMPurify.sanitize(marked.parse(acc));
+                    scrollToBottom();
+                } else if (evt.type === 'message_delta' && evt.delta?.stop_reason === 'refusal') {
+                    acc += '\n\n_(안전상의 이유로 응답이 제한되었습니다.)_';
+                }
+            }
+        }
+
+        answerEl.classList.remove('typing');
+        answerEl.innerHTML = DOMPurify.sanitize(marked.parse(acc || '_(응답이 비어 있습니다.)_'));
+        state.messages.push({ role: 'assistant', content: acc });
+        scrollToBottom();
+    }
+
+    function abort() { state.controller?.abort(); }
+
+    function setStreaming(on) {
+        state.streaming = on;
+        els.iconSend.classList.toggle('hidden', on);
+        els.iconStop.classList.toggle('hidden', !on);
+        els.btnSend.classList.toggle('bg-primary', !on);
+        els.btnSend.classList.toggle('bg-accent', on);
+        els.btnSend.classList.toggle('hover:bg-accent-dark', on);
+    }
+
+    els.btnSend.addEventListener('click', send);
+
+    // ============ 새 대화 ============
+    els.btnNew.addEventListener('click', () => {
+        if (state.streaming) abort();
+        state.messages = [];
+        els.messages.innerHTML = '';
+        els.welcome.classList.remove('hidden');
+    });
+
+    // ============ 설정 모달 ============
+    function openSettings() {
+        els.apiKeyInput.value = state.apiKey;
+        els.modelSelect.value = state.model;
+        els.settingsModal.classList.remove('hidden');
+        els.settingsModal.classList.add('flex');
+    }
+    function closeSettings() {
+        els.settingsModal.classList.add('hidden');
+        els.settingsModal.classList.remove('flex');
+    }
+    els.btnSettings.addEventListener('click', openSettings);
+    els.btnCloseSettings.addEventListener('click', closeSettings);
+    els.settingsModal.addEventListener('click', (e) => { if (e.target === els.settingsModal) closeSettings(); });
+
+    els.btnSaveSettings.addEventListener('click', () => {
+        state.apiKey = els.apiKeyInput.value.trim();
+        state.model = els.modelSelect.value;
+        localStorage.setItem('ds_api_key', state.apiKey);
+        localStorage.setItem('ds_model', state.model);
+        updateStatus();
+        closeSettings();
+    });
+
+    els.btnToggleKey.addEventListener('click', () => {
+        els.apiKeyInput.type = els.apiKeyInput.type === 'password' ? 'text' : 'password';
+    });
+
+    function flashKeyField() {
+        els.apiKeyInput.classList.add('ring-2', 'ring-accent', 'border-accent');
+        setTimeout(() => els.apiKeyInput.classList.remove('ring-2', 'ring-accent', 'border-accent'), 1600);
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+</script>
+</body>
+</html>
