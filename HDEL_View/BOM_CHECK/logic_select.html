@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOM 비교 분석 | BOM AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        :root{
+            --bg:#f5f5f7;
+            --card:#ffffff;
+            --ink:#1d1d1f;
+            --ink-2:#6e6e73;
+            --ink-3:#aeaeb2;
+            --blue:#0071e3;
+            --blue-deep:#0051a2;
+            --green:#34c759;
+            --red:#ff3b30;
+            --orange:#ff9500;
+            --hairline:rgba(0,0,0,.08);
+            --shadow-sm:0 2px 10px rgba(0,0,0,.05);
+            --shadow-md:0 8px 32px rgba(0,0,0,.08);
+            --shadow-lg:0 20px 60px rgba(0,0,0,.12);
+            --ease:cubic-bezier(.28,.11,.32,1);
+        }
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+        html{scroll-behavior:smooth}
+        body{
+            background:var(--bg);color:var(--ink);
+            font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue','Noto Sans KR',sans-serif;
+            min-height:100vh;overflow-x:hidden;
+            letter-spacing:-.015em;
+        }
+        ::selection{background:rgba(0,113,227,.18)}
+        ::-webkit-scrollbar{width:8px;height:8px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18);border-radius:8px;border:2px solid var(--bg)}
+        ::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.3)}
+
+        /* ===== NAVBAR — frosted glass ===== */
+        .navbar{
+            position:fixed;top:0;left:0;right:0;z-index:50;
+            background:rgba(251,251,253,.8);
+            backdrop-filter:saturate(180%) blur(20px);
+            -webkit-backdrop-filter:saturate(180%) blur(20px);
+            border-bottom:1px solid var(--hairline);
+        }
+
+        /* ===== HERO headline gradient ===== */
+        .hero-grad{
+            background:linear-gradient(90deg,#0071e3 0%,#5e5ce6 40%,#bf5af2 70%,#0071e3 100%);
+            background-size:250% auto;
+            -webkit-background-clip:text;background-clip:text;
+            -webkit-text-fill-color:transparent;
+            animation:heroFlow 8s ease-in-out infinite;
+        }
+        @keyframes heroFlow{0%,100%{background-position:0% center}50%{background-position:100% center}}
+
+        /* ===== CARDS ===== */
+        .card{
+            background:var(--card);border-radius:20px;
+            box-shadow:var(--shadow-sm);
+            border:1px solid rgba(0,0,0,.04);
+            transition:box-shadow .45s var(--ease),transform .45s var(--ease);
+        }
+        .card-hover:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+
+        /* ===== INPUTS — Apple form style ===== */
+        .field{position:relative}
+        .field input{
+            width:100%;padding:26px 18px 10px;border-radius:14px;font-size:16px;
+            background:rgba(0,0,0,.035);border:1.5px solid transparent;outline:none;
+            color:var(--ink);transition:all .3s var(--ease);font-weight:500;
+        }
+        .field input:hover{background:rgba(0,0,0,.05)}
+        .field input:focus{background:#fff;border-color:var(--blue);box-shadow:0 0 0 4px rgba(0,113,227,.12)}
+        .field label{
+            position:absolute;left:18px;top:18px;font-size:15px;color:var(--ink-2);
+            pointer-events:none;transition:all .25s var(--ease);font-weight:500;
+        }
+        .field input:focus + label,
+        .field input:not(:placeholder-shown) + label{
+            top:8px;font-size:11px;color:var(--blue);font-weight:600;letter-spacing:.02em;
+        }
+        .field input::placeholder{color:transparent}
+
+        /* ===== PRIMARY BUTTON — Apple pill ===== */
+        .btn-primary{
+            background:var(--blue);color:#fff;border:none;cursor:pointer;
+            padding:14px 32px;border-radius:980px;font-size:16px;font-weight:600;
+            transition:all .3s var(--ease);letter-spacing:-.01em;
+            display:inline-flex;align-items:center;gap:8px;justify-content:center;
+        }
+        .btn-primary:hover{background:#0077ed;transform:scale(1.02);box-shadow:0 8px 24px rgba(0,113,227,.35)}
+        .btn-primary:active{transform:scale(.98)}
+        .btn-primary:disabled{opacity:.4;pointer-events:none}
+        .btn-ghost{
+            background:transparent;color:var(--blue);border:none;cursor:pointer;
+            padding:14px 24px;border-radius:980px;font-size:16px;font-weight:500;
+            transition:all .3s var(--ease);
+        }
+        .btn-ghost:hover{background:rgba(0,113,227,.08)}
+
+        /* Sample chips */
+        .chip{
+            padding:7px 16px;border-radius:980px;font-size:13px;font-weight:500;cursor:pointer;
+            background:rgba(0,0,0,.045);color:var(--ink-2);border:none;
+            transition:all .25s var(--ease);
+        }
+        .chip:hover{background:rgba(0,113,227,.1);color:var(--blue)}
+
+        /* ===== SEGMENTED CONTROL — iOS style ===== */
+        .segmented{
+            display:inline-flex;background:rgba(0,0,0,.055);border-radius:12px;padding:3px;position:relative;
+        }
+        .seg-btn{
+            position:relative;z-index:2;padding:8px 22px;border-radius:9px;font-size:13.5px;font-weight:600;
+            color:var(--ink-2);cursor:pointer;border:none;background:transparent;
+            transition:color .3s var(--ease);white-space:nowrap;
+        }
+        .seg-btn.active{color:var(--ink)}
+        .seg-thumb{
+            position:absolute;top:3px;bottom:3px;border-radius:9px;background:#fff;
+            box-shadow:0 2px 8px rgba(0,0,0,.12),0 0 1px rgba(0,0,0,.08);
+            transition:left .35s var(--ease),width .35s var(--ease);z-index:1;
+        }
+
+        /* ===== FILTER PILLS ===== */
+        .fpill{
+            padding:6px 15px;border-radius:980px;font-size:13px;font-weight:500;cursor:pointer;
+            background:transparent;color:var(--ink-2);border:1px solid var(--hairline);
+            transition:all .25s var(--ease);white-space:nowrap;
+        }
+        .fpill:hover{border-color:rgba(0,0,0,.2);color:var(--ink)}
+        .fpill.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+        /* ===== SUMMARY STAT CARDS ===== */
+        .stat-num{
+            font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1;
+            font-variant-numeric:tabular-nums;
+        }
+        .stat-label{font-size:13px;color:var(--ink-2);font-weight:500;margin-top:6px}
+        .stat-accent-total  {color:var(--ink)}
+        .stat-accent-added  {color:var(--green)}
+        .stat-accent-removed{color:var(--red)}
+        .stat-accent-changed{color:var(--orange)}
+        .stat-accent-same   {color:var(--ink-3)}
+
+        /* ===== TABLE ===== */
+        .tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:14px}
+        .tbl thead th{
+            position:sticky;top:0;z-index:10;background:rgba(251,251,253,.92);
+            backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+            padding:12px 16px;text-align:left;font-size:12px;font-weight:600;color:var(--ink-2);
+            border-bottom:1px solid var(--hairline);letter-spacing:.01em;white-space:nowrap;
+        }
+        .tbl td{padding:13px 16px;border-bottom:1px solid rgba(0,0,0,.05);vertical-align:middle}
+        .tbl tbody tr{transition:background .2s var(--ease)}
+        .tbl tbody tr:hover{background:rgba(0,0,0,.02)}
+        .tbl tbody tr:last-child td{border-bottom:none}
+
+        /* Status dots + badges — iOS style */
+        .status-badge{
+            display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:980px;
+            font-size:12px;font-weight:600;white-space:nowrap;
+        }
+        .sb-added  {background:rgba(52,199,89,.12); color:#248a3d}
+        .sb-removed{background:rgba(255,59,48,.1);  color:#d70015}
+        .sb-changed{background:rgba(255,149,0,.12); color:#c93400}
+        .sb-same   {background:rgba(0,0,0,.05);     color:var(--ink-2)}
+        .status-dot{width:7px;height:7px;border-radius:50%}
+        .sd-added  {background:var(--green)}
+        .sd-removed{background:var(--red)}
+        .sd-changed{background:var(--orange)}
+        .sd-same   {background:var(--ink-3)}
+
+        /* Diff value display */
+        .v-old{color:var(--red);text-decoration:line-through;opacity:.65;font-size:13px}
+        .v-arrow{color:var(--ink-3);margin:0 6px;font-size:12px}
+        .v-new{color:#248a3d;font-weight:600}
+        .v-added{color:#248a3d}
+        .v-removed{color:var(--red);opacity:.7;text-decoration:line-through}
+
+        .part-no{font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0}
+        .mono{font-family:'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;letter-spacing:0}
+
+        /* ===== SPLIT VIEW ===== */
+        .blk-section{margin-bottom:28px}
+        .blk-title{
+            display:flex;align-items:baseline;gap:12px;margin-bottom:12px;padding:0 4px;
+        }
+        .blk-title h3{font-size:20px;font-weight:700;letter-spacing:-.02em}
+        .blk-title .meta{font-size:13px;color:var(--ink-2);display:flex;gap:8px;align-items:center}
+        .mini-badge{padding:2px 9px;border-radius:980px;font-size:11px;font-weight:700}
+
+        .split-grid th{
+            padding:10px 16px;font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;
+            border-bottom:1px solid var(--hairline);white-space:nowrap;text-align:left;
+        }
+        .split-grid td{padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.045);font-size:13.5px}
+        .split-grid tbody tr:last-child td{border-bottom:none}
+        .split-grid tbody tr{transition:background .2s}
+        .split-grid tbody tr:hover{background:rgba(0,0,0,.015)}
+        .col-past-head{color:#8e44ad;background:rgba(142,68,173,.05)}
+        .col-now-head {color:var(--blue);background:rgba(0,113,227,.045)}
+        .col-status-head{color:var(--ink-3);background:rgba(0,0,0,.02);text-align:center}
+        .cell-past{background:rgba(142,68,173,.018)}
+        .cell-now {background:rgba(0,113,227,.016)}
+        .cell-status{background:rgba(0,0,0,.012);text-align:center}
+        .cell-hl-old{background:rgba(255,59,48,.07)!important;color:#d70015;font-weight:600}
+        .cell-hl-new{background:rgba(52,199,89,.09)!important;color:#248a3d;font-weight:600}
+        .cell-dash{color:var(--ink-3)}
+
+        /* ===== LOADING ===== */
+        .apple-spinner{width:28px;height:28px;position:relative;margin:0 auto}
+        .apple-spinner div{
+            position:absolute;left:46%;top:0;width:8%;height:26%;background:var(--ink-2);
+            border-radius:4px;transform-origin:center 190%;animation:spinnerFade 1s linear infinite;
+        }
+        @keyframes spinnerFade{0%{opacity:1}100%{opacity:.15}}
+
+        /* ===== REVEAL ANIMATIONS ===== */
+        .reveal{opacity:0;transform:translateY(24px)}
+
+        /* ===== VERSION PILL BAR ===== */
+        .ver-pill{
+            display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:980px;
+            font-size:13px;font-weight:600;background:rgba(0,0,0,.04);
+        }
+
+        /* Divider hairline */
+        .hairline{height:1px;background:var(--hairline)}
+
+        /* keyboard hint */
+        kbd{
+            background:rgba(0,0,0,.05);border:1px solid var(--hairline);border-radius:5px;
+            padding:1px 6px;font-size:11px;font-family:inherit;color:var(--ink-2);
+        }
+
+        /* Empty state icon breathing */
+        @keyframes breathe{0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(1.05);opacity:.8}}
+        .breathe{animation:breathe 4s ease-in-out infinite}
+
+        /* Table container */
+        .tbl-container{max-height:64vh;overflow:auto;border-radius:0 0 20px 20px}
+        .split-container{overflow-x:auto}
+    </style>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar">
+    <div class="max-w-6xl mx-auto px-6 h-[52px] flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <a href="logic_select_main.html" class="flex items-center gap-1 text-[13px] font-medium transition-opacity hover:opacity-60" style="color:var(--blue)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                메인
+            </a>
+            <div class="w-px h-4" style="background:var(--hairline)"></div>
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-[7px] flex items-center justify-center" style="background:linear-gradient(135deg,#0071e3,#5e5ce6)">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+                </div>
+                <span class="text-[14px] font-semibold tracking-tight">BOM AI</span>
+                <span class="text-[12px]" style="color:var(--ink-3)">수배로직설계팀</span>
+            </div>
+        </div>
+        <div class="text-[12px] font-medium" style="color:var(--ink-2)">BOM 비교 분석</div>
+    </div>
+</nav>
+
+<!-- ===== MAIN ===== -->
+<main class="pt-[52px]">
+
+    <!-- HERO -->
+    <section class="max-w-4xl mx-auto px-6 pt-16 pb-10 text-center">
+        <p id="heroEyebrow" class="text-[15px] font-semibold mb-3 reveal" style="color:var(--orange)">BOM Diff Engine</p>
+        <h1 id="heroTitle" class="text-[44px] md:text-[56px] font-bold leading-[1.07] tracking-[-.03em] reveal">
+            변경점을 한눈에.<br><span class="hero-grad">과거와 현재를 비교하다.</span>
+        </h1>
+        <p id="heroSub" class="text-[19px] mt-5 font-normal max-w-xl mx-auto reveal" style="color:var(--ink-2)">
+            제품번호와 BLOCKNO만 입력하세요.<br class="md:hidden">
+            과거·현재 버전의 BOM을 자동으로 조회하고 비교합니다.
+        </p>
+    </section>
+
+    <!-- INPUT CARD -->
+    <section class="max-w-3xl mx-auto px-6 pb-14">
+        <div id="inputCard" class="card p-8 reveal" style="border-radius:24px">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="field">
+                    <input id="inProduct" type="text" placeholder="제품번호" autocomplete="off">
+                    <label for="inProduct">제품번호</label>
+                </div>
+                <div class="field">
+                    <input id="inBlock" type="text" placeholder="BLOCKNO" autocomplete="off">
+                    <label for="inBlock">BLOCKNO</label>
+                </div>
+            </div>
+
+            <!-- Samples -->
+            <div class="flex flex-wrap items-center gap-2 mt-5">
+                <span class="text-[12px] font-medium" style="color:var(--ink-3)">샘플</span>
+                <button class="chip" onclick="fillSample('MOD-2025-001','BLK-001')">MOD-2025-001 · BLK-001</button>
+                <button class="chip" onclick="fillSample('MOD-2024-007','BLK-003')">MOD-2024-007 · BLK-003</button>
+            </div>
+
+            <div class="hairline my-6"></div>
+
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <button id="btnCompare" class="btn-primary w-full sm:w-auto" onclick="runCompare()">
+                    비교 분석
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5-5 5M6 12h12"/></svg>
+                </button>
+                <button class="btn-ghost w-full sm:w-auto" onclick="clearAll()">초기화</button>
+                <span class="text-[12px] sm:ml-auto" style="color:var(--ink-3)"><kbd>Enter</kbd> 키로도 실행됩니다</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- LOADING -->
+    <section id="loadingState" class="hidden max-w-3xl mx-auto px-6 pb-24 text-center">
+        <div class="apple-spinner mb-5" id="spinner"></div>
+        <p class="text-[15px] font-medium" style="color:var(--ink-2)" id="loadingMsg">BOM 데이터 조회 중…</p>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="results" class="hidden max-w-6xl mx-auto px-6 pb-24">
+
+        <!-- Version bar -->
+        <div class="flex flex-wrap items-center justify-center gap-3 mb-10">
+            <span class="ver-pill" id="pillProduct" style="color:var(--ink)">—</span>
+            <span class="ver-pill" style="color:#8e44ad"><span class="status-dot" style="background:#8e44ad"></span><span id="pillPast">—</span></span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aeaeb2" stroke-width="2"><path stroke-linecap="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <span class="ver-pill" style="color:var(--blue)"><span class="status-dot" style="background:var(--blue)"></span><span id="pillNow">—</span></span>
+        </div>
+
+        <!-- Summary stats -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-12" id="statGrid">
+            <div class="card card-hover p-6 text-center">
+                <div class="stat-num stat-accent-total" id="cntTotal">0</div>
+                <div class="stat-label">전체 항목</div>
+            </div>
+            <div class="card card-hover p-6 text-center">
+                <div class="stat-num stat-accent-added" id="cntAdded">0</div>
+                <div class="stat-label">신규 추가</div>
+            </div>
+            <div class="card card-hover p-6 text-center">
+                <div class="stat-num stat-accent-removed" id="cntRemoved">0</div>
+                <div class="stat-label">삭제</div>
+            </div>
+            <div class="card card-hover p-6 text-center">
+                <div class="stat-num stat-accent-changed" id="cntChanged">0</div>
+                <div class="stat-label">변경</div>
+            </div>
+            <div class="card card-hover p-6 text-center">
+                <div class="stat-num stat-accent-same" id="cntSame">0</div>
+                <div class="stat-label">동일</div>
+            </div>
+        </div>
+
+        <!-- Controls: segmented + filters -->
+        <div class="flex flex-col md:flex-row items-center gap-4 mb-7">
+            <!-- Segmented view control -->
+            <div class="segmented" id="segControl">
+                <div class="seg-thumb" id="segThumb"></div>
+                <button class="seg-btn active" id="segDiff"  onclick="setView('diff')">통합 보기</button>
+                <button class="seg-btn"        id="segSplit" onclick="setView('split')">좌우 비교</button>
+            </div>
+
+            <!-- Filter pills -->
+            <div class="flex flex-wrap gap-2 md:ml-auto" id="filterTabs">
+                <button class="fpill active" data-filter="all"     onclick="setFilter('all',this)">전체</button>
+                <button class="fpill"        data-filter="changes" onclick="setFilter('changes',this)">변경사항</button>
+                <button class="fpill"        data-filter="added"   onclick="setFilter('added',this)">신규</button>
+                <button class="fpill"        data-filter="removed" onclick="setFilter('removed',this)">삭제</button>
+                <button class="fpill"        data-filter="changed" onclick="setFilter('changed',this)">변경</button>
+            </div>
+            <span class="text-[13px] font-medium shrink-0" style="color:var(--ink-3)" id="filterCount">0건</span>
+        </div>
+
+        <!-- UNIFIED DIFF VIEW -->
+        <div id="diffView" class="card overflow-hidden" style="border-radius:20px">
+            <div class="tbl-container">
+                <table class="tbl">
+                    <thead>
+                    <tr>
+                        <th style="width:46px">#</th>
+                        <th style="width:110px">상태</th>
+                        <th>부품번호</th>
+                        <th>BLOCKNO</th>
+                        <th style="text-align:center">수량</th>
+                        <th>SPEC</th>
+                        <th>주석</th>
+                    </tr>
+                    </thead>
+                    <tbody id="diffBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SPLIT VIEW -->
+        <div id="splitView" class="hidden"></div>
+
+    </section>
+
+    <!-- EMPTY STATE -->
+    <section id="emptyState" class="max-w-3xl mx-auto px-6 pb-28 text-center">
+        <div class="breathe inline-block mb-6">
+            <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="1.2">
+                <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
+            </svg>
+        </div>
+        <p class="text-[17px] font-medium" style="color:var(--ink-2)">아직 비교 결과가 없습니다</p>
+        <p class="text-[14px] mt-1.5" style="color:var(--ink-3)">위에서 제품번호와 BLOCKNO를 입력하고 비교 분석을 실행하세요</p>
+    </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="border-t" style="border-color:var(--hairline)">
+    <div class="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-2">
+        <span class="text-[12px]" style="color:var(--ink-3)">BOM AI — 수배로직설계팀 · BOM Diff Engine v2.1</span>
+        <span class="text-[12px]" style="color:var(--ink-3)">Copyright © 2025 수배로직설계팀. All rights reserved.</span>
+    </div>
+</footer>
+
+<script>
+    // =============================================
+    // MOCK BOM DATA (백엔드 시뮬레이션)
+    // =============================================
+    const MOCK_DB = {
+        'MOD-2025-001|BLK-001|PAST': [
+            { partno:'PART-E001', blockno:'BLK-A01', qty:2, spec:'BRACKET_STL_A',   note:'엔진 마운트 브래킷' },
+            { partno:'PART-E002', blockno:'BLK-A01', qty:4, spec:'BOLT_M8x25_CL10', note:'엔진 마운트 고정 볼트' },
+            { partno:'PART-E003', blockno:'BLK-A02', qty:1, spec:'GASKET_HG_A',     note:'헤드 개스킷 — 표준형' },
+            { partno:'PART-E004', blockno:'BLK-A02', qty:8, spec:'BOLT_M6_CL8',     note:'헤드 볼트' },
+            { partno:'PART-E005', blockno:'BLK-A03', qty:1, spec:'PUMP_OIL_MEC',    note:'기계식 오일 펌프' },
+            { partno:'PART-E006', blockno:'BLK-A03', qty:2, spec:'SEAL_OIL_NBR',    note:'오일 씰 (NBR)' },
+            { partno:'PART-T001', blockno:'BLK-B01', qty:1, spec:'GEAR_ASSY_6AT',   note:'6단 AT 기어 어셈블리' },
+            { partno:'PART-T002', blockno:'BLK-B01', qty:3, spec:'BEARING_NB204',   note:'베어링 NB204' },
+            { partno:'PART-T003', blockno:'BLK-B02', qty:1, spec:'SHAFT_MAIN_A',    note:'메인 샤프트 Type-A' },
+            { partno:'PART-T004', blockno:'BLK-B02', qty:2, spec:'CLIP_E_12MM',     note:'E-클립 φ12' },
+            { partno:'PART-C001', blockno:'BLK-C01', qty:1, spec:'FILTER_OIL_STD',  note:'오일 필터 — 표준' },
+            { partno:'PART-C002', blockno:'BLK-C01', qty:1, spec:'FILTER_AIR_A',    note:'에어 필터 Type-A' },
+            { partno:'PART-C003', blockno:'BLK-C02', qty:1, spec:'SENSOR_TEMP_NTC', note:'냉각수 온도 센서 (NTC)' },
+            { partno:'PART-C004', blockno:'BLK-C02', qty:1, spec:'HARNESS_ENG_A',   note:'엔진 와이어 하네스 A형' },
+        ],
+        'MOD-2025-001|BLK-001|NOW': [
+            { partno:'PART-E001', blockno:'BLK-A01', qty:2, spec:'BRACKET_STL_B',      note:'엔진 마운트 브래킷 (경량화 개선형)' },
+            { partno:'PART-E002', blockno:'BLK-A01', qty:6, spec:'BOLT_M8x25_CL10',    note:'엔진 마운트 고정 볼트' },
+            { partno:'PART-E003', blockno:'BLK-A02', qty:1, spec:'GASKET_HG_A',        note:'헤드 개스킷 — 표준형' },
+            { partno:'PART-E004', blockno:'BLK-A02', qty:8, spec:'BOLT_M6_CL10',       note:'헤드 볼트 (강화형 CL10)' },
+            { partno:'PART-E005', blockno:'BLK-A03', qty:1, spec:'PUMP_OIL_ELC',       note:'전동식 오일 펌프 (EV 대응)' },
+            { partno:'PART-E006', blockno:'BLK-A03', qty:2, spec:'SEAL_OIL_NBR',       note:'오일 씰 (NBR)' },
+            { partno:'PART-T001', blockno:'BLK-B01', qty:1, spec:'GEAR_ASSY_8AT',      note:'8단 AT 기어 어셈블리 (업그레이드)' },
+            { partno:'PART-T002', blockno:'BLK-B01', qty:4, spec:'BEARING_NB204',      note:'베어링 NB204' },
+            { partno:'PART-T003', blockno:'BLK-B02', qty:1, spec:'SHAFT_MAIN_A',       note:'메인 샤프트 Type-A' },
+            { partno:'PART-T004', blockno:'BLK-B02', qty:2, spec:'CLIP_E_12MM',        note:'E-클립 φ12' },
+            { partno:'PART-C001', blockno:'BLK-C01', qty:1, spec:'FILTER_OIL_HIPERF',  note:'고성능 오일 필터 (교체 주기 2배)' },
+            { partno:'PART-C002', blockno:'BLK-C01', qty:1, spec:'FILTER_AIR_A',       note:'에어 필터 Type-A' },
+            { partno:'PART-C003', blockno:'BLK-C02', qty:2, spec:'SENSOR_TEMP_NTC',    note:'냉각수 온도 센서 (NTC)' },
+            { partno:'PART-C005', blockno:'BLK-C02', qty:1, spec:'SENSOR_O2_WIDEBAND', note:'와이드밴드 산소 센서 (신규)' },
+            { partno:'PART-C006', blockno:'BLK-D01', qty:1, spec:'MODULE_ECU_GEN3',    note:'ECU 3세대 모듈 (신규 탑재)' },
+        ],
+        'MOD-2024-007|BLK-003|PAST': [
+            { partno:'PART-A011', blockno:'BLK-003', qty:1, spec:'ENG_2000_NA',   note:'2.0L 자연흡기 엔진' },
+            { partno:'PART-A012', blockno:'BLK-003', qty:4, spec:'INJECTOR_MPI',  note:'MPI 인젝터' },
+            { partno:'PART-A013', blockno:'BLK-003', qty:1, spec:'EXHAUST_STD',   note:'표준 배기 매니폴드' },
+            { partno:'PART-A014', blockno:'BLK-003', qty:1, spec:'BELT_TIMING_A', note:'타이밍 벨트' },
+            { partno:'PART-A015', blockno:'BLK-003', qty:2, spec:'PULLEY_CAM_A',  note:'캠축 풀리' },
+        ],
+        'MOD-2024-007|BLK-003|NOW': [
+            { partno:'PART-A011', blockno:'BLK-003', qty:1, spec:'ENG_2000_TURBO', note:'2.0L 터보 엔진 (변경)' },
+            { partno:'PART-A012', blockno:'BLK-003', qty:4, spec:'INJECTOR_GDI',   note:'GDI 인젝터 (직분사 변경)' },
+            { partno:'PART-A013', blockno:'BLK-003', qty:1, spec:'EXHAUST_STD',    note:'표준 배기 매니폴드' },
+            { partno:'PART-A016', blockno:'BLK-003', qty:1, spec:'CHAIN_TIMING_B', note:'타이밍 체인 (벨트→체인 변경)' },
+            { partno:'PART-A017', blockno:'BLK-003', qty:1, spec:'INTERCOOLER_FR', note:'프론트 인터쿨러 (신규)' },
+            { partno:'PART-A018', blockno:'BLK-003', qty:1, spec:'TURBO_ASSY_K03', note:'K03 터보차저 어셈블리 (신규)' },
+        ],
+    };
+
+    const VERSION_META = {
+        'MOD-2025-001|BLK-001': { past:'Rev.1 · 2025-01-15', now:'Rev.2 · 2025-06-08' },
+        'MOD-2024-007|BLK-003': { past:'Rev.3 · 2024-08-20', now:'Rev.4 · 2025-05-12' },
+    };
+
+    // =============================================
+    // STATE
+    // =============================================
+    let diffData = [];
+    let viewMode = 'diff';
+    let currentPastVer = '';
+    let currentNowVer  = '';
+
+    // =============================================
+    // INIT — hero entrance + spinner blades
+    // =============================================
+    document.addEventListener('DOMContentLoaded', () => {
+        // Spinner blades (Apple activity indicator)
+        const sp = document.getElementById('spinner');
+        for(let i=0;i<12;i++){
+            const b = document.createElement('div');
+            b.style.transform = `rotate(${i*30}deg) translateY(0)`;
+            b.style.animationDelay = `${-(1 - i/12)}s`;
+            sp.appendChild(b);
+        }
+
+        // GSAP entrance
+        if(typeof gsap !== 'undefined'){
+            gsap.to('#heroEyebrow',{opacity:1,y:0,duration:.8,ease:'power3.out',delay:.1});
+            gsap.to('#heroTitle',  {opacity:1,y:0,duration:.9,ease:'power3.out',delay:.25});
+            gsap.to('#heroSub',    {opacity:1,y:0,duration:.9,ease:'power3.out',delay:.45});
+            gsap.to('#inputCard',  {opacity:1,y:0,duration:.9,ease:'power3.out',delay:.65});
+        } else {
+            document.querySelectorAll('.reveal').forEach(el=>{el.style.opacity=1;el.style.transform='none';});
+        }
+
+        // Enter key
+        ['inProduct','inBlock'].forEach(id=>{
+            document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') runCompare(); });
+        });
+
+        // Segmented thumb initial position
+        requestAnimationFrame(positionSegThumb);
+        window.addEventListener('resize', positionSegThumb);
+    });
+
+    function positionSegThumb(){
+        const active = document.querySelector('.seg-btn.active');
+        const thumb  = document.getElementById('segThumb');
+        if(active && thumb){
+            thumb.style.left  = active.offsetLeft + 'px';
+            thumb.style.width = active.offsetWidth + 'px';
+        }
+    }
+
+    // =============================================
+    // SAMPLE / CLEAR
+    // =============================================
+    function fillSample(prod, block){
+        document.getElementById('inProduct').value = prod;
+        document.getElementById('inBlock').value   = block;
+        // trigger float label
+        document.getElementById('inProduct').dispatchEvent(new Event('input'));
+        document.getElementById('inBlock').dispatchEvent(new Event('input'));
+    }
+
+    function clearAll(){
+        document.getElementById('inProduct').value = '';
+        document.getElementById('inBlock').value   = '';
+        document.getElementById('results').classList.add('hidden');
+        document.getElementById('emptyState').classList.remove('hidden');
+        diffData = [];
+    }
+
+    // =============================================
+    // RUN COMPARE
+    // =============================================
+    function runCompare(){
+        const prod  = document.getElementById('inProduct').value.trim().toUpperCase();
+        const block = document.getElementById('inBlock').value.trim().toUpperCase();
+
+        if(!prod || !block){
+            alert('제품번호와 BLOCKNO를 입력하세요.');
+            return;
+        }
+
+        document.getElementById('emptyState').classList.add('hidden');
+        document.getElementById('results').classList.add('hidden');
+        document.getElementById('loadingState').classList.remove('hidden');
+        document.getElementById('btnCompare').disabled = true;
+
+        const msgs = ['BOM 데이터 조회 중…','과거·현재 버전 로딩 중…','변경점 분석 중…'];
+        let mi = 0;
+        const iv = setInterval(()=>{ document.getElementById('loadingMsg').textContent = msgs[mi++ % msgs.length]; }, 600);
+
+        setTimeout(()=>{
+            clearInterval(iv);
+            document.getElementById('btnCompare').disabled = false;
+            document.getElementById('loadingState').classList.add('hidden');
+
+            const pastBom = MOCK_DB[`${prod}|${block}|PAST`] || generateFallback(prod, block, 'past');
+            const nowBom  = MOCK_DB[`${prod}|${block}|NOW`]  || generateFallback(prod, block, 'now');
+
+            diffData = computeDiff(pastBom, nowBom);
+            renderResults(prod, block, diffData);
+        }, 1700);
+    }
+
+    function generateFallback(prod, block, type){
+        const base = [
+            {partno:'PART-GEN001',blockno:block,qty:1,spec:'SPEC_TYPE_A',note:`${prod} 기본 부품 A`},
+            {partno:'PART-GEN002',blockno:block,qty:2,spec:'SPEC_TYPE_B',note:`${prod} 기본 부품 B`},
+            {partno:'PART-GEN003',blockno:block,qty:4,spec:'BOLT_M8',    note:'표준 볼트'},
+            {partno:'PART-GEN004',blockno:block,qty:1,spec:'GASKET_STD', note:'표준 개스킷'},
+            {partno:'PART-GEN005',blockno:block,qty:1,spec:'SENSOR_A',   note:'센서 Type-A'},
+        ];
+        if(type==='now'){
+            base[1].qty  = 3;
+            base[1].note = base[1].note + ' (수량 변경)';
+            base[2].spec = 'BOLT_M10';
+            base.push({partno:'PART-GEN006',blockno:block,qty:1,spec:'MODULE_NEW',note:'신규 추가 모듈'});
+            base.splice(3,1);
+        }
+        return base;
+    }
+
+    // =============================================
+    // DIFF
+    // =============================================
+    function computeDiff(pastBom, nowBom){
+        const pastMap = new Map(pastBom.map(r=>[r.partno,r]));
+        const nowMap  = new Map(nowBom.map(r=>[r.partno,r]));
+        const result  = [];
+
+        pastBom.forEach(p=>{
+            const n = nowMap.get(p.partno);
+            if(!n){ result.push({status:'removed', past:p, now:null}); }
+            else{
+                const cf = diffFields(p,n);
+                result.push({status: cf.length?'changed':'same', past:p, now:n, changedFields:cf});
+            }
+        });
+        nowBom.forEach(n=>{
+            if(!pastMap.has(n.partno)) result.push({status:'added', past:null, now:n});
+        });
+
+        const order={removed:0,added:1,changed:2,same:3};
+        result.sort((a,b)=>{
+            if(order[a.status]!==order[b.status]) return order[a.status]-order[b.status];
+            return (a.past||a.now).partno.localeCompare((b.past||b.now).partno);
+        });
+        return result;
+    }
+
+    function diffFields(p,n){
+        const f=[];
+        if(p.qty     !== n.qty)     f.push('qty');
+        if(p.spec    !== n.spec)    f.push('spec');
+        if(p.blockno !== n.blockno) f.push('blockno');
+        if(p.note    !== n.note)    f.push('note');
+        return f;
+    }
+
+    // =============================================
+    // RENDER
+    // =============================================
+    function renderResults(prod, block, data){
+        const meta = VERSION_META[`${prod}|${block}`] || {past:'이전 버전', now:'최신 버전'};
+        currentPastVer = meta.past;
+        currentNowVer  = meta.now;
+        document.getElementById('pillProduct').textContent = `${prod} · ${block}`;
+        document.getElementById('pillPast').textContent    = meta.past;
+        document.getElementById('pillNow').textContent     = meta.now;
+
+        const cnt = s => data.filter(d=>d.status===s).length;
+        animateCount('cntTotal',   data.length);
+        animateCount('cntAdded',   cnt('added'));
+        animateCount('cntRemoved', cnt('removed'));
+        animateCount('cntChanged', cnt('changed'));
+        animateCount('cntSame',    cnt('same'));
+
+        // reset controls
+        viewMode='diff';
+        document.getElementById('segDiff').classList.add('active');
+        document.getElementById('segSplit').classList.remove('active');
+        document.getElementById('diffView').classList.remove('hidden');
+        document.getElementById('splitView').classList.add('hidden');
+        document.querySelectorAll('.fpill').forEach(p=>p.classList.remove('active'));
+        document.querySelector('[data-filter="all"]').classList.add('active');
+        setFilterState(true);
+
+        renderTable(data,'all');
+        renderSplitView(data);
+
+        const res = document.getElementById('results');
+        res.classList.remove('hidden');
+        requestAnimationFrame(positionSegThumb);
+
+        // Staggered entrance
+        if(typeof gsap !== 'undefined'){
+            gsap.fromTo('#results > *',
+                {opacity:0, y:28},
+                {opacity:1, y:0, duration:.8, stagger:.1, ease:'power3.out'}
+            );
+            gsap.fromTo('#statGrid > div',
+                {opacity:0, y:20, scale:.96},
+                {opacity:1, y:0, scale:1, duration:.7, stagger:.07, ease:'back.out(1.4)', delay:.2}
+            );
+        }
+        res.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+
+    function animateCount(id, target){
+        const el = document.getElementById(id);
+        if(typeof gsap !== 'undefined'){
+            const obj = {v:0};
+            gsap.to(obj,{v:target,duration:1.1,ease:'power2.out',delay:.3,onUpdate:()=>{ el.textContent = Math.round(obj.v); }});
+        } else { el.textContent = target; }
+    }
+
+    // =============================================
+    // VIEW TOGGLE (segmented)
+    // =============================================
+    function setView(mode){
+        viewMode = mode;
+        const isDiff = mode==='diff';
+        document.getElementById('segDiff').classList.toggle('active', isDiff);
+        document.getElementById('segSplit').classList.toggle('active', !isDiff);
+        positionSegThumb();
+        document.getElementById('diffView').classList.toggle('hidden', !isDiff);
+        document.getElementById('splitView').classList.toggle('hidden', isDiff);
+        setFilterState(isDiff);
+
+        const shown = document.getElementById(isDiff?'diffView':'splitView');
+        if(typeof gsap !== 'undefined'){
+            gsap.fromTo(shown,{opacity:0,y:14},{opacity:1,y:0,duration:.5,ease:'power3.out'});
+        }
+    }
+
+    function setFilterState(enabled){
+        const tabs = document.getElementById('filterTabs');
+        tabs.style.opacity = enabled ? '1' : '.35';
+        tabs.style.pointerEvents = enabled ? '' : 'none';
+    }
+
+    // =============================================
+    // UNIFIED TABLE
+    // =============================================
+    function setFilter(filter, btn){
+        document.querySelectorAll('.fpill').forEach(p=>p.classList.remove('active'));
+        btn.classList.add('active');
+        renderTable(diffData, filter);
+    }
+
+    function renderTable(data, filter){
+        const visible = data.filter(d=>{
+            if(filter==='all')     return true;
+            if(filter==='changes') return d.status!=='same';
+            return d.status===filter;
+        });
+        document.getElementById('filterCount').textContent = `${visible.length}건`;
+
+        const badge = {
+            added   :`<span class="status-badge sb-added"><span class="status-dot sd-added"></span>신규</span>`,
+            removed :`<span class="status-badge sb-removed"><span class="status-dot sd-removed"></span>삭제</span>`,
+            changed :`<span class="status-badge sb-changed"><span class="status-dot sd-changed"></span>변경</span>`,
+            same    :`<span class="status-badge sb-same"><span class="status-dot sd-same"></span>동일</span>`,
+        };
+
+        const tbody = document.getElementById('diffBody');
+        if(!visible.length){
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:56px;color:var(--ink-3);font-size:14px">해당 조건의 항목이 없습니다</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = visible.map((d,i)=>{
+            const cf = d.changedFields||[];
+            const partno = (d.now||d.past).partno;
+            return `<tr>
+      <td style="color:var(--ink-3);font-size:12px;font-variant-numeric:tabular-nums">${i+1}</td>
+      <td>${badge[d.status]}</td>
+      <td class="part-no">${esc(partno)}</td>
+      <td class="mono" style="color:var(--ink-2)">${cell(d.past?.blockno, d.now?.blockno, d.status, cf.includes('blockno'))}</td>
+      <td style="text-align:center;font-variant-numeric:tabular-nums">${cell(numStr(d.past?.qty), numStr(d.now?.qty), d.status, cf.includes('qty'))}</td>
+      <td class="mono">${cell(d.past?.spec, d.now?.spec, d.status, cf.includes('spec'))}</td>
+      <td style="color:var(--ink-2);font-size:13px">${cell(d.past?.note, d.now?.note, d.status, cf.includes('note'))}</td>
+    </tr>`;
+        }).join('');
+    }
+
+    function numStr(v){ return v==null ? null : String(v); }
+
+    function cell(oldVal, newVal, status, isChanged){
+        if(status==='added')   return `<span class="v-added">${esc(newVal??'')}</span>`;
+        if(status==='removed') return `<span class="v-removed">${esc(oldVal??'')}</span>`;
+        if(status==='same')    return esc(newVal??'');
+        if(isChanged) return `<span class="v-old">${esc(oldVal??'')}</span><span class="v-arrow">→</span><span class="v-new">${esc(newVal??'')}</span>`;
+        return esc(newVal??'');
+    }
+
+    function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // =============================================
+    // SPLIT VIEW — BLOCKNO 기준 좌우 비교
+    // =============================================
+    function renderSplitView(data){
+        const groups = new Map();
+        data.forEach(d=>{
+            const blk = (d.now||d.past).blockno;
+            if(!groups.has(blk)) groups.set(blk,[]);
+            groups.get(blk).push(d);
+        });
+
+        const el = document.getElementById('splitView');
+        el.innerHTML = [...groups.keys()].sort().map(blk=>{
+            const rows = groups.get(blk);
+            const a = rows.filter(r=>r.status==='added').length;
+            const r = rows.filter(r=>r.status==='removed').length;
+            const c = rows.filter(r=>r.status==='changed').length;
+
+            const badges = [
+                a?`<span class="mini-badge sb-added">+${a}</span>`:'',
+                r?`<span class="mini-badge sb-removed">−${r}</span>`:'',
+                c?`<span class="mini-badge sb-changed">~${c}</span>`:'',
+                (!a&&!r&&!c)?`<span class="mini-badge sb-same">변경 없음</span>`:'',
+            ].filter(Boolean).join('');
+
+            return `
+    <div class="blk-section">
+      <div class="blk-title">
+        <h3>${esc(blk)}</h3>
+        <div class="meta"><span>${rows.length}개 항목</span>${badges}</div>
+      </div>
+      <div class="card overflow-hidden" style="border-radius:18px">
+        <div class="split-container">
+          <table class="split-grid" style="border-collapse:collapse;width:100%;white-space:nowrap">
+            <thead>
+              <tr>
+                <th class="col-past-head" colspan="4">과거 · ${esc(currentPastVer)}</th>
+                <th class="col-status-head" style="width:80px">상태</th>
+                <th class="col-now-head" colspan="4">현재 · ${esc(currentNowVer)}</th>
+              </tr>
+              <tr>
+                <th class="col-past-head" style="min-width:120px;font-weight:500">부품번호</th>
+                <th class="col-past-head" style="min-width:50px;font-weight:500;text-align:center">수량</th>
+                <th class="col-past-head" style="min-width:140px;font-weight:500">SPEC</th>
+                <th class="col-past-head" style="min-width:170px;font-weight:500">주석</th>
+                <th class="col-status-head"></th>
+                <th class="col-now-head" style="min-width:120px;font-weight:500">부품번호</th>
+                <th class="col-now-head" style="min-width:50px;font-weight:500;text-align:center">수량</th>
+                <th class="col-now-head" style="min-width:140px;font-weight:500">SPEC</th>
+                <th class="col-now-head" style="min-width:170px;font-weight:500">주석</th>
+              </tr>
+            </thead>
+            <tbody>${rows.map(splitRow).join('')}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+        }).join('');
+    }
+
+    function splitRow(d){
+        const cf = d.changedFields||[];
+        const dash = `<span class="cell-dash">—</span>`;
+
+        const badge = {
+            added   :`<span class="status-badge sb-added" style="padding:3px 10px;font-size:11px">신규</span>`,
+            removed :`<span class="status-badge sb-removed" style="padding:3px 10px;font-size:11px">삭제</span>`,
+            changed :`<span class="status-badge sb-changed" style="padding:3px 10px;font-size:11px">변경</span>`,
+            same    :`<span class="status-badge sb-same" style="padding:3px 10px;font-size:11px">동일</span>`,
+        }[d.status];
+
+        const p = d.past, n = d.now;
+        const hq = cf.includes('qty'), hs = cf.includes('spec'), hn = cf.includes('note');
+
+        return `<tr>
+    <td class="cell-past part-no" style="${d.status==='removed'?'color:#d70015;text-decoration:line-through;opacity:.75':''}">${p?esc(p.partno):dash}</td>
+    <td class="cell-past ${hq?'cell-hl-old':''}" style="text-align:center;font-variant-numeric:tabular-nums">${p?esc(String(p.qty)):''}</td>
+    <td class="cell-past mono ${hs?'cell-hl-old':''}">${p?esc(p.spec):''}</td>
+    <td class="cell-past ${hn?'cell-hl-old':''}" style="color:var(--ink-2)">${p?esc(p.note):''}</td>
+    <td class="cell-status">${badge}</td>
+    <td class="cell-now part-no" style="${d.status==='added'?'color:#248a3d':''}">${n?esc(n.partno):dash}</td>
+    <td class="cell-now ${hq?'cell-hl-new':''}" style="text-align:center;font-variant-numeric:tabular-nums">${n?esc(String(n.qty)):''}</td>
+    <td class="cell-now mono ${hs?'cell-hl-new':''}">${n?esc(n.spec):''}</td>
+    <td class="cell-now ${hn?'cell-hl-new':''}" style="color:var(--ink-2)">${n?esc(n.note):''}</td>
+  </tr>`;
+    }
+</script>
+</body>
+</html>
