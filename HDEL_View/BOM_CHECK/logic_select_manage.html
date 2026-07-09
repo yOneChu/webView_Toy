@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리 호기 선택 | BOM AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        :root{
+            --bg:#f5f5f7;
+            --card:#ffffff;
+            --ink:#1d1d1f;
+            --ink-2:#6e6e73;
+            --ink-3:#aeaeb2;
+            --blue:#0071e3;
+            --blue-deep:#0051a2;
+            --green:#34c759;
+            --red:#ff3b30;
+            --orange:#ff9500;
+            --purple:#bf5af2;
+            --indigo:#5e5ce6;
+            --hairline:rgba(0,0,0,.08);
+            --shadow-sm:0 2px 10px rgba(0,0,0,.05);
+            --shadow-md:0 8px 32px rgba(0,0,0,.08);
+            --shadow-lg:0 20px 60px rgba(0,0,0,.12);
+            --ease:cubic-bezier(.28,.11,.32,1);
+        }
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+        html{scroll-behavior:smooth}
+        body{
+            background:var(--bg);color:var(--ink);
+            font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue','Noto Sans KR',sans-serif;
+            min-height:100vh;overflow-x:hidden;
+            letter-spacing:-.015em;
+        }
+        ::selection{background:rgba(0,113,227,.18)}
+        ::-webkit-scrollbar{width:8px;height:8px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18);border-radius:8px;border:2px solid var(--bg)}
+        ::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.3)}
+
+        /* ===== NAVBAR — frosted glass ===== */
+        .navbar{
+            position:fixed;top:0;left:0;right:0;z-index:50;
+            background:rgba(251,251,253,.8);
+            backdrop-filter:saturate(180%) blur(20px);
+            -webkit-backdrop-filter:saturate(180%) blur(20px);
+            border-bottom:1px solid var(--hairline);
+        }
+
+        /* ===== HERO headline gradient ===== */
+        .hero-grad{
+            background:linear-gradient(90deg,#0071e3 0%,#5e5ce6 40%,#bf5af2 70%,#0071e3 100%);
+            background-size:250% auto;
+            -webkit-background-clip:text;background-clip:text;
+            -webkit-text-fill-color:transparent;
+            animation:heroFlow 8s ease-in-out infinite;
+        }
+        @keyframes heroFlow{0%,100%{background-position:0% center}50%{background-position:100% center}}
+
+        /* ===== CARDS ===== */
+        .card{
+            background:var(--card);border-radius:20px;
+            box-shadow:var(--shadow-sm);
+            border:1px solid rgba(0,0,0,.04);
+            transition:box-shadow .45s var(--ease),transform .45s var(--ease);
+        }
+        .card-hover:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+
+        /* ===== INPUTS — Apple form style ===== */
+        .field{position:relative}
+        .field input{
+            width:100%;padding:26px 18px 10px;border-radius:14px;font-size:16px;
+            background:rgba(0,0,0,.035);border:1.5px solid transparent;outline:none;
+            color:var(--ink);transition:all .3s var(--ease);font-weight:500;
+        }
+        .field input:hover{background:rgba(0,0,0,.05)}
+        .field input:focus{background:#fff;border-color:var(--blue);box-shadow:0 0 0 4px rgba(0,113,227,.12)}
+        .field label{
+            position:absolute;left:18px;top:18px;font-size:15px;color:var(--ink-2);
+            pointer-events:none;transition:all .25s var(--ease);font-weight:500;
+        }
+        .field input:focus + label,
+        .field input:not(:placeholder-shown) + label{
+            top:8px;font-size:11px;color:var(--blue);font-weight:600;letter-spacing:.02em;
+        }
+        .field input::placeholder{color:transparent}
+
+        /* ===== PRIMARY BUTTON — Apple pill ===== */
+        .btn-primary{
+            background:var(--blue);color:#fff;border:none;cursor:pointer;
+            padding:14px 32px;border-radius:980px;font-size:16px;font-weight:600;
+            transition:all .3s var(--ease);letter-spacing:-.01em;
+            display:inline-flex;align-items:center;gap:8px;justify-content:center;
+        }
+        .btn-primary:hover{background:#0077ed;transform:scale(1.02);box-shadow:0 8px 24px rgba(0,113,227,.35)}
+        .btn-primary:active{transform:scale(.98)}
+        .btn-primary:disabled{opacity:.4;pointer-events:none}
+        .btn-ghost{
+            background:transparent;color:var(--blue);border:none;cursor:pointer;
+            padding:14px 24px;border-radius:980px;font-size:16px;font-weight:500;
+            transition:all .3s var(--ease);
+        }
+        .btn-ghost:hover{background:rgba(0,113,227,.08)}
+
+        /* Sample chips */
+        .chip{
+            padding:7px 16px;border-radius:980px;font-size:13px;font-weight:500;cursor:pointer;
+            background:rgba(0,0,0,.045);color:var(--ink-2);border:none;
+            transition:all .25s var(--ease);
+        }
+        .chip:hover{background:rgba(0,113,227,.1);color:var(--blue)}
+
+        /* ===== FILTER PILLS ===== */
+        .fpill{
+            padding:6px 15px;border-radius:980px;font-size:13px;font-weight:500;cursor:pointer;
+            background:transparent;color:var(--ink-2);border:1px solid var(--hairline);
+            transition:all .25s var(--ease);white-space:nowrap;
+        }
+        .fpill:hover{border-color:rgba(0,0,0,.2);color:var(--ink)}
+        .fpill.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+        /* ===== SUMMARY STAT CARDS ===== */
+        .stat-num{
+            font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1;
+            font-variant-numeric:tabular-nums;
+        }
+        .stat-label{font-size:13px;color:var(--ink-2);font-weight:500;margin-top:6px}
+
+        /* ===== UNIT CARDS (호기 선택 카드) ===== */
+        .unit-card{
+            position:relative;cursor:pointer;user-select:none;
+            background:var(--card);border-radius:20px;padding:22px;
+            box-shadow:var(--shadow-sm);border:1.5px solid rgba(0,0,0,.04);
+            transition:all .35s var(--ease);
+        }
+        .unit-card:hover{box-shadow:var(--shadow-md);transform:translateY(-3px)}
+        .unit-card.selected{
+            border-color:var(--blue);
+            background:linear-gradient(180deg,rgba(0,113,227,.045),rgba(0,113,227,.015));
+            box-shadow:0 8px 28px rgba(0,113,227,.16);
+        }
+        .unit-card .check{
+            position:absolute;top:18px;right:18px;width:26px;height:26px;border-radius:50%;
+            border:1.5px solid rgba(0,0,0,.15);background:#fff;
+            display:flex;align-items:center;justify-content:center;
+            transition:all .3s var(--ease);color:transparent;
+        }
+        .unit-card:hover .check{border-color:var(--blue)}
+        .unit-card.selected .check{background:var(--blue);border-color:var(--blue);color:#fff;transform:scale(1.05)}
+        .unit-no{
+            font-size:20px;font-weight:700;letter-spacing:-.02em;
+            font-variant-numeric:tabular-nums;
+        }
+        .unit-meta{font-size:12.5px;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+        .unit-divider{height:1px;background:rgba(0,0,0,.05);margin:14px 0}
+        .spec-row{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0}
+        .spec-row .k{color:var(--ink-3);font-weight:500}
+        .spec-row .v{color:var(--ink-2);font-weight:600;font-variant-numeric:tabular-nums}
+
+        /* Status badges — iOS style */
+        .status-badge{
+            display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:980px;
+            font-size:12px;font-weight:600;white-space:nowrap;
+        }
+        .sb-design {background:rgba(0,113,227,.1);  color:var(--blue-deep)}
+        .sb-prod   {background:rgba(255,149,0,.12); color:#c93400}
+        .sb-install{background:rgba(191,90,242,.12);color:#8e44ad}
+        .sb-done   {background:rgba(52,199,89,.12); color:#248a3d}
+        .status-dot{width:7px;height:7px;border-radius:50%}
+        .sd-design {background:var(--blue)}
+        .sd-prod   {background:var(--orange)}
+        .sd-install{background:var(--purple)}
+        .sd-done   {background:var(--green)}
+
+        .mine-badge{
+            display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:980px;
+            font-size:11px;font-weight:700;background:rgba(0,113,227,.1);color:var(--blue);
+        }
+
+        .mono{font-family:'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;letter-spacing:0}
+
+        /* ===== SELECTION BAR (하단 고정) ===== */
+        .select-bar{
+            position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120px);
+            z-index:60;display:flex;align-items:center;gap:14px;
+            background:rgba(29,29,31,.92);color:#f5f5f7;
+            backdrop-filter:saturate(180%) blur(20px);
+            -webkit-backdrop-filter:saturate(180%) blur(20px);
+            border-radius:980px;padding:10px 12px 10px 24px;
+            box-shadow:0 16px 48px rgba(0,0,0,.28);
+            transition:transform .45s var(--ease),opacity .45s var(--ease);
+            opacity:0;pointer-events:none;white-space:nowrap;
+        }
+        .select-bar.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto}
+        .select-bar .cnt-pill{
+            display:inline-flex;align-items:center;justify-content:center;
+            min-width:26px;height:26px;padding:0 8px;border-radius:980px;
+            background:var(--blue);font-size:13px;font-weight:700;
+            font-variant-numeric:tabular-nums;
+        }
+        .btn-save{
+            background:var(--blue);color:#fff;border:none;cursor:pointer;
+            padding:11px 26px;border-radius:980px;font-size:14.5px;font-weight:600;
+            transition:all .3s var(--ease);display:inline-flex;align-items:center;gap:7px;
+        }
+        .btn-save:hover{background:#0077ed;transform:scale(1.03)}
+        .btn-save:active{transform:scale(.97)}
+        .btn-bar-ghost{
+            background:transparent;color:#a1a1a6;border:none;cursor:pointer;
+            padding:11px 14px;border-radius:980px;font-size:13.5px;font-weight:500;
+            transition:all .25s var(--ease);
+        }
+        .btn-bar-ghost:hover{color:#f5f5f7;background:rgba(255,255,255,.1)}
+
+        /* ===== TOAST ===== */
+        .toast{
+            position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-16px);
+            z-index:70;display:flex;align-items:center;gap:9px;
+            background:rgba(29,29,31,.92);color:#f5f5f7;
+            backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+            border-radius:980px;padding:11px 22px;font-size:14px;font-weight:500;
+            box-shadow:0 12px 40px rgba(0,0,0,.25);
+            opacity:0;pointer-events:none;transition:all .4s var(--ease);
+        }
+        .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+        /* ===== LOADING ===== */
+        .apple-spinner{width:28px;height:28px;position:relative;margin:0 auto}
+        .apple-spinner div{
+            position:absolute;left:46%;top:0;width:8%;height:26%;background:var(--ink-2);
+            border-radius:4px;transform-origin:center 190%;animation:spinnerFade 1s linear infinite;
+        }
+        @keyframes spinnerFade{0%{opacity:1}100%{opacity:.15}}
+
+        /* ===== REVEAL ANIMATIONS ===== */
+        .reveal{opacity:0;transform:translateY(24px)}
+
+        /* Divider hairline */
+        .hairline{height:1px;background:var(--hairline)}
+
+        /* keyboard hint */
+        kbd{
+            background:rgba(0,0,0,.05);border:1px solid var(--hairline);border-radius:5px;
+            padding:1px 6px;font-size:11px;font-family:inherit;color:var(--ink-2);
+        }
+
+        /* Empty state icon breathing */
+        @keyframes breathe{0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(1.05);opacity:.8}}
+        .breathe{animation:breathe 4s ease-in-out infinite}
+    </style>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar">
+    <div class="max-w-6xl mx-auto px-6 h-[52px] flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <a href="logic_select_main.html" class="flex items-center gap-1 text-[13px] font-medium transition-opacity hover:opacity-60" style="color:var(--blue)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                메인
+            </a>
+            <div class="w-px h-4" style="background:var(--hairline)"></div>
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-[7px] flex items-center justify-center" style="background:linear-gradient(135deg,#0071e3,#5e5ce6)">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+                </div>
+                <span class="text-[14px] font-semibold tracking-tight">BOM AI</span>
+                <span class="text-[12px]" style="color:var(--ink-3)">수배로직설계팀</span>
+            </div>
+        </div>
+        <div class="text-[12px] font-medium" style="color:var(--ink-2)">관리 호기 선택</div>
+    </div>
+</nav>
+
+<!-- ===== MAIN ===== -->
+<main class="pt-[52px]">
+
+    <!-- HERO -->
+    <section class="max-w-4xl mx-auto px-6 pt-16 pb-10 text-center">
+        <p id="heroEyebrow" class="text-[15px] font-semibold mb-3 reveal" style="color:var(--orange)">Unit Manager</p>
+        <h1 id="heroTitle" class="text-[44px] md:text-[56px] font-bold leading-[1.07] tracking-[-.03em] reveal">
+            나의 호기를 정하다.<br><span class="hero-grad">조회하고, 선택하세요.</span>
+        </h1>
+        <p id="heroSub" class="text-[19px] mt-5 font-normal max-w-xl mx-auto reveal" style="color:var(--ink-2)">
+            프로젝트번호 또는 현장명으로 호기를 조회하고<br class="md:hidden">
+            내가 담당할 관리 호기를 선택해 저장합니다.
+        </p>
+    </section>
+
+    <!-- SEARCH CARD -->
+    <section class="max-w-3xl mx-auto px-6 pb-14">
+        <div id="inputCard" class="card p-8 reveal" style="border-radius:24px">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="field">
+                    <input id="inProject" type="text" placeholder="프로젝트번호" autocomplete="off">
+                    <label for="inProject">프로젝트번호</label>
+                </div>
+                <div class="field">
+                    <input id="inSite" type="text" placeholder="현장명" autocomplete="off">
+                    <label for="inSite">현장명</label>
+                </div>
+            </div>
+
+            <!-- Samples -->
+            <div class="flex flex-wrap items-center gap-2 mt-5">
+                <span class="text-[12px] font-medium" style="color:var(--ink-3)">샘플</span>
+                <button class="chip" onclick="fillSample('PJT-2025-0410','')">PJT-2025-0410</button>
+                <button class="chip" onclick="fillSample('','판교 테크노밸리')">판교 테크노밸리</button>
+                <button class="chip" onclick="fillSample('','')">전체 조회</button>
+            </div>
+
+            <div class="hairline my-6"></div>
+
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <button id="btnSearch" class="btn-primary w-full sm:w-auto" onclick="runSearch()">
+                    호기 조회
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M21 21l-4.35-4.35"/></svg>
+                </button>
+                <button class="btn-ghost w-full sm:w-auto" onclick="clearAll()">초기화</button>
+                <span class="text-[12px] sm:ml-auto" style="color:var(--ink-3)"><kbd>Enter</kbd> 키로도 실행됩니다</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- LOADING -->
+    <section id="loadingState" class="hidden max-w-3xl mx-auto px-6 pb-24 text-center">
+        <div class="apple-spinner mb-5" id="spinner"></div>
+        <p class="text-[15px] font-medium" style="color:var(--ink-2)" id="loadingMsg">호기 정보 조회 중…</p>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="results" class="hidden max-w-6xl mx-auto px-6 pb-32">
+
+        <!-- Summary stats -->
+        <div class="grid grid-cols-3 gap-4 mb-10" id="statGrid">
+            <div class="card card-hover p-6 text-center">
+                <div class="stat-num" style="color:var(--ink)" id="cntTotal">0</div>
+                <div class="stat-label">조회된 호기</div>
+            </div>
+            <div class="card card-hover p-6 text-center">
+                <div class="stat-num" style="color:var(--blue)" id="cntSelected">0</div>
+                <div class="stat-label">선택한 호기</div>
+            </div>
+            <div class="card card-hover p-6 text-center">
+                <div class="stat-num" style="color:var(--green)" id="cntMine">0</div>
+                <div class="stat-label">기존 관리 호기</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex flex-col md:flex-row items-center gap-4 mb-7">
+            <!-- Filter pills -->
+            <div class="flex flex-wrap gap-2" id="filterTabs">
+                <button class="fpill active" data-filter="all"      onclick="setFilter('all',this)">전체</button>
+                <button class="fpill"        data-filter="design"   onclick="setFilter('design',this)">설계</button>
+                <button class="fpill"        data-filter="prod"     onclick="setFilter('prod',this)">제작</button>
+                <button class="fpill"        data-filter="install"  onclick="setFilter('install',this)">설치</button>
+                <button class="fpill"        data-filter="done"     onclick="setFilter('done',this)">준공</button>
+                <button class="fpill"        data-filter="mine"     onclick="setFilter('mine',this)">내 관리 호기</button>
+            </div>
+            <div class="flex items-center gap-3 md:ml-auto">
+                <span class="text-[13px] font-medium shrink-0" style="color:var(--ink-3)" id="filterCount">0호기</span>
+                <div class="w-px h-4" style="background:var(--hairline)"></div>
+                <button class="btn-ghost" style="padding:7px 16px;font-size:13.5px" onclick="selectAllVisible(true)">모두 선택</button>
+                <button class="btn-ghost" style="padding:7px 16px;font-size:13.5px;color:var(--ink-2)" onclick="selectAllVisible(false)">모두 해제</button>
+            </div>
+        </div>
+
+        <!-- UNIT CARD GRID -->
+        <div id="unitGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+        <!-- no result in filter -->
+        <div id="noFilterResult" class="hidden text-center py-20">
+            <p class="text-[15px] font-medium" style="color:var(--ink-3)">해당 조건의 호기가 없습니다</p>
+        </div>
+
+    </section>
+
+    <!-- EMPTY STATE -->
+    <section id="emptyState" class="max-w-3xl mx-auto px-6 pb-28 text-center">
+        <div class="breathe inline-block mb-6">
+            <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="1.2">
+                <rect x="5" y="2" width="14" height="20" rx="2"/>
+                <path stroke-linecap="round" d="M9 6h6M9 10h6M9 14h6M12 18h.01"/>
+            </svg>
+        </div>
+        <p class="text-[17px] font-medium" style="color:var(--ink-2)">아직 조회된 호기가 없습니다</p>
+        <p class="text-[14px] mt-1.5" style="color:var(--ink-3)">위에서 프로젝트번호 또는 현장명을 입력하고 호기 조회를 실행하세요</p>
+    </section>
+
+</main>
+
+<!-- ===== SELECTION BAR (하단 고정) ===== -->
+<div class="select-bar" id="selectBar">
+    <span class="text-[14px] font-medium flex items-center gap-2.5">
+        <span class="cnt-pill" id="barCount">0</span>
+        호기 선택됨
+    </span>
+    <button class="btn-bar-ghost" onclick="clearSelection()">선택 해제</button>
+    <button class="btn-save" onclick="saveSelection()">
+        관리 호기로 저장
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+    </button>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+    <span id="toastMsg">저장되었습니다</span>
+</div>
+
+<!-- FOOTER -->
+<footer class="border-t" style="border-color:var(--hairline)">
+    <div class="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-2">
+        <span class="text-[12px]" style="color:var(--ink-3)">BOM AI — 수배로직설계팀 · Unit Manager v1.0</span>
+        <span class="text-[12px]" style="color:var(--ink-3)">Copyright © 2025 수배로직설계팀. All rights reserved.</span>
+    </div>
+</footer>
+
+<script>
+    // =============================================
+    // MOCK 호기 DATA (백엔드 시뮬레이션)
+    //   status: design(설계) / prod(제작) / install(설치) / done(준공)
+    // =============================================
+    const MOCK_UNITS = [
+        { unitNo:'2035570-01', project:'PJT-2025-0410', site:'판교 테크노밸리 A동',   model:'LUXEN-D', stops:24, speed:'240 m/min', capacity:'1,600 kg', status:'design'  },
+        { unitNo:'2035570-02', project:'PJT-2025-0410', site:'판교 테크노밸리 A동',   model:'LUXEN-D', stops:24, speed:'240 m/min', capacity:'1,600 kg', status:'design'  },
+        { unitNo:'2035571-01', project:'PJT-2025-0410', site:'판교 테크노밸리 B동',   model:'LUXEN-S', stops:18, speed:'180 m/min', capacity:'1,150 kg', status:'prod'    },
+        { unitNo:'2035571-02', project:'PJT-2025-0410', site:'판교 테크노밸리 B동',   model:'LUXEN-S', stops:18, speed:'180 m/min', capacity:'1,150 kg', status:'prod'    },
+        { unitNo:'2041120-01', project:'PJT-2025-0388', site:'서울역 복합환승센터',    model:'NEO-H',   stops:42, speed:'360 m/min', capacity:'1,800 kg', status:'design'  },
+        { unitNo:'2041120-02', project:'PJT-2025-0388', site:'서울역 복합환승센터',    model:'NEO-H',   stops:42, speed:'360 m/min', capacity:'1,800 kg', status:'design'  },
+        { unitNo:'2041121-01', project:'PJT-2025-0388', site:'서울역 복합환승센터',    model:'NEO-E',   stops:12, speed:'105 m/min', capacity:'900 kg',   status:'install' },
+        { unitNo:'2038800-01', project:'PJT-2024-0912', site:'부산 마린시티 타워',     model:'LUXEN-D', stops:56, speed:'420 m/min', capacity:'2,000 kg', status:'install' },
+        { unitNo:'2038800-02', project:'PJT-2024-0912', site:'부산 마린시티 타워',     model:'LUXEN-D', stops:56, speed:'420 m/min', capacity:'2,000 kg', status:'install' },
+        { unitNo:'2038801-01', project:'PJT-2024-0912', site:'부산 마린시티 타워',     model:'NEO-S',   stops:8,  speed:'60 m/min',  capacity:'750 kg',   status:'done'    },
+        { unitNo:'2029450-01', project:'PJT-2024-0655', site:'인천공항 제3터미널',     model:'NEO-H',   stops:6,  speed:'90 m/min',  capacity:'1,350 kg', status:'done'    },
+        { unitNo:'2029450-02', project:'PJT-2024-0655', site:'인천공항 제3터미널',     model:'NEO-H',   stops:6,  speed:'90 m/min',  capacity:'1,350 kg', status:'done'    },
+    ];
+
+    const STATUS_META = {
+        design : { label:'설계',  badge:'sb-design',  dot:'sd-design'  },
+        prod   : { label:'제작',  badge:'sb-prod',    dot:'sd-prod'    },
+        install: { label:'설치',  badge:'sb-install', dot:'sd-install' },
+        done   : { label:'준공',  badge:'sb-done',    dot:'sd-done'    },
+    };
+
+    const STORAGE_KEY = 'bomai.myUnits';
+
+    // =============================================
+    // STATE
+    // =============================================
+    let unitData   = [];                                   // 조회 결과
+    let selected   = new Set();                            // 이번에 선택한 호기
+    let myUnits    = new Set(loadMyUnits());               // 저장된 내 관리 호기
+    let currentFilter = 'all';
+
+    function loadMyUnits(){
+        try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+        catch(e){ return []; }
+    }
+    function persistMyUnits(){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([...myUnits]));
+    }
+
+    // =============================================
+    // INIT — hero entrance + spinner blades
+    // =============================================
+    document.addEventListener('DOMContentLoaded', () => {
+        // Spinner blades (Apple activity indicator)
+        const sp = document.getElementById('spinner');
+        for(let i=0;i<12;i++){
+            const b = document.createElement('div');
+            b.style.transform = `rotate(${i*30}deg) translateY(0)`;
+            b.style.animationDelay = `${-(1 - i/12)}s`;
+            sp.appendChild(b);
+        }
+
+        // GSAP entrance
+        if(typeof gsap !== 'undefined'){
+            gsap.to('#heroEyebrow',{opacity:1,y:0,duration:.8,ease:'power3.out',delay:.1});
+            gsap.to('#heroTitle',  {opacity:1,y:0,duration:.9,ease:'power3.out',delay:.25});
+            gsap.to('#heroSub',    {opacity:1,y:0,duration:.9,ease:'power3.out',delay:.45});
+            gsap.to('#inputCard',  {opacity:1,y:0,duration:.9,ease:'power3.out',delay:.65});
+        } else {
+            document.querySelectorAll('.reveal').forEach(el=>{el.style.opacity=1;el.style.transform='none';});
+        }
+
+        // Enter key
+        ['inProject','inSite'].forEach(id=>{
+            document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') runSearch(); });
+        });
+    });
+
+    // =============================================
+    // SAMPLE / CLEAR
+    // =============================================
+    function fillSample(project, site){
+        document.getElementById('inProject').value = project;
+        document.getElementById('inSite').value    = site;
+        document.getElementById('inProject').dispatchEvent(new Event('input'));
+        document.getElementById('inSite').dispatchEvent(new Event('input'));
+    }
+
+    function clearAll(){
+        document.getElementById('inProject').value = '';
+        document.getElementById('inSite').value    = '';
+        document.getElementById('results').classList.add('hidden');
+        document.getElementById('emptyState').classList.remove('hidden');
+        unitData = [];
+        selected.clear();
+        updateSelectionUI();
+    }
+
+    // =============================================
+    // SEARCH
+    // =============================================
+    function runSearch(){
+        const project = document.getElementById('inProject').value.trim().toUpperCase();
+        const site    = document.getElementById('inSite').value.trim();
+
+        document.getElementById('emptyState').classList.add('hidden');
+        document.getElementById('results').classList.add('hidden');
+        document.getElementById('loadingState').classList.remove('hidden');
+        document.getElementById('btnSearch').disabled = true;
+
+        const msgs = ['호기 정보 조회 중…','프로젝트 데이터 로딩 중…','담당 정보 확인 중…'];
+        let mi = 0;
+        const iv = setInterval(()=>{ document.getElementById('loadingMsg').textContent = msgs[mi++ % msgs.length]; }, 600);
+
+        setTimeout(()=>{
+            clearInterval(iv);
+            document.getElementById('btnSearch').disabled = false;
+            document.getElementById('loadingState').classList.add('hidden');
+
+            // 백엔드 필터 시뮬레이션 (둘 다 비어 있으면 전체 조회)
+            unitData = MOCK_UNITS.filter(u=>{
+                const okProject = !project || u.project.toUpperCase().includes(project);
+                const okSite    = !site    || u.site.includes(site);
+                return okProject && okSite;
+            });
+
+            // 기존 관리 호기는 미리 선택 상태로
+            selected = new Set(unitData.filter(u=>myUnits.has(u.unitNo)).map(u=>u.unitNo));
+
+            renderResults();
+        }, 1300);
+    }
+
+    // =============================================
+    // RENDER
+    // =============================================
+    function renderResults(){
+        animateCount('cntTotal', unitData.length);
+        animateCount('cntMine',  myUnits.size);
+
+        // 필터 초기화
+        currentFilter = 'all';
+        document.querySelectorAll('.fpill').forEach(p=>p.classList.remove('active'));
+        document.querySelector('[data-filter="all"]').classList.add('active');
+
+        renderGrid();
+        updateSelectionUI();
+
+        const res = document.getElementById('results');
+        res.classList.remove('hidden');
+
+        // Staggered entrance
+        if(typeof gsap !== 'undefined'){
+            gsap.fromTo('#statGrid > div',
+                {opacity:0, y:20, scale:.96},
+                {opacity:1, y:0, scale:1, duration:.7, stagger:.08, ease:'back.out(1.4)'}
+            );
+            gsap.fromTo('#unitGrid > div',
+                {opacity:0, y:24},
+                {opacity:1, y:0, duration:.6, stagger:.05, ease:'power3.out', delay:.15}
+            );
+        }
+        res.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+
+    function visibleUnits(){
+        return unitData.filter(u=>{
+            if(currentFilter==='all')  return true;
+            if(currentFilter==='mine') return myUnits.has(u.unitNo);
+            return u.status===currentFilter;
+        });
+    }
+
+    function renderGrid(){
+        const visible = visibleUnits();
+        document.getElementById('filterCount').textContent = `${visible.length}호기`;
+
+        const grid = document.getElementById('unitGrid');
+        const noRes = document.getElementById('noFilterResult');
+        grid.innerHTML = visible.map(unitCard).join('');
+        noRes.classList.toggle('hidden', visible.length>0);
+    }
+
+    function unitCard(u){
+        const st = STATUS_META[u.status];
+        const isSel  = selected.has(u.unitNo);
+        const isMine = myUnits.has(u.unitNo);
+        return `
+    <div class="unit-card ${isSel?'selected':''}" data-unit="${esc(u.unitNo)}" onclick="toggleUnit('${esc(u.unitNo)}')">
+      <div class="check">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <div class="flex items-center gap-2 mb-1.5">
+        <span class="unit-no">${esc(u.unitNo)}</span>
+        ${isMine?'<span class="mine-badge">내 호기</span>':''}
+      </div>
+      <div class="unit-meta">
+        <span class="mono">${esc(u.project)}</span>
+        <span style="color:var(--ink-3)">·</span>
+        <span>${esc(u.site)}</span>
+      </div>
+      <div class="unit-divider"></div>
+      <div class="spec-row"><span class="k">기종</span><span class="v mono">${esc(u.model)}</span></div>
+      <div class="spec-row"><span class="k">정지층 / 속도</span><span class="v">${u.stops}층 · ${esc(u.speed)}</span></div>
+      <div class="spec-row"><span class="k">정격하중</span><span class="v">${esc(u.capacity)}</span></div>
+      <div class="mt-3.5">
+        <span class="status-badge ${st.badge}"><span class="status-dot ${st.dot}"></span>${st.label}</span>
+      </div>
+    </div>`;
+    }
+
+    function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;').replace(/"/g,'&quot;'); }
+
+    function animateCount(id, target){
+        const el = document.getElementById(id);
+        if(typeof gsap !== 'undefined'){
+            const obj = {v:0};
+            gsap.to(obj,{v:target,duration:1,ease:'power2.out',delay:.2,onUpdate:()=>{ el.textContent = Math.round(obj.v); }});
+        } else { el.textContent = target; }
+    }
+
+    // =============================================
+    // FILTER
+    // =============================================
+    function setFilter(filter, btn){
+        currentFilter = filter;
+        document.querySelectorAll('.fpill').forEach(p=>p.classList.remove('active'));
+        btn.classList.add('active');
+        renderGrid();
+        if(typeof gsap !== 'undefined'){
+            gsap.fromTo('#unitGrid > div',{opacity:0,y:14},{opacity:1,y:0,duration:.45,stagger:.035,ease:'power3.out'});
+        }
+    }
+
+    // =============================================
+    // SELECTION
+    // =============================================
+    function toggleUnit(unitNo){
+        if(selected.has(unitNo)) selected.delete(unitNo);
+        else selected.add(unitNo);
+
+        const card = document.querySelector(`[data-unit="${unitNo}"]`);
+        if(card) card.classList.toggle('selected', selected.has(unitNo));
+        updateSelectionUI();
+    }
+
+    function selectAllVisible(on){
+        visibleUnits().forEach(u=>{ on ? selected.add(u.unitNo) : selected.delete(u.unitNo); });
+        document.querySelectorAll('.unit-card').forEach(c=>{
+            c.classList.toggle('selected', selected.has(c.dataset.unit));
+        });
+        updateSelectionUI();
+    }
+
+    function clearSelection(){
+        selected.clear();
+        document.querySelectorAll('.unit-card').forEach(c=>c.classList.remove('selected'));
+        updateSelectionUI();
+    }
+
+    function updateSelectionUI(){
+        document.getElementById('cntSelected').textContent = selected.size;
+        document.getElementById('barCount').textContent    = selected.size;
+        document.getElementById('selectBar').classList.toggle('show', selected.size>0 && unitData.length>0);
+    }
+
+    // =============================================
+    // SAVE
+    // =============================================
+    function saveSelection(){
+        // 이번 조회 범위 안에서는 선택 상태가 그대로 내 관리 호기가 된다
+        unitData.forEach(u=>{
+            if(selected.has(u.unitNo)) myUnits.add(u.unitNo);
+            else myUnits.delete(u.unitNo);
+        });
+        persistMyUnits();
+
+        animateCount('cntMine', myUnits.size);
+        renderGrid();          // '내 호기' 배지 갱신
+        updateSelectionUI();
+        showToast(`관리 호기 ${selected.size}대가 저장되었습니다`);
+    }
+
+    let toastTimer;
+    function showToast(msg){
+        const t = document.getElementById('toast');
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
+    }
+</script>
+</body>
+</html>
