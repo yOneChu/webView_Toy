@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ko" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TeamDocs — 팀 업무 매뉴얼</title>
+
+    <!-- TailwindCSS (Play CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        // Apple 시스템 팔레트
+                        apple: {
+                            blue: '#0071e3',
+                            bluehover: '#0077ed',
+                            gray: '#86868b',
+                            ink: '#1d1d1f',
+                            line: '#d2d2d7',
+                        },
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Pretendard"', '"Apple SD Gothic Neo"', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        soft: '0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)',
+                    },
+                },
+            },
+        };
+    </script>
+
+    <!-- 오픈소스 라이브러리 -->
+    <!-- 마크다운 렌더링 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <!-- XSS 방지 -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    <!-- 코드 하이라이팅 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/lib/common.min.js"></script>
+    <!-- 아이콘 -->
+    <script src="https://unpkg.com/lucide@0.417.0/dist/umd/lucide.min.js"></script>
+
+    <style>
+        /* 부드러운 스크롤 & 폰트 렌더링 */
+        html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+        * { scroll-behavior: smooth; }
+
+        /* GitBook 스타일 문서 타이포그래피 */
+        .prose-doc { color: #1d1d1f; line-height: 1.7; font-size: 17px; }
+        .dark .prose-doc { color: #f5f5f7; }
+        .prose-doc h1 { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 1.2rem; }
+        .prose-doc h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin: 2.4rem 0 1rem; padding-top: 0.6rem; }
+        .prose-doc h3 { font-size: 1.25rem; font-weight: 600; margin: 1.8rem 0 0.8rem; }
+        .prose-doc h4 { font-size: 1.05rem; font-weight: 600; margin: 1.4rem 0 0.6rem; }
+        .prose-doc p { margin: 0 0 1.1rem; }
+        .prose-doc a { color: #0071e3; text-decoration: none; }
+        .prose-doc a:hover { text-decoration: underline; }
+        .prose-doc ul, .prose-doc ol { margin: 0 0 1.1rem; padding-left: 1.5rem; }
+        .prose-doc li { margin: 0.35rem 0; }
+        .prose-doc ul { list-style: disc; }
+        .prose-doc ol { list-style: decimal; }
+        .prose-doc blockquote { border-left: 3px solid #0071e3; background: #f5f5f7; margin: 1.4rem 0; padding: 0.8rem 1.2rem; border-radius: 0 10px 10px 0; color: #515154; }
+        .dark .prose-doc blockquote { background: #1c1c1e; color: #a1a1a6; }
+        .prose-doc code:not(pre code) { background: #f5f5f7; color: #d6336c; padding: 0.15em 0.4em; border-radius: 6px; font-size: 0.88em; font-family: 'SF Mono', ui-monospace, monospace; }
+        .dark .prose-doc code:not(pre code) { background: #2c2c2e; color: #ff8fab; }
+        .prose-doc pre { background: #f5f5f7; border: 1px solid #e5e5ea; border-radius: 12px; padding: 1.1rem 1.3rem; overflow-x: auto; margin: 0 0 1.3rem; font-size: 0.9rem; }
+        .dark .prose-doc pre { background: #1c1c1e; border-color: #2c2c2e; }
+        .prose-doc pre code { font-family: 'SF Mono', ui-monospace, monospace; }
+        .dark .prose-doc pre code, .dark .prose-doc pre { color: #f5f5f7; }
+        .prose-doc table { width: 100%; border-collapse: collapse; margin: 0 0 1.3rem; font-size: 0.95rem; }
+        .prose-doc th, .prose-doc td { border: 1px solid #d2d2d7; padding: 0.6rem 0.9rem; text-align: left; }
+        .prose-doc th { background: #f5f5f7; font-weight: 600; }
+        .dark .prose-doc th, .dark .prose-doc td { border-color: #2c2c2e; }
+        .dark .prose-doc th { background: #1c1c1e; }
+        .prose-doc img { max-width: 100%; border-radius: 12px; margin: 1rem 0; }
+        .prose-doc hr { border: none; border-top: 1px solid #d2d2d7; margin: 2rem 0; }
+        .dark .prose-doc hr { border-color: #2c2c2e; }
+
+        /* 커스텀 스크롤바 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #c7c7cc; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #aeaeb2; }
+        .dark ::-webkit-scrollbar-thumb { background: #3a3a3c; }
+
+        /* 진입 애니메이션 */
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-up { animation: fadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="h-full bg-white dark:bg-black text-apple-ink dark:text-gray-100 font-sans">
+
+<div id="app" class="flex h-full">
+
+    <!-- ===================== 사이드바 ===================== -->
+    <aside id="sidebar" class="w-72 shrink-0 border-r border-apple-line dark:border-neutral-800 flex flex-col bg-[#fbfbfd] dark:bg-neutral-950 transition-transform">
+        <!-- 로고 -->
+        <div class="h-16 flex items-center gap-2.5 px-5 border-b border-apple-line/70 dark:border-neutral-800">
+            <div class="w-8 h-8 rounded-lg bg-apple-blue flex items-center justify-center text-white shrink-0">
+                <i data-lucide="book-open-text" class="w-[18px] h-[18px]"></i>
+            </div>
+            <div class="leading-tight">
+                <div class="font-semibold text-[15px] tracking-tight">TeamDocs</div>
+                <div class="text-[11px] text-apple-gray">업무 매뉴얼</div>
+            </div>
+        </div>
+
+        <!-- 검색 -->
+        <div class="px-4 pt-4 pb-2">
+            <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-apple-gray pointer-events-none"></i>
+                <input id="searchInput" type="text" placeholder="문서 검색…"
+                       class="w-full h-9 pl-9 pr-3 text-sm rounded-lg bg-black/[0.04] dark:bg-white/[0.06] border border-transparent focus:border-apple-blue focus:bg-white dark:focus:bg-neutral-900 outline-none transition placeholder:text-apple-gray">
+            </div>
+        </div>
+
+        <!-- DB 명세서 + 문서 트리 -->
+        <div class="flex-1 overflow-y-auto px-2 py-2">
+            <!-- DB 명세서 (ECO 검증 / 로직 작성 / 로직 검증) -->
+            <div class="mb-2">
+                <div class="flex items-center gap-1.5 px-2.5 py-1.5 text-apple-gray">
+                    <i data-lucide="database" class="w-3.5 h-3.5"></i>
+                    <span class="flex-1 truncate text-[13px] font-semibold">DB 명세서</span>
+                    <button id="reloadSpecsBtn" title="DB에서 다시 불러오기"
+                            class="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition">
+                        <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                    </button>
+                </div>
+                <nav id="specTree" class="mt-0.5 space-y-0.5"></nav>
+            </div>
+
+            <div class="mx-2.5 my-3 border-t border-apple-line/70 dark:border-neutral-800"></div>
+
+            <!-- 문서 트리 -->
+            <nav id="docTree" class="space-y-1"></nav>
+        </div>
+
+        <!-- 하단 액션 -->
+        <div class="border-t border-apple-line/70 dark:border-neutral-800 p-3 space-y-1">
+            <button id="newDocBtn" class="w-full flex items-center gap-2 px-3 h-9 rounded-lg text-sm font-medium bg-apple-blue text-white hover:bg-apple-bluehover transition">
+                <i data-lucide="plus" class="w-4 h-4"></i> 새 문서 작성
+            </button>
+            <div class="flex gap-1">
+                <button id="newCatBtn" class="flex-1 flex items-center justify-center gap-1.5 px-2 h-8 rounded-lg text-xs text-apple-gray hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition">
+                    <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i> 카테고리
+                </button>
+                <button id="exportBtn" title="JSON 내보내기" class="flex items-center justify-center px-2 h-8 rounded-lg text-apple-gray hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                </button>
+                <button id="importBtn" title="JSON 가져오기" class="flex items-center justify-center px-2 h-8 rounded-lg text-apple-gray hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                </button>
+                <button id="themeBtn" title="테마 전환" class="flex items-center justify-center px-2 h-8 rounded-lg text-apple-gray hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition">
+                    <i data-lucide="moon" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+            <input id="importFile" type="file" accept="application/json" class="hidden">
+        </div>
+    </aside>
+
+    <!-- ===================== 메인 ===================== -->
+    <main class="flex-1 flex flex-col min-w-0">
+        <!-- 상단바 -->
+        <header class="h-16 shrink-0 border-b border-apple-line dark:border-neutral-800 flex items-center justify-between px-6 gap-4 bg-white/80 dark:bg-black/80 backdrop-blur-xl sticky top-0 z-20">
+            <button id="toggleSidebar" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-black/[0.04] dark:hover:bg-white/[0.06]">
+                <i data-lucide="panel-left" class="w-5 h-5"></i>
+            </button>
+            <div id="breadcrumb" class="text-sm text-apple-gray truncate flex-1"></div>
+            <div id="viewActions" class="flex items-center gap-2"></div>
+        </header>
+
+        <!-- 콘텐츠 영역 -->
+        <div class="flex-1 overflow-y-auto" id="scrollArea">
+            <!-- 뷰어 -->
+            <div id="viewerRoot" class="max-w-[1100px] mx-auto px-6 lg:px-10 py-10 flex gap-10">
+                <article id="viewer" class="prose-doc flex-1 min-w-0 fade-up"></article>
+                <!-- 목차(TOC) -->
+                <aside id="tocPanel" class="hidden xl:block w-56 shrink-0">
+                    <div class="sticky top-24">
+                        <div class="text-[11px] font-semibold uppercase tracking-wider text-apple-gray mb-3 flex items-center gap-1.5">
+                            <i data-lucide="list" class="w-3.5 h-3.5"></i> 이 문서 목차
+                        </div>
+                        <ul id="toc" class="space-y-1.5 text-sm border-l border-apple-line dark:border-neutral-800"></ul>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- 에디터 (숨김) -->
+            <div id="editorRoot" class="hidden max-w-[1400px] mx-auto px-6 lg:px-10 py-6">
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <input id="editTitle" type="text" placeholder="문서 제목을 입력하세요"
+                           class="flex-1 min-w-[240px] text-2xl font-bold bg-transparent outline-none placeholder:text-apple-gray/60 tracking-tight">
+                </div>
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <select id="editCategory" class="h-9 px-3 text-sm rounded-lg bg-black/[0.04] dark:bg-white/[0.06] border border-transparent focus:border-apple-blue outline-none"></select>
+                    <input id="editAuthor" type="text" placeholder="작성자"
+                           class="h-9 px-3 w-40 text-sm rounded-lg bg-black/[0.04] dark:bg-white/[0.06] border border-transparent focus:border-apple-blue outline-none">
+                    <div class="flex-1"></div>
+                    <button id="cancelEdit" class="h-9 px-4 text-sm rounded-lg hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition">취소</button>
+                    <button id="saveDoc" class="h-9 px-5 text-sm font-medium rounded-lg bg-apple-blue text-white hover:bg-apple-bluehover transition flex items-center gap-1.5">
+                        <i data-lucide="check" class="w-4 h-4"></i> 저장
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[calc(100vh-260px)]">
+                    <div class="flex flex-col rounded-xl border border-apple-line dark:border-neutral-800 overflow-hidden">
+                        <div class="h-10 shrink-0 flex items-center px-4 text-xs font-medium text-apple-gray border-b border-apple-line dark:border-neutral-800 bg-[#fbfbfd] dark:bg-neutral-950">
+                            <i data-lucide="pen-line" class="w-3.5 h-3.5 mr-1.5"></i> Markdown
+                        </div>
+                        <textarea id="editContent" spellcheck="false"
+                                  class="flex-1 w-full p-4 resize-none outline-none bg-white dark:bg-black text-sm leading-relaxed font-mono"
+                                  style="font-family:'SF Mono',ui-monospace,monospace"></textarea>
+                    </div>
+                    <div class="flex flex-col rounded-xl border border-apple-line dark:border-neutral-800 overflow-hidden">
+                        <div class="h-10 shrink-0 flex items-center px-4 text-xs font-medium text-apple-gray border-b border-apple-line dark:border-neutral-800 bg-[#fbfbfd] dark:bg-neutral-950">
+                            <i data-lucide="eye" class="w-3.5 h-3.5 mr-1.5"></i> 미리보기
+                        </div>
+                        <div id="editPreview" class="prose-doc flex-1 overflow-y-auto p-5 text-[15px]"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 빈 상태 -->
+            <div id="emptyState" class="hidden h-full flex-col items-center justify-center text-center px-6 py-24">
+                <div class="w-16 h-16 rounded-2xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center mb-5">
+                    <i data-lucide="book-marked" class="w-8 h-8 text-apple-gray"></i>
+                </div>
+                <h2 class="text-xl font-semibold mb-2">문서를 선택하세요</h2>
+                <p class="text-apple-gray text-sm max-w-sm">왼쪽에서 매뉴얼을 선택하거나, <span class="text-apple-blue font-medium">새 문서 작성</span>으로 팀 매뉴얼을 시작하세요.</p>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- 토스트 -->
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden">
+    <div class="bg-apple-ink dark:bg-white text-white dark:text-apple-ink text-sm font-medium px-4 py-2.5 rounded-xl shadow-soft flex items-center gap-2"></div>
+</div>
+
+<script src="./api.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
