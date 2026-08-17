@@ -487,7 +487,7 @@
         updateThemeIcon(dark);
     }
     function updateThemeIcon(dark) {
-        $('#themeBtn').innerHTML = `<i data-lucide="${dark ? 'sun' : 'moon'}" class="w-3.5 h-3.5"></i>`;
+        $('#themeBtn').innerHTML = `<i data-lucide="${dark ? 'sun' : 'moon'}" class="w-4 h-4"></i>`;
         icons();
     }
 

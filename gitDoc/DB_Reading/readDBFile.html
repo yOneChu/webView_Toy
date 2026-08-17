@@ -155,9 +155,6 @@
                 <button id="importBtn" title="JSON 가져오기" class="flex items-center justify-center px-2 h-8 rounded-lg text-apple-gray hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition">
                     <i data-lucide="upload" class="w-3.5 h-3.5"></i>
                 </button>
-                <button id="themeBtn" title="테마 전환" class="flex items-center justify-center px-2 h-8 rounded-lg text-apple-gray hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition">
-                    <i data-lucide="moon" class="w-3.5 h-3.5"></i>
-                </button>
             </div>
             <input id="importFile" type="file" accept="application/json" class="hidden">
         </div>
@@ -171,7 +168,15 @@
                 <i data-lucide="panel-left" class="w-5 h-5"></i>
             </button>
             <div id="breadcrumb" class="text-sm text-apple-gray truncate flex-1"></div>
-            <div id="viewActions" class="flex items-center gap-2"></div>
+            <div class="flex items-center gap-2">
+                <!-- 문서/명세서별 액션(편집·새로고침 등) -->
+                <div id="viewActions" class="flex items-center gap-2"></div>
+                <!-- 테마 전환 — 항상 오른쪽 끝에 고정 -->
+                <button id="themeBtn" title="테마 전환"
+                        class="h-9 w-9 flex items-center justify-center rounded-lg border border-apple-line dark:border-neutral-700 text-apple-gray hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition">
+                    <i data-lucide="moon" class="w-4 h-4"></i>
+                </button>
+            </div>
         </header>
 
         <!-- 콘텐츠 영역 -->

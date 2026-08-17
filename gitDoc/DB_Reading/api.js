@@ -258,6 +258,11 @@ npm run deploy
  *   readUrl    : 마크다운 본문을 가져올 GET URL (전체 주소)
  *   saveUrl    : 수정 내용을 저장할 URL. null 이면 읽기 전용으로 동작
  *   saveMethod : 저장 시 HTTP 메서드 (기본 'POST')
+ *   saveFormat : 'form' → application/x-www-form-urlencoded
+ *                        (컨트롤러가 @RequestParam / 애노테이션 없는 String 파라미터일 때)
+ *                'json' → application/json  (컨트롤러가 @RequestBody DTO 일 때). 기본값
+ *   saveFields : 서버가 기대하는 파라미터명 매핑
+ *                예) { content: 'updatedContent' } → 본문을 updatedContent 로 보냄
  * ------------------------------------------------------------------ */
 const DB_SPEC_TYPES = [
     {
@@ -268,16 +273,23 @@ const DB_SPEC_TYPES = [
     },
     {
         id: 'LOGIC_WRITE', name: '로직 작성', icon: 'pen-tool',
-        readUrl: 'http://localhost:8070/apiv2/getLogicWriteAsDB?key=subae',   // TODO: 조회 API 주소
-        saveUrl: null,   // TODO: 저장 API 주소
+        readUrl: 'http://localhost:8070/apiv2/getLogicWriteAsDB?key=subae&type=LOGIC_WRITE',
+        saveUrl: 'http://localhost:8070/apiv2/update_PLM_DB_MetaData?key=subae&type=LOGIC_WRITE',
         saveMethod: 'POST',
+        // 컨트롤러: update_PLM_DB_MetaData(String key, String updatedContent)
+        //   → 애노테이션 없는 String = @RequestParam 이므로 JSON body 는 읽지 못함(null).
+        //     form 전송 + 본문 파라미터명을 updatedContent 로 맞춘다.
+        saveFormat: 'form',
+        saveFields: { content: 'updatedContent'},
     },
     {
         id: 'LOGIC_VERIFY', name: '로직 검증', icon: 'check-check',
         // ★ 연결 완료 — text/plain 마크다운 원문을 그대로 반환하는 API
-        readUrl: 'http://localhost:8070/apiv2/getPIDMetaInfo?key=subae',
-        saveUrl: null,   // TODO: 저장 API를 만들면 여기에 주소를 넣으세요 (그 순간 편집 가능해집니다)
+        readUrl: 'http://localhost:8070/apiv2/getLogicVerifyAsDB?key=subae&type=LOGIC_VERIFY',
+        saveUrl: 'http://localhost:8070/apiv2/update_PLM_DB_MetaData?key=subae&type=LOGIC_VERIFY',   // TODO: 저장 API를 만들면 여기에 주소를 넣으세요 (그 순간 편집 가능해집니다)
         saveMethod: 'POST',
+        saveFormat: 'form',
+        saveFields: { content: 'updatedContent' },
     },
 ];
 
@@ -295,10 +307,14 @@ const DB_SPEC_TYPES = [
  *                                            필드에서 마크다운을 꺼냅니다
  *
  *   [저장]  saveMethod saveUrl
- *           → body: { "id":"LOGIC_VERIFY", "content":"마크다운", "author":"홍길동" }
+ *           · saveFormat:'json' → application/json
+ *                                 { "id":"...", "content":"마크다운", "author":"홍길동" }
+ *           · saveFormat:'form' → application/x-www-form-urlencoded
+ *                                 id=...&content=...&author=...
+ *                                 (@RequestParam 컨트롤러는 이 형식만 읽습니다)
  *           ← 아무 응답이나 OK (200/204 모두 정상 처리)
  *
- *   ※ 서버 응답 필드명이 다르면 _pickContent() / _buildSaveBody() 만 고치세요.
+ *   ※ 서버 응답 필드명이 다르면 _pickContent() / 요청 파라미터명은 saveFields 로 조정하세요.
  * ================================================================== */
 class SpecStore {
     constructor({ headers = {}, mockKey = 'teamdocs.specs.v1' } = {}) {
@@ -321,9 +337,23 @@ class SpecStore {
         } catch { return raw; }                                 // JSON 이라 했지만 아닌 경우
     }
 
-    /** 저장 요청 body 구성 (서버 스펙에 맞춰 수정하세요) */
-    _buildSaveBody(id, content, author) {
-        return JSON.stringify({ id, content, author });
+    /** 저장 요청의 Content-Type 과 body 구성 (명세서별 saveFormat / saveFields 반영) */
+    _buildSaveRequest(t, id, content, author) {
+        const f = { id: 'id', content: 'content', author: 'author', ...(t.saveFields || {}) };
+        const payload = { [f.id]: id, [f.content]: content, [f.author]: author };
+
+        // @RequestParam 컨트롤러용 — 폼 전송(프리플라이트 없음)
+        if (t.saveFormat === 'form') {
+            return {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                body: new URLSearchParams(payload).toString(),
+            };
+        }
+        // @RequestBody 컨트롤러용 — JSON 전송
+        return {
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        };
     }
 
     async getSpecTypes() {
@@ -383,10 +413,11 @@ class SpecStore {
         }
 
         /* --- 실 API 저장 --- */
+        const req = this._buildSaveRequest(t, id, content, author);
         const res = await fetch(t.saveUrl, {
             method: t.saveMethod || 'POST',
-            headers: { 'Content-Type': 'application/json', ...this.headers },
-            body: this._buildSaveBody(id, content, author),
+            headers: { ...req.headers, ...this.headers },
+            body: req.body,
         });
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
         return this.getSpec(id);   // 저장 후 DB 기준으로 다시 읽어옴
