@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOM-WATCHER | Anomaly Detection Command Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --bg:#05070f; --panel:rgba(10,16,30,.55); --line:rgba(120,180,255,.14);
+            --cy:#22d3ee; --cy-dim:#0e7490; --gold:#fbbf24; --red:#ff3b52; --ok:#34d399;
+            --tx:#e8f1ff; --tx-dim:#7f92ad;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+            margin:0; overflow:hidden; background:var(--bg); color:var(--tx);
+            font-family:'Noto Sans KR',-apple-system,'Malgun Gothic',sans-serif;
+            -webkit-font-smoothing:antialiased;
+        }
+        canvas{display:block}
+        #stage{position:fixed; inset:0; z-index:1}
+
+        /* 화면 전체 효과 */
+        #vignette{position:fixed; inset:0; z-index:2; pointer-events:none;
+            background:radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,.75) 100%)}
+        #alarmFlash{position:fixed; inset:0; z-index:3; pointer-events:none; opacity:0;
+            box-shadow:inset 0 0 200px 40px rgba(255,59,82,.55); transition:opacity .25s}
+        #alarmFlash.on{opacity:1}
+        #scanline{position:fixed; inset:0; z-index:2; pointer-events:none; opacity:.35;
+            background:repeating-linear-gradient(to bottom, rgba(255,255,255,.03) 0 1px, transparent 1px 3px)}
+
+        /* 공통 패널 */
+        .panel{
+            position:fixed; z-index:10; background:var(--panel);
+            backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+            border:1px solid var(--line); border-radius:14px;
+            box-shadow:0 20px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+        }
+        .eyebrow{font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:.22em;
+            color:var(--cy); text-transform:uppercase}
+
+        /* 헤더 */
+        #hdr{top:22px; left:24px; right:24px; padding:14px 22px; display:flex;
+            align-items:center; justify-content:space-between; gap:20px}
+        #hdr h1{margin:0; font-family:'Orbitron',sans-serif; font-size:19px; font-weight:900;
+            letter-spacing:.08em; background:linear-gradient(90deg,#fff,var(--cy));
+            -webkit-background-clip:text; background-clip:text; color:transparent}
+        #hdr .sub{font-size:11.5px; color:var(--tx-dim); margin-top:3px}
+        .hdr-right{display:flex; align-items:center; gap:26px}
+        .hdr-stat{text-align:right}
+        .hdr-stat b{display:block; font-family:'Orbitron',sans-serif; font-size:17px; line-height:1.1}
+        .hdr-stat span{font-size:10px; color:var(--tx-dim); letter-spacing:.1em}
+        #live{display:flex; align-items:center; gap:7px; font-size:11px; color:var(--ok);
+            font-family:'Orbitron',sans-serif; letter-spacing:.12em}
+        #live i{width:7px; height:7px; border-radius:50%; background:var(--ok);
+            box-shadow:0 0 10px var(--ok); animation:blink 1.6s infinite}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+        /* 좌측 KPI */
+        #left{top:112px; left:24px; width:290px; padding:18px}
+        .kpi{display:flex; align-items:baseline; justify-content:space-between;
+            padding:11px 0; border-bottom:1px dashed rgba(120,180,255,.12)}
+        .kpi:last-child{border:none}
+        .kpi .k{font-size:12px; color:var(--tx-dim)}
+        .kpi .v{font-family:'Orbitron',sans-serif; font-size:22px; font-weight:700}
+        .kpi .v small{font-size:11px; color:var(--tx-dim); margin-left:3px; font-family:'Noto Sans KR'}
+        .v.cy{color:var(--cy)} .v.gd{color:var(--gold)}
+        .v.rd{color:var(--red); text-shadow:0 0 14px rgba(255,59,82,.6)}
+
+        #progWrap{margin-top:14px}
+        #progWrap .lbl{display:flex; justify-content:space-between; font-size:10.5px;
+            color:var(--tx-dim); margin-bottom:6px; font-family:'Orbitron',sans-serif; letter-spacing:.1em}
+        #progBar{height:4px; background:rgba(255,255,255,.07); border-radius:4px; overflow:hidden}
+        #progFill{height:100%; width:0%; border-radius:4px;
+            background:linear-gradient(90deg,var(--cy-dim),var(--cy)); box-shadow:0 0 12px var(--cy);
+            transition:width .4s ease}
+
+        /* 우측 로그 */
+        #right{top:112px; right:24px; width:330px; padding:16px 18px; display:flex; flex-direction:column}
+        #logList{margin-top:10px; height:250px; overflow:hidden; display:flex; flex-direction:column-reverse}
+        .log{display:flex; gap:9px; padding:6px 0; font-size:11.5px; line-height:1.45;
+            border-bottom:1px solid rgba(255,255,255,.04); animation:slideIn .35s ease}
+        @keyframes slideIn{from{opacity:0; transform:translateX(14px)}to{opacity:1; transform:none}}
+        .log .t{color:var(--tx-dim); font-family:'Orbitron',sans-serif; font-size:10px; flex:none; padding-top:1px}
+        .log .m{color:#c3d3e8}
+        .log.warn .m{color:var(--gold)}
+        .log.err .m{color:var(--red); font-weight:700}
+        .log.ok .m{color:var(--ok)}
+
+        /* 이상 상세 드릴다운 */
+        #detail{right:24px; bottom:26px; width:430px; padding:18px 20px;
+            border-color:rgba(255,59,82,.35);
+            box-shadow:0 20px 60px rgba(0,0,0,.7), 0 0 40px rgba(255,59,82,.12);
+            opacity:0; transform:translateY(24px); pointer-events:none;
+            transition:all .5s cubic-bezier(.2,.8,.2,1)}
+        #detail.show{opacity:1; transform:none; pointer-events:auto}
+        #detail h3{margin:8px 0 4px; font-size:16px; font-weight:700}
+        #detail .who{font-size:11.5px; color:var(--tx-dim); margin-bottom:14px}
+        table{width:100%; border-collapse:collapse; font-size:11.5px}
+        th{text-align:left; color:var(--tx-dim); font-weight:500; font-size:10px;
+            letter-spacing:.1em; padding:0 0 7px; border-bottom:1px solid var(--line)}
+        td{padding:8px 0; border-bottom:1px solid rgba(255,255,255,.04)}
+        td.ref{color:var(--gold)}
+        td.tgt{color:var(--red); font-weight:700}
+        #dBody tr{cursor:pointer; transition:background .18s}
+        #dBody tr:hover{background:rgba(255,59,82,.1)}
+        #dBody tr:hover td{color:#fff}
+        #dBody tr:hover td.ref{color:var(--gold)}
+        .tag{display:inline-block; padding:2px 7px; border-radius:4px; font-size:9.5px;
+            font-family:'Orbitron',sans-serif; letter-spacing:.08em}
+        .tag.crit{background:rgba(255,59,82,.16); color:var(--red); border:1px solid rgba(255,59,82,.35)}
+        #detail .act{margin-top:14px; padding:10px 12px; border-radius:8px; font-size:11.5px;
+            background:rgba(52,211,153,.08); border:1px solid rgba(52,211,153,.25); color:var(--ok)}
+
+        /* 3D 라벨 */
+        #labels{position:fixed; inset:0; z-index:5; pointer-events:none}
+        .lbl3d{position:absolute; transform:translate(-50%,-50%); white-space:nowrap;
+            font-size:11px; font-weight:500; padding:4px 10px; border-radius:20px;
+            background:rgba(6,12,24,.72); border:1px solid var(--line); color:#b9cde6;
+            transition:opacity .3s; letter-spacing:.02em}
+        .lbl3d.ref{border-color:rgba(251,191,36,.5); color:var(--gold); font-weight:700}
+        .lbl3d.err{border-color:rgba(255,59,82,.6); color:#fff; background:rgba(120,10,25,.85);
+            font-weight:700; box-shadow:0 0 22px rgba(255,59,82,.5); animation:pop .5s}
+        @keyframes pop{from{transform:translate(-50%,-50%) scale(.4); opacity:0}}
+
+        /* 하단 컨트롤 */
+        #ctrl{bottom:26px; left:24px; padding:12px 16px; display:flex; gap:10px; align-items:center}
+        .btn{font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:.1em; cursor:pointer;
+            padding:9px 16px; border-radius:8px; border:1px solid rgba(34,211,238,.3);
+            background:rgba(34,211,238,.07); color:var(--cy); transition:.2s}
+        .btn:hover{background:rgba(34,211,238,.18); box-shadow:0 0 18px rgba(34,211,238,.25)}
+        .btn.g{border-color:rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:var(--tx-dim)}
+        .hint{font-size:10.5px; color:var(--tx-dim); margin-left:6px}
+        kbd{font-family:'Orbitron',sans-serif; font-size:9.5px; padding:2px 6px; border-radius:4px;
+            background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); color:#b9cde6}
+
+        /* 단계 표시 */
+        #phase{position:fixed; z-index:10; left:50%; bottom:32px; transform:translateX(-50%);
+            font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:.25em; color:var(--cy);
+            text-transform:uppercase; opacity:.85; text-shadow:0 0 16px rgba(34,211,238,.5)}
+
+        @media (max-width:1280px){ #left,#right{width:250px} #detail{width:340px} }
+    </style>
+</head>
+<body>
+
+<div id="stage"></div>
+<div id="labels"></div>
+<div id="scanline"></div>
+<div id="vignette"></div>
+<div id="alarmFlash"></div>
+
+<header class="panel" id="hdr">
+    <div>
+        <div class="eyebrow">PLM Intelligence</div>
+        <h1>BOM-WATCHER</h1>
+        <div class="sub">설계 BOM 이상감지 관제 &mdash; 대표 호기 기준 일일 자동 검증</div>
+    </div>
+    <div class="hdr-right">
+        <div class="hdr-stat"><b class="v cy" id="hTime">--:--:--</b><span>SYSTEM TIME</span></div>
+        <div class="hdr-stat"><b style="color:var(--gold)">EL-2600-STD</b><span>REFERENCE 호기</span></div>
+        <div id="live"><i></i>LIVE MONITORING</div>
+    </div>
+</header>
+
+<aside class="panel" id="left">
+    <div class="eyebrow">Today's Verification</div>
+    <div class="kpi"><span class="k">검증 대상 호기</span><span class="v cy" data-cnt="128">0</span></div>
+    <div class="kpi"><span class="k">비교 BOM 항목</span><span class="v" data-cnt="48620">0</span></div>
+    <div class="kpi"><span class="k">경고 (Warning)</span><span class="v gd" data-cnt="7">0</span></div>
+    <div class="kpi"><span class="k">치명 이상 (Critical)</span><span class="v rd" data-cnt="1">0</span></div>
+    <div class="kpi"><span class="k">평균 검증 시간</span><span class="v" data-cnt="42">0<small>초</small></span></div>
+    <div id="progWrap">
+        <div class="lbl"><span>SCAN PROGRESS</span><span id="progTxt">0%</span></div>
+        <div id="progBar"><div id="progFill"></div></div>
+    </div>
+</aside>
+
+<aside class="panel" id="right">
+    <div class="eyebrow">Detection Stream</div>
+    <div id="logList"></div>
+</aside>
+
+<section class="panel" id="detail">
+    <span class="tag crit">CRITICAL ANOMALY</span>
+    <h3 id="dTitle">호기 BOM 이상 감지</h3>
+    <div class="who">대표 호기 <b style="color:var(--gold)">EL-2600-STD</b> 대비 구성 차이</div>
+    <table>
+        <thead><tr><th>구분</th><th>항목</th><th>대표 호기</th><th>대상 호기</th></tr></thead>
+        <tbody id="dBody"></tbody>
+    </table>
+    <div class="act">▶ 설계 담당자 자동 통보 완료 · 재검증 스케줄 등록됨</div>
+</section>
+
+<div class="panel" id="ctrl">
+    <button class="btn" id="btnDemo">▶ 자동 시연</button>
+    <button class="btn g" id="btnReset">전체 조망</button>
+    <button class="btn g" id="btnSfx">🔇 사운드 켜기</button>
+    <span class="hint"><kbd>Space</kbd> 시연 &nbsp;<kbd>R</kbd> 리셋 &nbsp;<kbd>S</kbd> 사운드 &nbsp;· 드래그 회전 / 휠 줌 / 호기 클릭</span>
+</div>
+
+<div id="phase">Standby</div>
+
+<script type="importmap">
+    { "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "@tweenjs/tween.js": "https://unpkg.com/@tweenjs/tween.js@23.1.1/dist/tween.esm.js"
+    }}
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    import * as TWEEN from '@tweenjs/tween.js';
+
+    /* ============================================================
+       0. 데이터 — 실제 PLM 연동 시 이 배열만 API 응답으로 교체
+       ============================================================ */
+    const REFERENCE = { id:'EL-2600-STD', name:'대표 호기 EL-2600' };
+
+    const UNITS = [
+        { id:'HD-24-1071', site:'서울 A현장',  status:'ok'   },
+        { id:'HD-24-1072', site:'부산 B현장',  status:'ok'   },
+        { id:'HD-24-1088', site:'인천 C현장',  status:'warn' },
+        { id:'HD-24-1094', site:'대전 D현장',  status:'ok'   },
+        { id:'HD-24-1102', site:'광주 E현장',  status:'crit' },   // ← 이상 호기
+        { id:'HD-24-1115', site:'울산 F현장',  status:'ok'   },
+        { id:'HD-24-1121', site:'수원 G현장',  status:'warn' },
+        { id:'HD-24-1133', site:'창원 H현장',  status:'ok'   }
+    ];
+
+    // 드릴다운 diff (대표 호기 vs 이상 호기)
+    const DIFF = [
+        { kind:'수량 상이', item:'가이드레일 브래킷 (GR-BRK-08)', ref:'32 EA', tgt:'24 EA' },
+        { kind:'누락',      item:'과속조절기 로프 텐셔너 (OS-TN-02)', ref:'1 EA',  tgt:'없음' },
+        { kind:'사양 상이', item:'권상기 모터 (TM-18kW)', ref:'18.5 kW', tgt:'15.0 kW' },
+        { kind:'개정 불일치', item:'카도어 오퍼레이터 도면', ref:'Rev. C', tgt:'Rev. A' }
+    ];
+
+    const COL = { ok:0x22d3ee, warn:0xfbbf24, crit:0xff3b52, ref:0xfbbf24 };
+
+    /* ============================================================
+       0.5 사운드 엔진 — WebAudio 합성 (외부 음원 파일 없음 / 오프라인 동작)
+       ============================================================ */
+    const SFX = (() => {
+        let ctx = null, master = null, hum = null, on = false;
+
+        function boot(){
+            if (ctx) return;
+            const AC = window.AudioContext || window.webkitAudioContext;
+            ctx = new AC();
+            master = ctx.createGain();
+            master.gain.value = 0.0001;
+            const comp = ctx.createDynamicsCompressor();   // 피크 보호 (발표장 스피커 대비)
+            master.connect(comp); comp.connect(ctx.destination);
+        }
+        const live = () => { if (!on) return null; boot(); if (ctx.state !== 'running') ctx.resume(); return ctx; };
+
+        // 단음 (sine/triangle/sawtooth/square)
+        function tone(f, dur, type='sine', vol=.5, slide=null, delay=0){
+            const c = live(); if (!c) return;
+            const t0 = c.currentTime + delay;
+            const o = c.createOscillator(), g = c.createGain();
+            o.type = type; o.frequency.setValueAtTime(f, t0);
+            if (slide) o.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
+            g.gain.setValueAtTime(0.0001, t0);
+            g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+            g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+            o.connect(g); g.connect(master);
+            o.start(t0); o.stop(t0 + dur + .05);
+        }
+
+        // 노이즈 버스트 (whoosh / 공압음)
+        function noise(dur, f0, f1, vol=.35, delay=0){
+            const c = live(); if (!c) return;
+            const t0 = c.currentTime + delay;
+            const n = Math.floor(c.sampleRate * dur);
+            const buf = c.createBuffer(1, n, c.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let i=0;i<n;i++) d[i] = (Math.random()*2-1) * (1 - i/n);
+            const src = c.createBufferSource(); src.buffer = buf;
+            const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.2;
+            bp.frequency.setValueAtTime(f0, t0);
+            bp.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+            const g = c.createGain(); g.gain.value = vol;
+            src.connect(bp); bp.connect(g); g.connect(master);
+            src.start(t0);
+        }
+
+        return {
+            get enabled(){ return on; },
+
+            toggle(){
+                boot();
+                on = !on;
+                if (on){
+                    ctx.resume();
+                    master.gain.setTargetAtTime(0.32, ctx.currentTime, .25);   // 페이드 인
+                    this.ambient(true);
+                } else {
+                    master.gain.setTargetAtTime(0.0001, ctx.currentTime, .15);
+                    setTimeout(() => this.ambient(false), 300);
+                }
+                return on;
+            },
+
+            // 관제실 저음 앰비언스
+            ambient(start){
+                if (start){
+                    const c = live(); if (!c || hum) return;
+                    const g = c.createGain(); g.gain.value = .09;
+                    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 180;
+                    const oscs = [55, 55.6, 82.5].map(f => {
+                        const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f;
+                        o.connect(lp); o.start(); return o;
+                    });
+                    // 아주 느린 흔들림
+                    const lfo = c.createOscillator(), lg = c.createGain();
+                    lfo.frequency.value = .07; lg.gain.value = .035;
+                    lfo.connect(lg); lg.connect(g.gain); lfo.start();
+                    lp.connect(g); g.connect(master);
+                    hum = { oscs, lfo };
+                } else if (hum){
+                    hum.oscs.forEach(o => { try{ o.stop(); }catch(e){} });
+                    try{ hum.lfo.stop(); }catch(e){}
+                    hum = null;
+                }
+            },
+
+            click(){ tone(1200, .05, 'square', .12); },
+            // 호기 1기 검증 통과
+            blip(i=0){ tone(680 + i*45, .12, 'triangle', .22); },
+            // 경미한 차이
+            warn(){ tone(420, .18, 'square', .16); tone(330, .22, 'square', .14, null, .1); },
+            // 치명 이상 — 2음 사이렌 3회
+            alarm(){
+                for (let k=0;k<3;k++){
+                    tone(880, .16, 'sawtooth', .3, 660, k*.34);
+                    tone(660, .16, 'sawtooth', .3, 880, k*.34 + .17);
+                }
+                noise(.5, 1800, 240, .12);
+            },
+            // 카메라 이동
+            whoosh(){ noise(.85, 240, 2600, .3); },
+            // 엘리베이터 도착 종 (2음)
+            ding(){ tone(1046.5, .55, 'sine', .34); tone(783.99, .85, 'sine', .3, null, .28); },
+            // 조치 완료
+            chime(){ [523.25, 659.25, 783.99, 1046.5].forEach((f,i) => tone(f, .7, 'sine', .22, null, i*.11)); },
+            // 데이터 스캔 스윕
+            sweepStart(){ noise(1.1, 300, 1400, .12); tone(180, 1.0, 'sine', .14, 300); }
+        };
+    })();
+
+    /* ============================================================
+       1. 씬 기본 구성
+       ============================================================ */
+    const stage = document.getElementById('stage');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x05070f, 0.0032);
+
+    const camera = new THREE.PerspectiveCamera(48, innerWidth/innerHeight, 0.5, 3000);
+    const HOME = new THREE.Vector3(0, 120, 260);
+    camera.position.copy(HOME);
+
+    const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+    renderer.setSize(innerWidth, innerHeight);
+    // 발표장 노트북 보호: DPR 상한 1.5
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    stage.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = .06;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = .35;
+    controls.minDistance = 40;
+    controls.maxDistance = 620;
+    controls.maxPolarAngle = Math.PI * .86;
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .85, .5, .2);
+    composer.addPass(bloom);
+
+    scene.add(new THREE.AmbientLight(0xffffff, .45));
+    const key = new THREE.DirectionalLight(0x88bbff, .9); key.position.set(60,140,90); scene.add(key);
+
+    /* ============================================================
+       2. 배경 — 별 입자 + 그리드 바닥
+       ============================================================ */
+    (function starfield(){
+        const N = 1400, pos = new Float32Array(N*3);
+        for (let i=0;i<N;i++){
+            const r = 700 + Math.random()*900, th = Math.random()*Math.PI*2, ph = Math.acos(2*Math.random()-1);
+            pos[i*3]   = r*Math.sin(ph)*Math.cos(th);
+            pos[i*3+1] = r*Math.cos(ph)*.5;
+            pos[i*3+2] = r*Math.sin(ph)*Math.sin(th);
+        }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+        scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color:0x5b7fa8, size:1.6, transparent:true, opacity:.55 })));
+    })();
+
+    const grid = new THREE.GridHelper(900, 60, 0x1b3a5c, 0x11243a);
+    grid.position.y = -85;
+    grid.material.transparent = true; grid.material.opacity = .35;
+    scene.add(grid);
+
+    /* ============================================================
+       3. 엘리베이터 실물 형상 빌더
+          승강로 프레임 · 가이드레일 · 권상기(시브) · 카 · 균형추 · 로프
+          프레임은 LineSegments 1개로 병합 → draw call 최소화
+       ============================================================ */
+    function buildElevator({ h=60, w=18, color=0x22d3ee, accent=0xffffff, floors=6 }){
+        const d = w, hw = w/2, hd = d/2, y0 = -h/2, y1 = h/2;
+        const g = new THREE.Group();
+
+        // 승강로 프레임 (기둥 4본 + 층 빔)
+        const fp = [];
+        const corner = [[-hw,-hd],[hw,-hd],[hw,hd],[-hw,hd]];
+        corner.forEach(([x,z]) => fp.push(new THREE.Vector3(x,y0,z), new THREE.Vector3(x,y1,z)));
+        for (let k=0;k<=floors;k++){
+            const y = y0 + h*k/floors;
+            for (let i=0;i<4;i++){
+                const a = corner[i], b = corner[(i+1)%4];
+                fp.push(new THREE.Vector3(a[0],y,a[1]), new THREE.Vector3(b[0],y,b[1]));
+            }
+        }
+        const frameMat = new THREE.LineBasicMaterial({ color, transparent:true, opacity:.3 });
+        g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(fp), frameMat));
+
+        const solidMat = new THREE.MeshStandardMaterial({
+            color, emissive:color, emissiveIntensity:.4, metalness:.65, roughness:.35 });
+
+        // 가이드레일 2본
+        [-1,1].forEach(s => {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(w*.05, h*.97, w*.05), solidMat);
+            rail.position.set(s*(hw - w*.07), 0, 0);
+            g.add(rail);
+        });
+
+        // 권상기 (최상부) — 모터 본체 + 시브
+        const machine = new THREE.Group();
+        const motor = new THREE.Mesh(new THREE.CylinderGeometry(w*.12, w*.12, w*.3, 14), solidMat);
+        motor.rotation.z = Math.PI/2;
+        motor.position.x = -w*.1;
+        machine.add(motor);
+        const sheave = new THREE.Mesh(new THREE.TorusGeometry(w*.16, w*.03, 8, 22), solidMat);
+        sheave.rotation.y = Math.PI/2;
+        sheave.position.x = w*.12;
+        machine.add(sheave);
+        machine.position.y = y1 + w*.15;
+        g.add(machine);
+
+        // 카 (승강기)
+        const carH = h*.16;
+        const car = new THREE.Group();
+        const carMat = new THREE.MeshStandardMaterial({
+            color:accent, emissive:color, emissiveIntensity:1.2, metalness:.5, roughness:.22 });
+        car.add(new THREE.Mesh(new THREE.BoxGeometry(w*.56, carH, d*.56), carMat));
+        const doorMat = new THREE.MeshBasicMaterial({ color, transparent:true, opacity:.9 });
+        [-1,1].forEach(s => {
+            const dr = new THREE.Mesh(new THREE.BoxGeometry(w*.13, carH*.74, w*.03), doorMat);
+            dr.position.set(s*w*.14, 0, d*.29);
+            car.add(dr);
+        });
+        g.add(car);
+
+        // 균형추
+        const cw = new THREE.Mesh(new THREE.BoxGeometry(w*.18, h*.09, d*.1), solidMat);
+        cw.position.z = hd - w*.09;
+        g.add(cw);
+
+        // 주로프 (매 프레임 갱신)
+        const ropeGeo = new THREE.BufferGeometry();
+        ropeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3));
+        g.add(new THREE.LineSegments(ropeGeo,
+            new THREE.LineBasicMaterial({ color, transparent:true, opacity:.45 })));
+
+        const lo = y0 + carH*.8, hi = y1 - carH*.8;
+        const api = { group:g, car, cw, sheave, machine, solidMat, carMat, frameMat,
+            top:y1 + w*.15, h, w, carH, phase:Math.random()*Math.PI*2 };
+
+        // k: 0(최하층) ~ 1(최상층)
+        api.update = k => {
+            car.position.y = lo + (hi-lo)*k;
+            cw.position.y  = hi - (hi-lo)*k;
+            sheave.rotation.x = k*26;
+            const p = ropeGeo.attributes.position.array;
+            p[0]=w*.12;  p[1]=api.top;  p[2]=0;
+            p[3]=w*.12;  p[4]=car.position.y + carH/2; p[5]=0;
+            p[6]=w*.12;  p[7]=api.top;  p[8]=cw.position.z;
+            p[9]=w*.12;  p[10]=cw.position.y + h*.045; p[11]=cw.position.z;
+            ropeGeo.attributes.position.needsUpdate = true;
+        };
+        api.update(.5);
+        return api;
+    }
+
+    /* ── 대표 호기 (중앙) — 모든 비교의 기준 ── */
+    const coreGroup = new THREE.Group(); scene.add(coreGroup);
+
+    const refElev = buildElevator({ h:66, w:21, color:COL.ref, accent:0xfff4d6, floors:7 });
+    coreGroup.add(refElev.group);
+
+    const coreWire = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(36, 1),
+        new THREE.MeshBasicMaterial({ color:COL.ref, wireframe:true, transparent:true, opacity:.11 })
+    );
+    coreGroup.add(coreWire);
+
+    // 기준면 링 3겹
+    const refRings = [];
+    for (let i=0;i<3;i++){
+        const ring = new THREE.Mesh(
+            new THREE.TorusGeometry(30 + i*9, .25, 8, 120),
+            new THREE.MeshBasicMaterial({ color:COL.ref, transparent:true, opacity:.3 - i*.07 })
+        );
+        ring.rotation.x = Math.PI/2 + (i-1)*.28;
+        ring.rotation.z = i*.5;
+        coreGroup.add(ring); refRings.push(ring);
+    }
+
+    /* ============================================================
+       4. 호기 BOM 클러스터 생성기
+          구조: Root(호기) → L1 어셈블리 6 → L2 부품
+          성능 포인트: 선분은 클러스터당 LineSegments 1개로 병합
+       ============================================================ */
+    const ORBIT_R = 155;
+    const clusters = [];
+    const labelBox = document.getElementById('labels');
+    const pickTargets = [];
+
+    const geoAsm  = new THREE.SphereGeometry(2.3, 14, 14);
+    const geoPart = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+
+    function buildCluster(unit, idx){
+        const ang = (idx / UNITS.length) * Math.PI * 2;
+        const pos = new THREE.Vector3(Math.cos(ang)*ORBIT_R, (idx%2?1:-1)*14, Math.sin(ang)*ORBIT_R);
+
+        const g = new THREE.Group();
+        g.position.copy(pos);
+        const c = COL[unit.status];
+
+        const matNode = new THREE.MeshStandardMaterial({
+            color:c, emissive:c, emissiveIntensity:unit.status==='ok'?.55:1.4,
+            metalness:.3, roughness:.35
+        });
+        const matLine = new THREE.LineBasicMaterial({
+            color:c, transparent:true, opacity:unit.status==='ok'?.22:.5
+        });
+
+        // Root — 호기 실물 형상 (승강로 + 카 + 권상기)
+        const elev = buildElevator({ h:38, w:12, color:c, accent:0xe6f7ff, floors:5 });
+        elev.group.position.set(0, 30, 0);
+        g.add(elev.group);
+
+        // 라인/라벨 기준점
+        const root = new THREE.Object3D();
+        root.position.set(0, 26, 0);
+        g.add(root);
+
+        // 클릭 판정용 프록시 (보이지 않지만 넉넉한 영역)
+        const pick = new THREE.Mesh(
+            new THREE.CylinderGeometry(12, 12, 58, 8),
+            new THREE.MeshBasicMaterial({ transparent:true, opacity:0, depthWrite:false })
+        );
+        pick.position.set(0, 28, 0);
+        pick.userData.unitIndex = idx;
+        g.add(pick); pickTargets.push(pick);
+
+        const pts = [];                       // 병합될 선분 정점
+        const parts = [];                     // 미세 애니메이션 대상
+
+        const ASM = 6;
+        for (let i=0;i<ASM;i++){
+            const a = (i/ASM)*Math.PI*2;
+            const asm = new THREE.Mesh(geoAsm, matNode);
+            asm.position.set(Math.cos(a)*20, 0, Math.sin(a)*20);
+            g.add(asm); parts.push(asm);
+            pts.push(root.position.clone(), asm.position.clone());
+
+            const PN = 3 + (i % 3);
+            for (let j=0;j<PN;j++){
+                const pa = (j/PN)*Math.PI*2 + i;
+                const p = new THREE.Mesh(geoPart, matNode);
+                p.position.set(
+                    asm.position.x + Math.cos(pa)*9,
+                    -24 - (j%2)*5,
+                    asm.position.z + Math.sin(pa)*9
+                );
+                p.rotation.set(Math.random()*3, Math.random()*3, 0);
+                g.add(p); parts.push(p);
+                pts.push(asm.position.clone(), p.position.clone());
+            }
+        }
+
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+        g.add(new THREE.LineSegments(lineGeo, matLine));
+
+        // 대표 호기와의 비교 링크 (중앙 → 호기)
+        const linkMat = new THREE.LineBasicMaterial({ color:0x2a5f8f, transparent:true, opacity:.3 });
+        const linkGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), pos.clone()]);
+        scene.add(new THREE.Line(linkGeo, linkMat));
+
+        // 링크를 따라 흐르는 검증 펄스
+        const pulse = new THREE.Mesh(
+            new THREE.SphereGeometry(1.6, 8, 8),
+            new THREE.MeshBasicMaterial({ color:0x9fe9ff })
+        );
+        pulse.userData = { from:new THREE.Vector3(0,0,0), to:pos.clone(), t:Math.random() };
+        scene.add(pulse);
+
+        // 이상 호기: 확산 경보 링
+        let alertRings = [];
+        if (unit.status === 'crit'){
+            for (let k=0;k<2;k++){
+                const r = new THREE.Mesh(
+                    new THREE.RingGeometry(30, 31.4, 80),
+                    new THREE.MeshBasicMaterial({ color:COL.crit, transparent:true, opacity:.7, side:THREE.DoubleSide })
+                );
+                r.rotation.x = -Math.PI/2; r.position.y = -6;
+                r.userData.phase = k*.5;
+                g.add(r); alertRings.push(r);
+            }
+        }
+
+        // 이상 부위 마커 — DIFF 항목이 실물 형상의 어디인지 지시
+        const markers = [];
+        const markerGroup = new THREE.Group();
+        markerGroup.visible = false;
+        if (unit.status === 'crit'){
+            const spots = [
+                new THREE.Vector3( 5.2, 22.0, 0   ),   // 0 가이드레일 브래킷
+                new THREE.Vector3( 0,   14.5, 4.4 ),   // 1 과속조절기 텐셔너 (승강로 하부)
+                new THREE.Vector3( 1.4, 50.5, 0   ),   // 2 권상기 모터 (최상부)
+                new THREE.Vector3( 0,   30.0, 4.6 )    // 3 카도어 오퍼레이터
+            ];
+            const mkMat = new THREE.MeshStandardMaterial({
+                color:0xffd9de, emissive:COL.crit, emissiveIntensity:2.2, roughness:.3 });
+            spots.forEach(sp => {
+                const m = new THREE.Mesh(new THREE.OctahedronGeometry(1.5), mkMat);
+                m.position.copy(sp);
+                m.userData.flash = 0;
+                markerGroup.add(m); markers.push(m);
+
+                const halo = new THREE.Mesh(
+                    new THREE.RingGeometry(2.4, 2.9, 24),
+                    new THREE.MeshBasicMaterial({ color:COL.crit, transparent:true, opacity:.6, side:THREE.DoubleSide })
+                );
+                halo.position.copy(sp);
+                m.userData.halo = halo;
+                markerGroup.add(halo);
+            });
+        }
+        g.add(markerGroup);
+
+        // HTML 라벨
+        const lb = document.createElement('div');
+        lb.className = 'lbl3d';
+        lb.textContent = unit.id;
+        labelBox.appendChild(lb);
+
+        const glowMats = [matNode, elev.solidMat, elev.carMat];
+        scene.add(g);
+        clusters.push({
+            unit, group:g, root, parts, matNode, matLine, pulse, alertRings, label:lb, pos,
+            elev, markers, markerGroup, glowMats,
+            baseEmissive: glowMats.map(m => m.emissiveIntensity)
+        });
+    }
+    UNITS.forEach(buildCluster);
+    const critCluster = clusters.find(c => c.unit.status === 'crit');
+
+    // 대표 호기 라벨
+    const refLabel = document.createElement('div');
+    refLabel.className = 'lbl3d ref';
+    refLabel.textContent = '★ ' + REFERENCE.name + ' (기준)';
+    labelBox.appendChild(refLabel);
+
+    /* ============================================================
+       5. 스캔 스윕 — 궤도를 도는 검증 빔
+       ============================================================ */
+    const sweep = new THREE.Mesh(
+        new THREE.PlaneGeometry(ORBIT_R + 70, 170),
+        new THREE.MeshBasicMaterial({ color:0x22d3ee, transparent:true, opacity:.08, side:THREE.DoubleSide })
+    );
+    sweep.geometry.translate((ORBIT_R + 70)/2, 0, 0);
+    sweep.position.y = 18;
+    sweep.visible = false;
+    scene.add(sweep);
+
+    /* ============================================================
+       6. UI 헬퍼
+       ============================================================ */
+    const $ = s => document.querySelector(s);
+    const logList = $('#logList');
+    const nowStr = () => new Date().toTimeString().slice(0,8);
+
+    function log(msg, type=''){
+        const el = document.createElement('div');
+        el.className = 'log ' + type;
+        el.innerHTML = '<span class="t">' + nowStr() + '</span><span class="m">' + msg + '</span>';
+        logList.prepend(el);
+        while (logList.children.length > 14) logList.lastChild.remove();
+    }
+
+    function countUp(el, to, ms=1400){
+        const from = 0, t0 = performance.now();
+        const small = el.querySelector('small');
+        const suffix = small ? small.outerHTML : '';
+        (function step(t){
+            const k = Math.min(1, (t - t0)/ms);
+            const e = 1 - Math.pow(1-k, 3);
+            el.innerHTML = Math.round(from + (to-from)*e).toLocaleString() + suffix;
+            if (k < 1) requestAnimationFrame(step);
+        })(t0);
+    }
+    function runCounters(){
+        document.querySelectorAll('[data-cnt]').forEach(el => countUp(el, +el.dataset.cnt));
+    }
+
+    function setProgress(p){
+        $('#progFill').style.width = p + '%';
+        $('#progTxt').textContent = Math.round(p) + '%';
+    }
+    function phase(txt){ $('#phase').textContent = txt; }
+
+    function flyTo(target, dist=95, height=40, ms=2000){
+        SFX.whoosh();
+        const dir = target.clone().normalize();
+        const end = target.clone().add(dir.multiplyScalar(dist)).setY(target.y + height);
+        new TWEEN.Tween(camera.position).to({x:end.x,y:end.y,z:end.z}, ms)
+            .easing(TWEEN.Easing.Cubic.InOut).start();
+        new TWEEN.Tween(controls.target).to({x:target.x,y:target.y,z:target.z}, ms)
+            .easing(TWEEN.Easing.Cubic.InOut).start();
+    }
+    function flyHome(ms=2200){
+        SFX.whoosh();
+        controls.autoRotate = true;
+        new TWEEN.Tween(camera.position).to({x:HOME.x,y:HOME.y,z:HOME.z}, ms)
+            .easing(TWEEN.Easing.Cubic.InOut).start();
+        new TWEEN.Tween(controls.target).to({x:0,y:0,z:0}, ms)
+            .easing(TWEEN.Easing.Cubic.InOut).start();
+    }
+
+    function fillDiff(){
+        const body = $('#dBody');
+        body.innerHTML = '';
+        DIFF.forEach((d,i) => {
+            setTimeout(() => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td>' + d.kind + '</td><td>' + d.item +
+                    '</td><td class="ref">' + d.ref + '</td><td class="tgt">' + d.tgt + '</td>';
+                // 표의 행 ↔ 3D 실물 부위 연동
+                tr.onmouseenter = () => {
+                    const m = critCluster && critCluster.markers[i];
+                    if (m){ m.userData.flash = 1; SFX.blip(i*3); }
+                };
+                body.appendChild(tr);
+                SFX.click();
+            }, i*220);
+        });
+    }
+
+    function showDetail(){
+        $('#detail').classList.add('show');
+        if (critCluster) critCluster.markerGroup.visible = true;
+        SFX.ding();
+    }
+    function hideDetail(){
+        $('#detail').classList.remove('show');
+        if (critCluster) critCluster.markerGroup.visible = false;
+    }
+
+    /* ============================================================
+       7. 자동 시연 시나리오 (Auto-pilot)
+          INTRO → SCAN → DETECT → DRILL-DOWN → RESOLVE → 복귀
+       ============================================================ */
+    let demoTimers = [];
+    let demoRunning = false;
+    const after = (ms, fn) => demoTimers.push(setTimeout(fn, ms));
+
+    function stopDemo(){
+        demoTimers.forEach(clearTimeout); demoTimers = [];
+        demoRunning = false; sweep.visible = false;
+        $('#btnDemo').textContent = '▶ 자동 시연';
+    }
+
+    function resetAll(){
+        stopDemo();
+        hideDetail();
+        $('#alarmFlash').classList.remove('on');
+        clusters.forEach(c => { c.label.className = 'lbl3d'; c.label.textContent = c.unit.id; });
+        setProgress(0); phase('Standby'); logList.innerHTML = '';
+        flyHome();
+    }
+
+    function startDemo(){
+        stopDemo(); demoRunning = true;
+        $('#btnDemo').textContent = '■ 시연 중지';
+        hideDetail();
+        logList.innerHTML = '';
+        clusters.forEach(c => { c.label.className = 'lbl3d'; c.label.textContent = c.unit.id; });
+        setProgress(0);
+
+        // ── 1막: 오프닝
+        phase('Phase 1 — 전체 조망');
+        flyHome(2200);
+        runCounters();
+        log('BOM-WATCHER 일일 검증 배치 시작', 'ok');
+        log('대표 호기 ' + REFERENCE.id + ' 기준 스냅샷 로드 완료');
+
+        // ── 2막: 순차 스캔
+        after(2200, () => {
+            phase('Phase 2 — 호기별 BOM 비교 스캔');
+            sweep.visible = true;
+            SFX.sweepStart();
+            log('전 호기 BOM 트리 비교 연산 시작 (128 호기)');
+        });
+
+        UNITS.forEach((u, i) => {
+            after(2600 + i*620, () => {
+                const c = clusters[i];
+                setProgress((i+1)/UNITS.length*100);
+
+                // 스캔 시 실물 형상 순간 발광
+                c.glowMats.forEach(m => m.emissiveIntensity = 2.8);
+                setTimeout(() => {
+                    c.glowMats.forEach((m,k) => m.emissiveIntensity = c.baseEmissive[k]);
+                }, 420);
+
+                if (u.status === 'ok'){
+                    log(u.id + ' · ' + u.site + ' — 일치 (0 diff)', 'ok');
+                    SFX.blip(i);
+                }
+                if (u.status === 'warn'){
+                    log(u.id + ' · ' + u.site + ' — 경미한 차이 2건 (검토 필요)', 'warn');
+                    SFX.warn();
+                }
+                if (u.status === 'crit'){
+                    log(u.id + ' · ' + u.site + ' — 구성 불일치 4건 감지!', 'err');
+                }
+            });
+        });
+
+        // ── 3막: 이상 감지 알람
+        const critIdx = UNITS.findIndex(u => u.status === 'crit');
+        const scanEnd = 2600 + UNITS.length*620;
+
+        after(scanEnd + 200, () => {
+            phase('Phase 3 — 치명 이상 감지');
+            sweep.visible = false;
+            const c = clusters[critIdx];
+            c.label.className = 'lbl3d err';
+            c.label.textContent = '⚠ ' + c.unit.id + ' CRITICAL';
+            $('#alarmFlash').classList.add('on');
+            SFX.alarm();
+            setTimeout(() => $('#alarmFlash').classList.remove('on'), 900);
+            log('■ CRITICAL — ' + c.unit.id + ' 즉시 확인 필요', 'err');
+            controls.autoRotate = false;
+        });
+
+        // ── 4막: 드릴다운
+        after(scanEnd + 1200, () => {
+            phase('Phase 4 — 원인 드릴다운');
+            const c = clusters[critIdx];
+            $('#dTitle').textContent = c.unit.id + ' (' + c.unit.site + ') BOM 이상';
+            flyTo(c.pos, 70, 34, 2400);
+            log('해당 호기 BOM 트리 전개 · 대표 호기와 구조 비교');
+        });
+
+        after(scanEnd + 3400, () => {
+            fillDiff();
+            showDetail();
+            log('불일치 상세 4건 도출 (수량 1 / 누락 1 / 사양 1 / 개정 1)', 'err');
+            log('이상 부위 3D 위치 표시 — 권상기 / 가이드레일 / 카도어', 'warn');
+        });
+
+        // ── 5막: 조치 & 복귀
+        after(scanEnd + 6200, () => {
+            phase('Phase 5 — 자동 조치');
+            SFX.chime();
+            log('설계 담당자 및 PM 자동 통보 발송', 'ok');
+            log('출하 전 재검증 스케줄 등록 완료', 'ok');
+        });
+
+        after(scanEnd + 9000, () => {
+            phase('검증 사이클 완료 — 대기 중');
+            hideDetail();
+            flyHome(2600);
+            log('금일 검증 사이클 종료 · 이상 1건 사전 차단', 'ok');
+            demoRunning = false;
+            $('#btnDemo').textContent = '▶ 자동 시연';
+        });
+    }
+
+    /* ============================================================
+       8. 인터랙션 — 클릭으로 호기 선택
+       ============================================================ */
+    const ray = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let downXY = null;
+
+    renderer.domElement.addEventListener('pointerdown', e => downXY = [e.clientX, e.clientY]);
+    renderer.domElement.addEventListener('pointerup', e => {
+        if (!downXY) return;
+        const moved = Math.hypot(e.clientX-downXY[0], e.clientY-downXY[1]);
+        downXY = null;
+        if (moved > 5) return;                       // 드래그는 무시
+
+        mouse.x = (e.clientX/innerWidth)*2 - 1;
+        mouse.y = -(e.clientY/innerHeight)*2 + 1;
+        ray.setFromCamera(mouse, camera);
+        const hit = ray.intersectObjects(pickTargets, false)[0];
+        if (!hit) return;
+
+        const c = clusters[hit.object.userData.unitIndex];
+        stopDemo();
+        controls.autoRotate = false;
+        phase('수동 조회 — ' + c.unit.id);
+        flyTo(c.pos, 70, 34, 1600);
+        log(c.unit.id + ' · ' + c.unit.site + ' 상세 조회');
+
+        if (c.unit.status === 'crit'){
+            $('#dTitle').textContent = c.unit.id + ' (' + c.unit.site + ') BOM 이상';
+            fillDiff(); showDetail();
+        } else {
+            hideDetail();
+        }
+    });
+
+    /* ── 사운드 토글 (브라우저 자동재생 정책상 첫 조작 이후 활성) ── */
+    function syncSfxBtn(){
+        $('#btnSfx').textContent = SFX.enabled ? '🔊 사운드 끄기' : '🔇 사운드 켜기';
+    }
+    let gestureDone = false;
+    function firstGesture(e){
+        if (gestureDone) return;
+        gestureDone = true;
+        if (e && e.target && e.target.id === 'btnSfx') return;   // 토글 버튼이 첫 클릭이면 중복 방지
+        SFX.toggle(); syncSfxBtn();
+        log('사운드 활성화 — 관제 앰비언스 ON');
+    }
+    addEventListener('pointerdown', firstGesture);
+    addEventListener('keydown', firstGesture);
+
+    $('#btnSfx').onclick = () => { SFX.toggle(); syncSfxBtn(); SFX.click(); };
+    $('#btnDemo').onclick = () => { SFX.click(); demoRunning ? stopDemo() : startDemo(); };
+    $('#btnReset').onclick = () => { SFX.click(); resetAll(); };
+    addEventListener('keydown', e => {
+        if (e.code === 'Space'){ e.preventDefault(); SFX.click(); demoRunning ? stopDemo() : startDemo(); }
+        if (e.key === 'r' || e.key === 'R') resetAll();
+        if (e.key === 's' || e.key === 'S'){ SFX.toggle(); syncSfxBtn(); }
+    });
+    syncSfxBtn();
+
+    /* ============================================================
+       9. 렌더 루프
+       ============================================================ */
+    const v = new THREE.Vector3();
+    function project(p3, el){
+        v.copy(p3).project(camera);
+        const visible = v.z < 1;
+        el.style.opacity = visible ? 1 : 0;
+        if (!visible) return;
+        el.style.left = ( v.x*.5 + .5) * innerWidth  + 'px';
+        el.style.top  = (-v.y*.5 + .5) * innerHeight + 'px';
+    }
+
+    const worldPos = new THREE.Vector3();
+    let t = 0;
+
+    // 카 운행 곡선 — 양 끝(층)에서 잠시 멈추는 느낌
+    function travelCurve(x){
+        const s = Math.sin(x);
+        return .5 + .5 * Math.sign(s) * Math.pow(Math.abs(s), .55);
+    }
+
+    function animate(time){
+        requestAnimationFrame(animate);
+        t += 0.016;
+        TWEEN.update(time);
+        controls.update();
+
+        // 대표 호기 — 천천히 자전 + 카 운행
+        refElev.group.rotation.y += .0032;
+        coreWire.rotation.y -= .002; coreWire.rotation.z += .0013;
+        refElev.update(travelCurve(t*.62));
+        refElev.carMat.emissiveIntensity = 1.2 + Math.sin(t*2)*.4;
+        refRings.forEach((r,i) => r.rotation.z += .0016 * (i+1));
+
+        // 스캔 스윕 회전
+        if (sweep.visible) sweep.rotation.y -= .035;
+
+        clusters.forEach((c, i) => {
+            // 클러스터 미세 자전 + 부유
+            c.group.rotation.y += .0022;
+            c.group.position.y = c.pos.y + Math.sin(t*.8 + i)*2.2;
+
+            // 이상 호기 경보 링 확산
+            c.alertRings.forEach(r => {
+                const k = ((t*.45 + r.userData.phase) % 1);
+                r.scale.setScalar(.35 + k*1.5);
+                r.material.opacity = .75 * (1-k);
+            });
+            // 호기별 카 운행 (위상차로 각각 다른 층을 오르내림)
+            c.elev.update(travelCurve(t*.5 + c.elev.phase));
+
+            if (c.unit.status === 'crit'){
+                const e = 1.5 + Math.sin(t*7)*.9;
+                c.glowMats.forEach(m => m.emissiveIntensity = e);
+            }
+
+            // 이상 부위 마커
+            c.markers.forEach(m => {
+                m.userData.flash *= .94;
+                m.scale.setScalar(1 + Math.sin(t*5 + m.position.y)*.12 + m.userData.flash*1.4);
+                m.rotation.y += .035;
+                const halo = m.userData.halo;
+                halo.lookAt(camera.position);
+                const k = (t*.85) % 1;
+                halo.scale.setScalar(.55 + k*1.35 + m.userData.flash*.8);
+                halo.material.opacity = .7*(1-k) + m.userData.flash*.3;
+            });
+
+            // 검증 펄스 이동
+            const u = c.pulse.userData;
+            u.t += .0052;
+            if (u.t > 1) u.t = 0;
+            c.pulse.position.lerpVectors(u.from, u.to, u.t);
+            c.pulse.material.opacity = 1;
+
+            // 라벨 투영
+            c.root.getWorldPosition(worldPos);
+            project(worldPos.clone().add(new THREE.Vector3(0, 30, 0)), c.label);
+        });
+
+        project(new THREE.Vector3(0, 42, 0), refLabel);
+
+        composer.render();
+    }
+    requestAnimationFrame(animate);
+
+    addEventListener('resize', () => {
+        camera.aspect = innerWidth/innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+        composer.setSize(innerWidth, innerHeight);
+    });
+
+    // 시계
+    setInterval(() => $('#hTime').textContent = nowStr(), 1000);
+    $('#hTime').textContent = nowStr();
+
+    // 첫 진입 연출
+    log('BOM-WATCHER 관제 콘솔 접속', 'ok');
+    log('PLM 커넥터 정상 · 대표 호기 스냅샷 동기화 완료');
+    runCounters();
+    setTimeout(startDemo, 1200);
+</script>
+</body>
+</html>

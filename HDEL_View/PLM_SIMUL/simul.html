@@ -1,0 +1,973 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PID 실행 시뮬레이터</title>
+    <style>
+        :root {
+            --bg: #f4f6f9;
+            --panel: #ffffff;
+            --border: #d9dee5;
+            --text: #1f2933;
+            --muted: #6b7785;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+
+            --true-bg: #e7f6ec;
+            --true-strong: #1f9d55;
+            --false-bg: #fdecec;
+            --false-strong: #d64545;
+            --unread-bg: #f1f2f4;
+            --unread-text: #a0a8b3;
+            --cell-true: #b9e8c8;
+            --cell-false: #f7c1c1;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+            font-size: 13px;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        header {
+            background: #1e293b;
+            color: #fff;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        header h1 { margin: 0; font-size: 17px; }
+        header span { color: #94a3b8; font-size: 12px; }
+
+        main { padding: 16px 20px; }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+        }
+        .panel-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        /* 검색 조건 */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 10px 14px;
+        }
+        .field label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+        .field label .req { color: var(--false-strong); }
+        .field input, .field select {
+            width: 100%;
+            padding: 7px 9px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            font-size: 13px;
+        }
+        .field input:focus { outline: 2px solid #bfdbfe; border-color: var(--primary); }
+
+        .url-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            align-items: center;
+        }
+        .url-preview {
+            flex: 1;
+            font-family: Consolas, monospace;
+            font-size: 12px;
+            padding: 7px 9px;
+            background: #f8fafc;
+            border: 1px dashed var(--border);
+            border-radius: 5px;
+            color: var(--muted);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .local-row { font-size: 12px; color: var(--muted); }
+        .local-row button { padding: 5px 12px; font-size: 12px; }
+        #sourceInfo { color: var(--primary); }
+
+        button {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        button:hover { background: #f1f5f9; }
+        button.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+            font-weight: bold;
+        }
+        button.primary:hover { background: var(--primary-dark); }
+        button:disabled { opacity: .6; cursor: wait; }
+
+        /* 요약 */
+        .summary {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .stat {
+            flex: 1;
+            min-width: 130px;
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: #fff;
+        }
+        .stat .label { font-size: 12px; color: var(--muted); }
+        .stat .value { font-size: 22px; font-weight: bold; margin-top: 2px; }
+        .stat.true { border-left: 4px solid var(--true-strong); }
+        .stat.true .value { color: var(--true-strong); }
+        .stat.false { border-left: 4px solid var(--false-strong); }
+        .stat.false .value { color: var(--false-strong); }
+        .stat.unread { border-left: 4px solid var(--unread-text); }
+        .stat.unread .value { color: var(--unread-text); }
+        .stat.total { border-left: 4px solid var(--primary); }
+
+        /* 필터 / 범례 */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .toolbar .seg { display: flex; }
+        .toolbar .seg button { border-radius: 0; margin-left: -1px; }
+        .toolbar .seg button:first-child { border-radius: 5px 0 0 5px; margin-left: 0; }
+        .toolbar .seg button:last-child { border-radius: 0 5px 5px 0; }
+        .toolbar .seg button.active { background: #1e293b; color: #fff; border-color: #1e293b; }
+        .toolbar input[type=search] {
+            padding: 7px 9px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            width: 240px;
+        }
+        .toolbar label.chk { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        .legend { display: flex; gap: 12px; margin-left: auto; color: var(--muted); font-size: 12px; }
+        .legend i {
+            display: inline-block;
+            width: 12px; height: 12px;
+            border-radius: 2px;
+            vertical-align: -2px;
+            margin-right: 4px;
+            border: 1px solid rgba(0,0,0,.1);
+        }
+
+        /* 결과 테이블 */
+        .table-wrap {
+            overflow: auto;
+            max-height: calc(100vh - 150px);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #fff;
+        }
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: max-content;
+            min-width: 100%;
+        }
+        th, td {
+            border-right: 1px solid #e5e8ec;
+            border-bottom: 1px solid #e5e8ec;
+            padding: 4px 8px;
+            white-space: nowrap;
+            text-align: left;
+            vertical-align: top;
+        }
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #334155;
+            color: #fff;
+            font-weight: normal;
+            font-size: 12px;
+        }
+        thead tr.group th {
+            background: #1e293b;
+            text-align: left;
+            font-weight: bold;
+        }
+        thead tr.cols th { top: 27px; }
+
+        /* 좌측 고정 컬럼 */
+        .sticky-1, .sticky-2 { position: sticky; z-index: 1; }
+        .sticky-1 { left: 0; width: 46px; min-width: 46px; text-align: right; }
+        .sticky-2 { left: 46px; min-width: 70px; box-shadow: 2px 0 0 #cbd2da; }
+        thead .sticky-1, thead .sticky-2 { z-index: 3; }
+        tbody .sticky-1, tbody .sticky-2 { background: inherit; }
+
+        th.grp-spec { background: #3b4a63 !important; }
+        th.grp-key { background: #4a3b63 !important; }
+
+        tbody tr { background: #fff; }
+        tbody tr.rowTrue { background: var(--true-bg); }
+        tbody tr.rowFalse { background: var(--false-bg); }
+        tbody tr.unreaded { background: var(--unread-bg); color: var(--unread-text); }
+        tbody tr:hover { filter: brightness(0.96); cursor: pointer; }
+        tbody tr.selected { outline: 2px solid var(--primary); outline-offset: -2px; }
+
+        td.status { text-align: center; font-weight: bold; }
+        tr.rowTrue td.status { color: var(--true-strong); }
+        tr.rowFalse td.status { color: var(--false-strong); }
+
+        td.cellTrue { background: var(--cell-true); }
+        td.cellFalse { background: var(--cell-false); }
+        tr.unreaded td.cellTrue, tr.unreaded td.cellFalse { background: transparent; }
+
+        td.addr { font-weight: bold; color: #7c3aed; }
+        tr.unreaded td.addr { color: var(--unread-text); }
+        td.goto { color: #c2410c; font-weight: bold; }
+        td.goto .jump { text-decoration: underline; cursor: pointer; }
+        tbody tr.flash td { animation: flash 1.2s ease-out; }
+        @keyframes flash { from { background: #fde68a; } }
+        td.key { color: #4338ca; font-weight: bold; }
+        td.spec { color: #334155; }
+        td.pair-end { border-right: 1px solid #c3cad3; }
+        td.output { white-space: normal; min-width: 220px; max-width: 420px; }
+        td.remark { white-space: normal; min-width: 180px; max-width: 360px; color: var(--muted); }
+
+        /* 요약 보기: 조건/결과 칩 */
+        td.chips { white-space: normal; min-width: 200px; max-width: 460px; }
+        .chip {
+            display: inline-block;
+            margin: 1px 4px 1px 0;
+            padding: 0 6px;
+            border-radius: 3px;
+            border: 1px solid #cbd2da;
+            background: #fff;
+            font-size: 12px;
+            line-height: 18px;
+            white-space: nowrap;
+        }
+        .chip .k { color: #475569; }
+        .chip .v { font-weight: bold; }
+        .chip.cellTrue { background: var(--cell-true); border-color: #86d3a0; }
+        .chip.cellFalse { background: var(--cell-false); border-color: #eb9a9a; }
+        .chip.res .k { color: #4338ca; font-weight: bold; }
+        tr.unreaded .chip { background: transparent; color: var(--unread-text); border-color: #dde1e6; }
+        tr.unreaded .chip .k { color: var(--unread-text); }
+
+        .out-item { display: block; }
+        .out-item b { color: var(--true-strong); }
+        .out-item .call { color: #4338ca; text-decoration: underline; cursor: pointer; }
+
+        .empty, .msg {
+            padding: 40px;
+            text-align: center;
+            color: var(--muted);
+        }
+        .msg.error { color: var(--false-strong); white-space: pre-line; text-align: left; }
+
+        .spinner {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+            vertical-align: -2px;
+            margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 상세 / 최종결과 드로어 */
+        .drawer {
+            position: fixed;
+            top: 0; right: 0; bottom: 0;
+            width: 440px;
+            max-width: 100%;
+            background: #fff;
+            box-shadow: -4px 0 16px rgba(0,0,0,.15);
+            transform: translateX(100%);
+            transition: transform .2s;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+        }
+        .drawer.open { transform: none; }
+        .drawer-head {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .drawer-head h2 { margin: 0; font-size: 15px; flex: 1; }
+        .drawer-body { padding: 12px 16px; overflow: auto; flex: 1; }
+        .drawer-body input[type=search] {
+            width: 100%;
+            padding: 7px 9px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .kv { width: 100%; }
+        .kv th, .kv td { white-space: normal; word-break: break-all; }
+        .kv th { background: #f1f5f9; color: var(--text); width: 45%; position: static; }
+        .kv tr.hit td, .kv tr.hit th { background: #fef9c3; }
+        .kv td.blank { color: var(--unread-text); font-style: italic; }
+        .section-title { font-weight: bold; margin: 14px 0 6px; }
+        .badge {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .badge.true { background: var(--true-strong); }
+        .badge.false { background: var(--false-strong); }
+        .badge.unread { background: var(--unread-text); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>PID 실행 시뮬레이터</h1>
+    <span>pidExecuteLineData</span>
+</header>
+
+<main>
+    <!-- 조회 조건 -->
+    <section class="panel">
+        <div class="panel-title">조회 조건</div>
+        <form id="searchForm" autocomplete="off">
+            <div class="form-grid">
+                <div class="field">
+                    <label for="hogi">호기 (hogi) <span class="req">*</span></label>
+                    <input id="hogi" name="hogi" value="208223L01" required>
+                </div>
+                <div class="field">
+                    <label for="PID">PID <span class="req">*</span></label>
+                    <input id="PID" name="PID" value="EL_PB186A01" required>
+                </div>
+                <div class="field">
+                    <label for="testVersion">testVersion</label>
+                    <input id="testVersion" name="testVersion">
+                </div>
+                <div class="field">
+                    <label for="isfloor">isfloor</label>
+                    <input id="isfloor" name="isfloor">
+                </div>
+                <div class="field">
+                    <label for="floor">floor</label>
+                    <input id="floor" name="floor">
+                </div>
+                <div class="field">
+                    <label for="type">type</label>
+                    <input id="type" name="type">
+                </div>
+            </div>
+            <div class="url-row">
+                <div class="url-preview" id="urlPreview" title="URL 붙여넣기 가능 (Ctrl+V)"></div>
+                <button type="button" id="btnPasteUrl" title="클립보드의 URL에서 파라미터를 읽어옵니다">URL 붙여넣기</button>
+                <button type="submit" class="primary" id="btnRun">실행</button>
+            </div>
+            <div class="url-row local-row">
+                <span>API 대신 저장된 결과로 보기:</span>
+                <button type="button" id="btnLocalJson" title="이 페이지와 같은 폴더의 result.json을 불러옵니다">result.json 불러오기</button>
+                <button type="button" id="btnPickFile">JSON 파일 선택…</button>
+                <input type="file" id="fileInput" accept=".json,application/json" hidden>
+                <span id="sourceInfo"></span>
+            </div>
+        </form>
+    </section>
+
+    <!-- 요약 -->
+    <section class="panel" id="summaryPanel" hidden>
+        <div class="summary">
+            <div class="stat total"><div class="label">전체 라인</div><div class="value" id="stTotal">0</div></div>
+            <div class="stat true"><div class="label">조건 만족 (TRUE)</div><div class="value" id="stTrue">0</div></div>
+            <div class="stat false"><div class="label">조건 불만족 (FALSE)</div><div class="value" id="stFalse">0</div></div>
+            <div class="stat unread"><div class="label">미실행 (건너뜀)</div><div class="value" id="stUnread">0</div></div>
+            <div class="stat"><div class="label">최종 결과값</div>
+                <div class="value" style="font-size:14px;margin-top:6px">
+                    <button type="button" id="btnFinal">최종 OUTPUT 보기 (<span id="stFinal">0</span>)</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 결과 -->
+    <section class="panel">
+        <div class="toolbar" id="toolbar" hidden>
+            <div class="seg" id="filterSeg">
+                <button type="button" data-filter="all" class="active">전체</button>
+                <button type="button" data-filter="true">TRUE</button>
+                <button type="button" data-filter="false">FALSE</button>
+                <button type="button" data-filter="readed">실행된 라인</button>
+                <button type="button" data-filter="unread">미실행</button>
+            </div>
+            <label class="chk"><input type="checkbox" id="hideBlank" checked> 빈 라인 숨기기</label>
+            <label class="chk" title="JSP 원본처럼 SPEC/CON, KEY/VAL을 각각 컬럼으로 펼쳐서 봅니다"><input type="checkbox" id="fullView"> 원본 컬럼 펼치기</label>
+            <input type="search" id="keyword" placeholder="SPEC / KEY / VAL / REMARK 검색">
+            <span id="shownCount" style="color:var(--muted)"></span>
+            <div class="legend">
+                <span><i style="background:var(--true-bg)"></i>TRUE 라인</span>
+                <span><i style="background:var(--false-bg)"></i>FALSE 라인</span>
+                <span><i style="background:var(--unread-bg)"></i>미실행</span>
+                <span><i style="background:var(--cell-true)"></i>조건 일치</span>
+                <span><i style="background:var(--cell-false)"></i>조건 불일치</span>
+            </div>
+        </div>
+        <div id="resultArea">
+            <div class="empty">조회 조건을 입력하고 <b>실행</b>을 누르세요.</div>
+        </div>
+    </section>
+</main>
+
+<!-- 상세 드로어 -->
+<aside class="drawer" id="drawer">
+    <div class="drawer-head">
+        <h2 id="drawerTitle">상세</h2>
+        <button type="button" id="btnCloseDrawer">닫기 ✕</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<script>
+    const API_URL = 'https://plmpro.hdel.co.kr/plmetc/vault/pidExecuteLineData';
+    const PARAM_NAMES = ['hogi', 'PID', 'testVersion', 'isfloor', 'floor', 'type'];
+
+    const $ = (id) => document.getElementById(id);
+    const state = {
+        rows: [],
+        maxSpec: 0,
+        maxRes: 0,
+        filter: 'all',
+        keyword: '',
+        hideBlank: true,
+        fullView: false,
+        selectedIdx: -1,
+    };
+
+    // ---------- 유틸 ----------
+    function esc(v) {
+        if (v === null || v === undefined) return '';
+        return String(v)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+    const nvl = (v) => (v === null || v === undefined ? '' : String(v));
+    const br = (v) => esc(v).replace(/\n/g, '<br>');
+
+    function buildUrl() {
+        const qs = PARAM_NAMES
+            .map((n) => `${n}=${encodeURIComponent($(n).value.trim())}`)
+            .join('&');
+        return `${API_URL}?${qs}`;
+    }
+
+    function updatePreview() {
+        $('urlPreview').textContent = buildUrl();
+    }
+
+    // URL 문자열(전체 URL 또는 쿼리스트링)에서 파라미터를 폼에 채움
+    function applyUrl(text) {
+        text = (text || '').trim();
+        if (!text) return false;
+        const query = text.includes('?') ? text.split('?')[1] : text;
+        if (!query.includes('=')) return false;
+        const params = new URLSearchParams(query);
+        let applied = false;
+        PARAM_NAMES.forEach((n) => {
+            if (params.has(n)) {
+                $(n).value = params.get(n);
+                applied = true;
+            }
+        });
+        updatePreview();
+        return applied;
+    }
+
+    // ---------- 데이터 가공 ----------
+    // 실제 값이 있는 마지막 인덱스 + 1 (빈 컬럼을 잘라내기 위해)
+    function usedLength(a, b) {
+        let n = 0;
+        const len = Math.max((a || []).length, (b || []).length);
+        for (let i = 0; i < len; i++) {
+            if (nvl(a && a[i]) !== '' || nvl(b && b[i]) !== '') n = i + 1;
+        }
+        return n;
+    }
+
+    const cmpClass = (c) => (c === 'T' ? 'cellTrue' : (c === 'F' ? 'cellFalse' : ''));
+    const cmpTitle = (c) => (c === 'T' ? '조건 일치' : (c === 'F' ? '조건 불일치' : ''));
+
+    function classify(row) {
+        const rowTrue = nvl(row.rowTrue);
+        if (rowTrue === '') return 'unread';
+        return rowTrue === 'true' ? 'true' : 'false';
+    }
+
+    // JSP 참고코드와 동일한 OUTPUT 생성 규칙 (rowTrue 라인만)
+    function buildOutput(row, idx) {
+        if (classify(row) !== 'true') return '';
+        const keys = row.keyList || [];
+        const vals = row.valList || [];
+        const resultMap = row.resultMap || {};
+        const seen = new Set();
+        const parts = [];
+
+        for (let j = 0; j < state.maxRes; j++) {
+            const key = nvl(keys[j]);
+            if (key === '' || seen.has(key)) continue;
+            seen.add(key);
+            const val = nvl(vals[j]);
+
+            if (key === 'CALL') {
+                const cnt = Object.keys(resultMap).length;
+                parts.push(`<span class="out-item">CALL(<b>${esc(val)}</b>) → `
+                    + `<span class="call" data-idx="${idx}">resultMap ${cnt}건 보기</span></span>`);
+            } else if (key === 'OUTPUT') {
+                // OUTPUT 선언 라인: resultMap 키가 'OUTPUT' + DOUID + 컬럼인덱스 형태로 저장됨
+                const outVar = nvl(resultMap[`OUTPUT${nvl(row.DOUID)}${j}`]) || val;
+                parts.push(`<span class="out-item">OUTPUT 선언 → <b>${esc(outVar)}</b></span>`);
+            } else {
+                parts.push(`<span class="out-item">${esc(key)} = <b>${br(nvl(resultMap[key]))}</b></span>`);
+            }
+        }
+        return parts.join('');
+    }
+
+    function rowText(row) {
+        return [
+            row.ADDR, row.GOTO, row.REMARKS, row.line_no,
+            ...(row.specList || []), ...(row.conList || []),
+            ...(row.keyList || []), ...(row.valList || []),
+        ].map(nvl).join(' ').toLowerCase();
+    }
+
+    // ---------- 렌더링 ----------
+    function renderSummary() {
+        const rows = state.rows;
+        const cnt = { true: 0, false: 0, unread: 0 };
+        rows.forEach((r) => cnt[classify(r)]++);
+        $('stTotal').textContent = rows.length;
+        $('stTrue').textContent = cnt.true;
+        $('stFalse').textContent = cnt.false;
+        $('stUnread').textContent = cnt.unread;
+        $('stFinal').textContent = Object.keys(finalResultMap()).length;
+        $('summaryPanel').hidden = false;
+        $('toolbar').hidden = false;
+    }
+
+    function renderTable() {
+        const { rows, maxSpec, maxRes } = state;
+        if (!rows.length) {
+            $('resultArea').innerHTML = '<div class="empty">조회 결과가 없습니다.</div>';
+            $('shownCount').textContent = '';
+            return;
+        }
+
+        // HEADER
+        const full = state.fullView;
+        let h = '<table id="resultTable"><thead>';
+        if (full) {
+            h += '<tr class="group">'
+                + '<th class="sticky-1" rowspan="2">#</th>'
+                + '<th class="sticky-2" rowspan="2">ADDR</th>'
+                + '<th rowspan="2">결과</th>';
+            if (maxSpec) h += `<th class="grp-spec" colspan="${maxSpec * 2}">조건 (SPEC / CON)</th>`;
+            if (maxRes) h += `<th class="grp-key" colspan="${maxRes * 2}">결과 (KEY / VAL)</th>`;
+            h += '<th rowspan="2">GOTO</th><th rowspan="2">OUTPUT</th><th rowspan="2">REMARK</th></tr>';
+
+            h += '<tr class="cols">';
+            for (let i = 1; i <= maxSpec; i++) h += `<th class="grp-spec">SPEC${i}</th><th class="grp-spec">CON${i}</th>`;
+            for (let i = 1; i <= maxRes; i++) h += `<th class="grp-key">KEY${i}</th><th class="grp-key">VAL${i}</th>`;
+            h += '</tr>';
+        } else {
+            h += '<tr>'
+                + '<th class="sticky-1">#</th><th class="sticky-2">ADDR</th><th>결과</th>'
+                + '<th class="grp-spec">조건 (SPEC = CON)</th>'
+                + '<th class="grp-key">결과 (KEY = VAL)</th>'
+                + '<th>GOTO</th><th>OUTPUT</th><th>REMARK</th></tr>';
+        }
+        h += '</thead><tbody>';
+
+        // CONTENTS
+        const kw = state.keyword.toLowerCase();
+        let shown = 0;
+
+        rows.forEach((row, i) => {
+            const status = classify(row);
+            if (state.filter === 'true' && status !== 'true') return;
+            if (state.filter === 'false' && status !== 'false') return;
+            if (state.filter === 'readed' && status === 'unread') return;
+            if (state.filter === 'unread' && status !== 'unread') return;
+            if (state.hideBlank && nvl(row.isBlankLine) === 'true' && nvl(row.ADDR) === '') return;
+            if (kw && !rowText(row).includes(kw)) return;
+            shown++;
+
+            const trClass = status === 'unread' ? 'unreaded'
+                : (status === 'true' ? 'readed rowTrue' : 'readed rowFalse');
+            const statusText = status === 'unread' ? '-' : (status === 'true' ? 'TRUE' : 'FALSE');
+
+            h += `<tr class="${trClass}${i === state.selectedIdx ? ' selected' : ''}" data-idx="${i}">`;
+            h += `<td class="sticky-1">${esc(row.line_no || i + 1)}</td>`;
+            h += `<td class="sticky-2 addr">${esc(row.ADDR)}</td>`;
+            h += `<td class="status">${statusText}</td>`;
+
+            const specs = row.specList || [];
+            const cons = row.conList || [];
+            const cmps = row.compareResultList || [];
+            const keys = row.keyList || [];
+            const vals = row.valList || [];
+
+            if (full) {
+                for (let j = 0; j < maxSpec; j++) {
+                    const cmp = nvl(cmps[j]);
+                    h += `<td class="spec ${cmpClass(cmp)}" title="${cmpTitle(cmp)}">${esc(specs[j])}</td>`;
+                    h += `<td class="pair-end ${cmpClass(cmp)}" title="${cmpTitle(cmp)}">${esc(cons[j])}</td>`;
+                }
+                for (let j = 0; j < maxRes; j++) {
+                    h += `<td class="key">${esc(keys[j])}</td>`;
+                    h += `<td class="pair-end">${br(vals[j])}</td>`;
+                }
+            } else {
+                let specChips = '';
+                for (let j = 0; j < usedLength(specs, cons); j++) {
+                    if (nvl(specs[j]) === '' && nvl(cons[j]) === '') continue;
+                    const cmp = nvl(cmps[j]);
+                    specChips += `<span class="chip ${cmpClass(cmp)}" title="SPEC${j + 1} ${cmpTitle(cmp)}">`
+                        + `<span class="k">${esc(specs[j])}</span> = <span class="v">${esc(cons[j])}</span></span>`;
+                }
+                let resChips = '';
+                for (let j = 0; j < usedLength(keys, vals); j++) {
+                    if (nvl(keys[j]) === '' && nvl(vals[j]) === '') continue;
+                    resChips += `<span class="chip res" title="KEY${j + 1}"><span class="k">${esc(keys[j])}</span>`
+                        + (nvl(vals[j]) !== '' ? ` = <span class="v">${br(vals[j])}</span>` : '') + '</span>';
+                }
+                h += `<td class="chips">${specChips}</td><td class="chips">${resChips}</td>`;
+            }
+
+            h += row.GOTO
+                ? `<td class="goto"><span class="jump" data-goto="${esc(row.GOTO)}" title="${esc(row.GOTO)} 라인으로 이동">→ ${esc(row.GOTO)}</span></td>`
+                : '<td class="goto"></td>';
+            h += `<td class="output">${buildOutput(row, i)}</td>`;
+            h += `<td class="remark">${esc(row.REMARKS)}</td>`;
+            h += '</tr>';
+        });
+
+        h += '</tbody></table>';
+        if (!shown) h = '<div class="empty">필터 조건에 맞는 라인이 없습니다.</div>';
+
+        $('resultArea').innerHTML = `<div class="table-wrap">${h}</div>`;
+        $('shownCount').textContent = `${shown} / ${rows.length} 라인 표시`;
+    }
+
+    // ---------- 드로어 (라인 상세 / resultMap) ----------
+    function finalResultMap() {
+        for (let i = state.rows.length - 1; i >= 0; i--) {
+            if (state.rows[i].resultMap) return state.rows[i].resultMap;
+        }
+        return {};
+    }
+
+    function kvTable(map, highlightKeys) {
+        const entries = Object.entries(map || {});
+        if (!entries.length) return '<div class="empty" style="padding:16px">데이터 없음</div>';
+        // OUTPUTxxxx 키(내부 참조용)는 뒤로 보냄
+        entries.sort((a, b) => (a[0].startsWith('OUTPUT') ? 1 : 0) - (b[0].startsWith('OUTPUT') ? 1 : 0));
+        return '<table class="kv"><tbody>' + entries.map(([k, v]) => {
+            const hit = highlightKeys && highlightKeys.has(k) ? ' class="hit"' : '';
+            const val = nvl(v);
+            return `<tr${hit} data-k="${esc(k.toLowerCase())} ${esc(val.toLowerCase())}"><th>${esc(k)}</th>`
+                + (val === '' ? '<td class="blank">(빈 값)</td>' : `<td>${br(val)}</td>`) + '</tr>';
+        }).join('') + '</tbody></table>';
+    }
+
+    function openDrawer(title, html) {
+        $('drawerTitle').textContent = title;
+        $('drawerBody').innerHTML = html;
+        $('drawer').classList.add('open');
+        const search = $('drawerBody').querySelector('input[type=search]');
+        if (search) {
+            search.addEventListener('input', () => {
+                const q = search.value.trim().toLowerCase();
+                $('drawerBody').querySelectorAll('.kv tr').forEach((tr) => {
+                    tr.hidden = q && !tr.dataset.k.includes(q);
+                });
+            });
+        }
+    }
+
+    function showRowDetail(idx) {
+        const row = state.rows[idx];
+        if (!row) return;
+        state.selectedIdx = idx;
+        document.querySelectorAll('#resultTable tr.selected').forEach((tr) => tr.classList.remove('selected'));
+        const tr = document.querySelector(`#resultTable tr[data-idx="${idx}"]`);
+        if (tr) tr.classList.add('selected');
+
+        const status = classify(row);
+        const badge = status === 'unread' ? '<span class="badge unread">미실행</span>'
+            : `<span class="badge ${status}">${status.toUpperCase()}</span>`;
+
+        let html = `<div>${badge} &nbsp; LINE ${esc(row.line_no || idx + 1)}`
+            + (row.ADDR ? ` · ADDR <b>${esc(row.ADDR)}</b>` : '')
+            + (row.GOTO ? ` · GOTO <b>${esc(row.GOTO)}</b>` : '')
+            + ` · DOUID ${esc(row.DOUID)}</div>`;
+        if (row.REMARKS) html += `<div style="margin-top:6px;color:var(--muted)">${esc(row.REMARKS)}</div>`;
+
+        // 조건
+        const specs = row.specList || [], cons = row.conList || [], cmps = row.compareResultList || [];
+        const n = usedLength(specs, cons);
+        if (n) {
+            html += '<div class="section-title">조건</div><table class="kv"><tbody>';
+            for (let j = 0; j < n; j++) {
+                const c = nvl(cmps[j]);
+                const cls = c === 'T' ? 'cellTrue' : (c === 'F' ? 'cellFalse' : '');
+                html += `<tr><th>${esc(specs[j])}</th><td class="${cls}">${esc(cons[j])} ${c ? `(${c === 'T' ? '일치' : '불일치'})` : ''}</td></tr>`;
+            }
+            html += '</tbody></table>';
+        }
+
+        // 결과 KEY/VAL
+        const keys = row.keyList || [], vals = row.valList || [];
+        const m = usedLength(keys, vals);
+        const keySet = new Set();
+        if (m) {
+            html += '<div class="section-title">결과 (KEY = VAL)</div><table class="kv"><tbody>';
+            for (let j = 0; j < m; j++) {
+                keySet.add(nvl(keys[j]));
+                html += `<tr><th>${esc(keys[j])}</th><td>${br(vals[j])}</td></tr>`;
+            }
+            html += '</tbody></table>';
+        }
+
+        if (row.resultMap) {
+            html += `<div class="section-title">이 라인 실행 후 resultMap (${Object.keys(row.resultMap).length}건)</div>`
+                + '<input type="search" placeholder="키 / 값 검색">'
+                + kvTable(row.resultMap, keySet);
+        }
+        openDrawer('라인 상세', html);
+    }
+
+    function showFinal() {
+        const map = finalResultMap();
+        openDrawer(`최종 OUTPUT (${Object.keys(map).length}건)`,
+            '<div style="color:var(--muted);margin-bottom:8px">마지막으로 실행된 라인 기준의 resultMap 입니다.</div>'
+            + '<input type="search" placeholder="키 / 값 검색">' + kvTable(map));
+    }
+
+    // ---------- 데이터 적재 (API / JSON 파일 공통) ----------
+    function loadRows(json, sourceLabel) {
+        const rows = Array.isArray(json) ? json : (json.data || json.list || []);
+        if (!Array.isArray(rows)) throw new Error('결과 형식이 배열이 아닙니다.');
+
+        state.rows = rows;
+        state.selectedIdx = -1;
+        state.maxSpec = Math.max(0, ...rows.map((r) => usedLength(r.specList, r.conList)));
+        state.maxRes = Math.max(0, ...rows.map((r) => usedLength(r.keyList, r.valList)));
+        $('sourceInfo').textContent = `현재 표시: ${sourceLabel}`;
+        $('drawer').classList.remove('open');
+
+        renderSummary();
+        renderTable();
+    }
+
+    function showLoadError(msg) {
+        $('summaryPanel').hidden = true;
+        $('toolbar').hidden = true;
+        $('resultArea').innerHTML = `<div class="msg error">${esc(msg)}</div>`;
+    }
+
+    async function loadLocalJson() {
+        try {
+            const res = await fetch('./result.json', { cache: 'no-store' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            loadRows(await res.json(), 'result.json');
+        } catch (e) {
+            console.error(e);
+            showLoadError(`result.json 을 불러오지 못했습니다: ${e.message}\n\n`
+                + '· 파일(file://)로 직접 연 경우 브라우저가 로컬 파일 읽기를 막습니다.\n'
+                + '  WebStorm 내장 서버(localhost)로 열거나 "JSON 파일 선택…" 버튼을 사용하세요.');
+        }
+    }
+
+    function loadPickedFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                loadRows(JSON.parse(reader.result), file.name);
+            } catch (e) {
+                showLoadError(`JSON 파싱 실패 (${file.name}): ${e.message}`);
+            }
+        };
+        reader.readAsText(file, 'UTF-8');
+    }
+
+    // GOTO 클릭 시 해당 ADDR 라인으로 스크롤
+    function jumpToAddr(addr) {
+        const idx = state.rows.findIndex((r) => nvl(r.ADDR) === addr);
+        if (idx < 0) return alert(`ADDR '${addr}' 라인을 찾을 수 없습니다.`);
+        let tr = document.querySelector(`#resultTable tr[data-idx="${idx}"]`);
+        if (!tr) {
+            // 필터로 숨겨져 있으면 필터 해제 후 다시 그림
+            state.filter = 'all';
+            state.keyword = '';
+            $('keyword').value = '';
+            document.querySelectorAll('#filterSeg button').forEach((x) => x.classList.toggle('active', x.dataset.filter === 'all'));
+            renderTable();
+            tr = document.querySelector(`#resultTable tr[data-idx="${idx}"]`);
+        }
+        if (!tr) return;
+        // 페이지 전체가 아닌 테이블 영역만 스크롤
+        const wrap = tr.closest('.table-wrap');
+        const offset = tr.getBoundingClientRect().top - wrap.getBoundingClientRect().top;
+        wrap.scrollTo({ top: wrap.scrollTop + offset - wrap.clientHeight / 3 });
+        tr.classList.remove('flash');
+        void tr.offsetWidth;
+        tr.classList.add('flash');
+    }
+
+    // ---------- API 호출 ----------
+    async function run() {
+        if (!$('hogi').value.trim() || !$('PID').value.trim()) {
+            alert('호기와 PID는 필수입니다.');
+            return;
+        }
+        const url = buildUrl();
+        const btn = $('btnRun');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>실행 중';
+        $('resultArea').innerHTML = '<div class="msg">API 호출 중...</div>';
+        $('drawer').classList.remove('open');
+
+        try {
+            const res = await fetch(url, { method: 'GET' });
+            if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+            loadRows(await res.json(), `API 결과 (${$('hogi').value.trim()} / ${$('PID').value.trim()})`);
+
+            // 주소창에 파라미터 반영 (새로고침/공유 시 재사용)
+            const qs = new URLSearchParams();
+            PARAM_NAMES.forEach((n) => qs.set(n, $(n).value.trim()));
+            history.replaceState(null, '', `${location.pathname}?${qs}`);
+        } catch (e) {
+            console.error(e);
+            $('summaryPanel').hidden = true;
+            $('toolbar').hidden = true;
+            $('resultArea').innerHTML = `<div class="msg error">API 호출 실패: ${esc(e.message)}\n\n`
+                + '· 네트워크(사내망) 연결을 확인하세요.\n'
+                + '· "Failed to fetch" 인 경우 CORS 정책으로 차단되었을 수 있습니다. '
+                + 'plmpro.hdel.co.kr 도메인에서 페이지를 열거나 서버에 CORS 허용이 필요합니다.\n'
+                + '· 브라우저에서 API URL을 직접 열어 결과를 result.json으로 저장한 뒤 "result.json 불러오기"로 볼 수 있습니다.\n\n'
+                + `요청 URL: ${esc(url)}</div>`;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '실행';
+        }
+    }
+
+    // ---------- 이벤트 ----------
+    $('searchForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        run();
+    });
+    PARAM_NAMES.forEach((n) => $(n).addEventListener('input', updatePreview));
+
+    // 입력칸에 전체 URL을 붙여넣으면 파라미터를 자동 분해
+    $('searchForm').addEventListener('paste', (e) => {
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        if (/[?&]?(hogi|PID)=/.test(text) && applyUrl(text)) e.preventDefault();
+    });
+    $('btnPasteUrl').addEventListener('click', async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (!applyUrl(text)) alert('클립보드에 파라미터가 포함된 URL이 없습니다.');
+        } catch (err) {
+            const text = prompt('API URL 또는 쿼리스트링을 붙여넣으세요');
+            if (text && !applyUrl(text)) alert('파라미터를 찾을 수 없습니다.');
+        }
+    });
+
+    $('filterSeg').addEventListener('click', (e) => {
+        const b = e.target.closest('button[data-filter]');
+        if (!b) return;
+        document.querySelectorAll('#filterSeg button').forEach((x) => x.classList.toggle('active', x === b));
+        state.filter = b.dataset.filter;
+        renderTable();
+    });
+    $('hideBlank').addEventListener('change', (e) => {
+        state.hideBlank = e.target.checked;
+        renderTable();
+    });
+    $('fullView').addEventListener('change', (e) => {
+        state.fullView = e.target.checked;
+        renderTable();
+    });
+    let kwTimer;
+    $('keyword').addEventListener('input', (e) => {
+        clearTimeout(kwTimer);
+        kwTimer = setTimeout(() => {
+            state.keyword = e.target.value.trim();
+            renderTable();
+        }, 200);
+    });
+
+    $('btnLocalJson').addEventListener('click', loadLocalJson);
+    $('btnPickFile').addEventListener('click', () => $('fileInput').click());
+    $('fileInput').addEventListener('change', (e) => {
+        loadPickedFile(e.target.files[0]);
+        e.target.value = '';
+    });
+
+    $('resultArea').addEventListener('click', (e) => {
+        const jump = e.target.closest('.jump[data-goto]');
+        if (jump) return jumpToAddr(jump.dataset.goto);
+        const tr = e.target.closest('tbody tr[data-idx]');
+        if (tr) showRowDetail(Number(tr.dataset.idx));
+    });
+    $('btnFinal').addEventListener('click', showFinal);
+    $('btnCloseDrawer').addEventListener('click', () => $('drawer').classList.remove('open'));
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') $('drawer').classList.remove('open');
+    });
+
+    // ---------- 초기화: 페이지 URL 파라미터가 있으면 자동 실행 ----------
+    (function init() {
+        const params = new URLSearchParams(location.search);
+        let hasParam = false;
+        PARAM_NAMES.forEach((n) => {
+            if (params.has(n)) {
+                $(n).value = params.get(n);
+                hasParam = true;
+            }
+        });
+        updatePreview();
+        if (hasParam && $('hogi').value && $('PID').value) run();
+    })();
+</script>
+</body>
+</html>

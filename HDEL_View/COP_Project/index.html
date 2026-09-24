@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elevator PLM Executive Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Noto+Sans+KR:wght@300;400;700&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            /* 심도 있는 방사형 그라데이션 배경 */
+            background: radial-gradient(circle at 50% 50%, #0a1128 0%, #03040e 100%);
+            font-family: 'Noto Sans KR', sans-serif;
+            color: #fff;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 1;
+        }
+
+        /* ---------------- 상단 네비게이션 바 ---------------- */
+        #top-nav {
+            position: absolute;
+            top: 0; left: 0; width: 100%;
+            height: 70px;
+            background: rgba(10, 15, 30, 0.5);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+            z-index: 20;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            box-sizing: border-box;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 30px; height: 30px;
+            background: #00ffff;
+            border-radius: 4px;
+            display: inline-block;
+            box-shadow: 0 0 15px #00ffff;
+        }
+
+        .nav-menus {
+            display: flex;
+            gap: 40px;
+        }
+
+        .nav-item {
+            font-size: 15px;
+            font-weight: 500;
+            color: #a0b4c7;
+            cursor: pointer;
+            text-decoration: none;
+            position: relative;
+            padding-bottom: 5px;
+            transition: color 0.3s;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            color: #fff;
+        }
+
+        .nav-item::after {
+            content: ''; position: absolute; left: 0; bottom: 0; width: 0%; height: 2px;
+            background: #00ffff; transition: width 0.3s;
+            box-shadow: 0 0 8px #00ffff;
+        }
+        .nav-item:hover::after, .nav-item.active::after { width: 100%; }
+
+        /* ---------------- 좌측 데이터 패널 (위치 조정) ---------------- */
+        #ui-panel {
+            position: absolute;
+            top: 100px; /* 상단 메뉴에 가리지 않게 내림 */
+            left: 30px;
+            width: 360px;
+            padding: 25px;
+            background: rgba(5, 10, 20, 0.6);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            z-index: 10;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        }
+
+        h2 { font-family: 'Orbitron', sans-serif; font-size: 18px; color: #fff; margin: 0 0 5px 0; }
+        .subtitle { font-size: 13px; color: #8da3b9; margin-bottom: 20px; }
+
+        .alert-box {
+            background: rgba(255, 42, 42, 0.15);
+            border-left: 4px solid #ff2a2a;
+            padding: 15px; border-radius: 6px; margin-bottom: 20px;
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 rgba(255,42,42,0); }
+            50% { box-shadow: 0 0 15px rgba(255,42,42,0.4); }
+            100% { box-shadow: 0 0 0 rgba(255,42,42,0); }
+        }
+
+        .alert-box strong { color: #ff5555; display: block; margin-bottom: 8px; }
+        .alert-box p { margin: 0; font-size: 13px; color: #ddd; line-height: 1.5; }
+
+        button {
+            width: 100%; padding: 14px; background: linear-gradient(90deg, #ff2a2a, #cc0000);
+            color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 14px;
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(255,42,42,0.3);
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,42,42,0.6); }
+
+        /* ---------------- 하단 장식 (Status Bar) ---------------- */
+        #bottom-bar {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 50px;
+            background: rgba(5, 10, 20, 0.8);
+            border-top: 1px solid rgba(0, 255, 255, 0.1);
+            z-index: 20;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            box-sizing: border-box;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            color: #8da3b9;
+        }
+
+        .status-group { display: flex; gap: 30px; align-items: center; }
+        .status-item span { color: #00ffff; font-weight: bold; margin-left: 5px; }
+        .status-dot {
+            width: 8px; height: 8px; background: #00ff00; border-radius: 50%;
+            display: inline-block; margin-right: 8px; box-shadow: 0 0 8px #00ff00;
+        }
+
+        .data-stream {
+            font-family: monospace; color: #00aaff;
+            overflow: hidden; white-space: nowrap; width: 300px;
+        }
+    </style>
+
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "@tweenjs/tween.js": "https://unpkg.com/@tweenjs/tween.js@23.1.1/dist/tween.esm.js"
+            }
+        }
+    </script>
+</head>
+<body>
+
+<!-- 상단 네비게이션 -->
+<nav id="top-nav">
+    <div class="logo">
+        <div class="logo-icon"></div>
+        PLM VANGUARD
+    </div>
+    <div class="nav-menus">
+        <a href="#" class="nav-item active">시스템 개요 (Overview)</a>
+        <a href="#" class="nav-item">호기 이력 조회 (History)</a>
+        <a href="#" class="nav-item">BOM 상세 검색 (Search)</a>
+    </div>
+</nav>
+
+<!-- 좌측 정보 패널 -->
+<div id="ui-panel">
+    <h2>ELEVATOR M-700</h2>
+    <div class="subtitle">Global Standard High-Speed Model</div>
+
+    <div class="alert-box">
+        <strong>⚠️ [Critical] 부품 공급망 리스크</strong>
+        <p>
+            - 문제부품: <b>메인 인버터 모듈 (INV-89X)</b><br>
+            - 감지내용: 칩셋 제조사 단종(EOL)<br>
+            - 재무영향: 양산 지연 시 일 $50K 손실
+        </p>
+    </div>
+
+    <button id="btn-zoom">🚨 문제 부품 추적 (Fly-to)</button>
+    <button id="btn-reset" style="background: transparent; border: 1px solid #445; box-shadow:none; margin-top: 10px;">전체 구조 보기</button>
+</div>
+
+<!-- 하단 상태 표시줄 -->
+<footer id="bottom-bar">
+    <div class="status-group">
+        <div><span class="status-dot"></span>SYSTEM ONLINE</div>
+        <div class="status-item">ERP SYNC: <span>99.9%</span></div>
+        <div class="status-item">TOTAL NODES: <span>1,204</span></div>
+    </div>
+    <div class="data-stream" id="ticker">Loading data stream... 0x8F9A2B</div>
+    <div class="status-group">
+        <div class="status-item">LAST UPDATE: <span id="clock">00:00:00</span></div>
+    </div>
+</footer>
+
+<div id="canvas-container"></div>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import * as TWEEN from '@tweenjs/tween.js';
+
+    // 1. 기본 씬 설정
+    const scene = new THREE.Scene();
+    // 안개를 약간 옅게 처리하여 배경 효과가 잘 보이도록 함
+    scene.fog = new THREE.FogExp2(0x0a1128, 0.0015);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 2000);
+    const GLOBAL_POS = new THREE.Vector3(0, 80, 200);
+    camera.position.copy(GLOBAL_POS);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.3;
+    controls.maxDistance = 600;
+
+    // ==========================================
+    // 🌟 배경 꾸미기 요소 (Three.js)
+    // ==========================================
+
+    // [1] 사이버틱 바닥 그리드 (GridHelper)
+    const gridHelper = new THREE.GridHelper(800, 40, 0x00aaff, 0x003366);
+    gridHelper.position.y = -60; // 부품들 아래쪽에 배치
+    gridHelper.material.opacity = 0.3;
+    gridHelper.material.transparent = true;
+    scene.add(gridHelper);
+
+    // [2] 떠다니는 데이터 파티클 (Starfield / Dust effect)
+    const particlesGeometry = new THREE.BufferGeometry();
+    const particlesCount = 3000;
+    const posArray = new Float32Array(particlesCount * 3);
+
+    for(let i = 0; i < particlesCount * 3; i++) {
+        posArray[i] = (Math.random() - 0.5) * 800; // 넓은 공간에 흩뿌림
+    }
+    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+    const particlesMaterial = new THREE.PointsMaterial({
+        size: 2,
+        color: 0x00ffff,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending // 겹칠 때 밝아지는 효과
+    });
+    const particleMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+    scene.add(particleMesh);
+
+
+    // ==========================================
+    // 부품 Sprite 생성 및 트리 로직 (기존과 동일)
+    // ==========================================
+    function createPartSprite(icon, name, isError) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256; canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = isError ? 'rgba(80, 0, 0, 0.8)' : 'rgba(0, 40, 80, 0.7)';
+        ctx.beginPath();
+        ctx.arc(128, 128, 100, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.shadowColor = isError ? '#ff3333' : '#00aaff';
+        ctx.shadowBlur = 20;
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = isError ? '#ff3333' : '#00aaff';
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        ctx.font = '70px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(icon, 128, 100);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 22px Noto Sans KR';
+        ctx.fillText(name, 128, 175);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const sprite = new THREE.Sprite(material);
+        sprite.scale.set(30, 30, 1);
+        return sprite;
+    }
+
+    const bomData = {
+        name: "M-700 Elevator", icon: "🛗", isError: false, pos: new THREE.Vector3(0, 50, 0),
+        children: [
+            {
+                name: "구동부 (Traction)", icon: "⚙️", isError: false, pos: new THREE.Vector3(-60, 10, -40),
+                children: [
+                    { name: "교류 모터", icon: "🛞", pos: new THREE.Vector3(-90, -25, -70) },
+                    { name: "도르래(Sheave)", icon: "🔄", pos: new THREE.Vector3(-60, -25, -20) },
+                    { name: "브레이크 패드", icon: "🛑", pos: new THREE.Vector3(-30, -25, -70) }
+                ]
+            },
+            {
+                name: "카 (Cabin)", icon: "🚪", isError: false, pos: new THREE.Vector3(60, 10, -40),
+                children: [
+                    { name: "도어 모터", icon: "↔️", pos: new THREE.Vector3(30, -25, -70) },
+                    { name: "조작반 (COP)", icon: "🔢", pos: new THREE.Vector3(60, -25, -20) },
+                    { name: "스마트 조명", icon: "💡", pos: new THREE.Vector3(90, -25, -70) }
+                ]
+            },
+            {
+                name: "제어반 (Control)", icon: "⚡", isError: true, pos: new THREE.Vector3(-40, 10, 60),
+                children: [
+                    { name: "통신 제어보드", icon: "📡", pos: new THREE.Vector3(-70, -25, 60) },
+                    { name: "메인 인버터", icon: "🔥", isError: true, pos: new THREE.Vector3(-40, -25, 100) }, // 에러
+                    { name: "마그네틱 릴레이", icon: "🧲", pos: new THREE.Vector3(-10, -25, 60) }
+                ]
+            },
+            {
+                name: "안전장치 (Safety)", icon: "🛡️", isError: false, pos: new THREE.Vector3(40, 10, 60),
+                children: [
+                    { name: "조속기 (Governor)", icon: "⏱️", pos: new THREE.Vector3(10, -25, 60) },
+                    { name: "비상정지장치", icon: "🚧", pos: new THREE.Vector3(40, -25, 100) },
+                    { name: "유압식 버퍼", icon: "⬇️", pos: new THREE.Vector3(70, -25, 60) }
+                ]
+            }
+        ]
+    };
+
+    let errorNodeSprite = null;
+    let errorPulseRing = null;
+
+    function buildTree(nodeData, parentPos) {
+        const sprite = createPartSprite(nodeData.icon, nodeData.name, nodeData.isError || false);
+        sprite.position.copy(nodeData.pos);
+        scene.add(sprite);
+
+        if (parentPos) {
+            const lineMat = new THREE.LineBasicMaterial({
+                color: nodeData.isError ? 0xff3333 : 0x00ffff,
+                transparent: true, opacity: 0.3
+            });
+            const lineGeo = new THREE.BufferGeometry().setFromPoints([parentPos, nodeData.pos]);
+            scene.add(new THREE.Line(lineGeo, lineMat));
+        }
+
+        if (nodeData.isError && (!nodeData.children)) {
+            errorNodeSprite = sprite;
+            const ringGeo = new THREE.RingGeometry(18, 20, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, side: THREE.DoubleSide });
+            errorPulseRing = new THREE.Mesh(ringGeo, ringMat);
+            errorPulseRing.position.copy(sprite.position);
+            scene.add(errorPulseRing);
+        }
+
+        if (nodeData.children) {
+            nodeData.children.forEach(child => buildTree(child, nodeData.pos));
+        }
+    }
+    buildTree(bomData, null);
+
+    // ==========================================
+    // 상호작용 및 애니메이션 루프
+    // ==========================================
+    document.getElementById('btn-zoom').addEventListener('click', () => {
+        if (!errorNodeSprite) return;
+        controls.autoRotate = false;
+        const target = errorNodeSprite.position;
+
+        new TWEEN.Tween(camera.position)
+            .to({ x: target.x, y: target.y + 15, z: target.z + 50 }, 2000)
+            .easing(TWEEN.Easing.Cubic.InOut).start();
+
+        new TWEEN.Tween(controls.target)
+            .to({ x: target.x, y: target.y, z: target.z }, 2000)
+            .easing(TWEEN.Easing.Cubic.InOut).start();
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+        controls.autoRotate = true;
+        new TWEEN.Tween(camera.position)
+            .to({ x: GLOBAL_POS.x, y: GLOBAL_POS.y, z: GLOBAL_POS.z }, 2000)
+            .easing(TWEEN.Easing.Cubic.InOut).start();
+        new TWEEN.Tween(controls.target)
+            .to({ x: 0, y: 0, z: 0 }, 2000)
+            .easing(TWEEN.Easing.Cubic.InOut).start();
+    });
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // 하단 시계 & 티커 업데이트 로직
+    setInterval(() => {
+        const now = new Date();
+        document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', {hour12:false});
+
+        // 해커/사이버 느낌의 가상 데이터 스트림 생성
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let randomStr = "BOM_STREAM_";
+        for(let i=0; i<10; i++) randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+        document.getElementById('ticker').innerText = `Analyzing node packets... [ ${randomStr} ] OK`;
+    }, 1000);
+
+    let time = 0;
+    function animate() {
+        requestAnimationFrame(animate);
+        time += 0.05;
+
+        // 배경 파티클 회전 애니메이션 (우주 유영 느낌)
+        particleMesh.rotation.y = time * 0.01;
+        particleMesh.rotation.x = time * 0.005;
+
+        if (errorPulseRing) {
+            const scale = 1 + Math.sin(time) * 0.4;
+            errorPulseRing.scale.set(scale, scale, 1);
+            errorPulseRing.material.opacity = 0.6 - (Math.sin(time) * 0.4);
+            errorPulseRing.quaternion.copy(camera.quaternion);
+        }
+
+        TWEEN.update();
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
+</script>
+</body>
+</html>
