@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOM Sentinel</title>
+    <meta name="description" content="PLM 등록 엘리베이터 호기별 BOM을 이전 버전과 비교해 부품·수량 변경과 이상을 감지합니다.">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* ───────────── Design tokens ───────────── */
+        :root {
+            --bg: #0A0E14;
+            --bg-glow: rgba(61, 214, 245, .10);
+            --surface: #111722;
+            --surface-2: #161D2B;
+            --surface-3: #1C2536;
+            --border: #232C3D;
+            --border-strong: #33405A;
+            --text: #E6EBF2;
+            --text-muted: #9AA6B9;
+            --accent: #3DD6F5;
+            --accent-ink: #04232B;
+            --accent-soft: rgba(61, 214, 245, .12);
+
+            --add: #3FD08A;  --add-bg: rgba(63, 208, 138, .14);
+            --del: #FF6B6B;  --del-bg: rgba(255, 107, 107, .14);
+            --qty: #F5B841;  --qty-bg: rgba(245, 184, 65, .14);
+            --note: #B39DFF; --note-bg: rgba(179, 157, 255, .14);
+
+            --high: #FF6B6B; --high-bg: rgba(255, 107, 107, .18);
+            --med: #F5B841;  --med-bg: rgba(245, 184, 65, .16);
+            --low: #7DBBFF;  --low-bg: rgba(125, 187, 255, .14);
+
+            --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 32px rgba(0,0,0,.35);
+            --radius: 14px;
+            --radius-sm: 8px;
+            --ease-out: cubic-bezier(.22, 1, .36, 1);
+            --dur-fast: 150ms;
+            --dur: 260ms;
+            --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+            --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+            color-scheme: dark;
+        }
+        :root[data-theme="light"] {
+            --bg: #F4F6FA;
+            --bg-glow: rgba(8, 124, 156, .08);
+            --surface: #FFFFFF;
+            --surface-2: #F1F4F9;
+            --surface-3: #E7ECF3;
+            --border: #DCE2EB;
+            --border-strong: #C3CCD9;
+            --text: #0E1726;
+            --text-muted: #4F5D70;
+            --accent: #087C9C;
+            --accent-ink: #FFFFFF;
+            --accent-soft: rgba(8, 124, 156, .10);
+
+            --add: #11774A;  --add-bg: #E3F5EC;
+            --del: #C22F2F;  --del-bg: #FDECEC;
+            --qty: #8A5A00;  --qty-bg: #FFF3D6;
+            --note: #5B3FC4; --note-bg: #EEEAFD;
+
+            --high: #C22F2F; --high-bg: #FDECEC;
+            --med: #8A5A00;  --med-bg: #FFF3D6;
+            --low: #1F57B0;  --low-bg: #E6EEFC;
+
+            --shadow: 0 1px 2px rgba(14,23,38,.05), 0 8px 24px rgba(14,23,38,.06);
+            color-scheme: light;
+        }
+
+        /* ───────────── Base ───────────── */
+        *, *::before, *::after { box-sizing: border-box; }
+        * { margin: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 16px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100dvh;
+        }
+        button, input, select { font: inherit; color: inherit; }
+        button { cursor: pointer; background: none; border: 0; }
+        a { color: inherit; text-decoration: none; }
+        ul, ol { list-style: none; padding: 0; }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+        .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+        .muted { color: var(--text-muted); }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+        .skip { position: absolute; left: 16px; top: -48px; z-index: 1000; background: var(--accent); color: var(--accent-ink); padding: 8px 14px; border-radius: 8px; font-weight: 600; }
+        .skip:focus { top: 12px; }
+        .ic { width: 18px; height: 18px; flex: none; }
+        .ic-sm { width: 14px; height: 14px; }
+        .ic-lg { width: 22px; height: 22px; }
+        .container { max-width: 1320px; margin: 0 auto; padding: 0 24px; }
+        @media (max-width: 640px) { .container { padding: 0 16px; } }
+
+        /* ───────────── Buttons ───────────── */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            min-height: 44px; padding: 0 20px; border-radius: 10px;
+            font-weight: 600; font-size: 15px; white-space: nowrap;
+            transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast), opacity var(--dur-fast);
+            touch-action: manipulation;
+        }
+        .btn:active { transform: scale(.98); }
+        .btn.primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 6px 24px var(--accent-soft); }
+        .btn.primary:hover { filter: brightness(1.08); }
+        .btn.ghost { border: 1px solid var(--border-strong); background: var(--surface); }
+        .btn.ghost:hover { border-color: var(--accent); }
+        .btn.block { width: 100%; }
+        .btn[disabled] { opacity: .45; cursor: not-allowed; box-shadow: none; transform: none; }
+        .btn.lg { min-height: 52px; padding: 0 26px; font-size: 16px; }
+        .link { color: var(--accent); font-weight: 600; font-size: 14px; min-height: 32px; padding: 0 4px; }
+        .link:hover { text-decoration: underline; }
+
+        /* ───────────── Top bar ───────────── */
+        .topbar {
+            position: sticky; top: 0; z-index: 40;
+            background: color-mix(in srgb, var(--bg) 88%, transparent);
+            border-bottom: 1px solid var(--border);
+        }
+        .topbar .container { display: flex; align-items: center; gap: 24px; height: 64px; }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.01em; font-size: 17px; }
+        .brand-mark {
+            width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
+            background: linear-gradient(160deg, var(--accent), color-mix(in srgb, var(--accent) 40%, #5B3FC4));
+            color: var(--accent-ink);
+        }
+        .nav { display: flex; gap: 4px; margin-left: 8px; }
+        .nav a { padding: 8px 14px; border-radius: 8px; color: var(--text-muted); font-weight: 500; font-size: 15px; min-height: 40px; display: inline-flex; align-items: center; }
+        .nav a:hover { color: var(--text); background: var(--surface-2); }
+        .nav a[aria-current="page"] { color: var(--text); background: var(--surface-2); }
+        .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+        .env-pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text-muted); }
+        .icon-btn { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; border: 1px solid var(--border); background: var(--surface); }
+        .icon-btn:hover { border-color: var(--accent); }
+        @media (max-width: 720px) { .env-pill { display: none; } .nav { margin-left: 0; } .brand-text { display: none; } }
+
+        /* ───────────── Landing ───────────── */
+        .hero { position: relative; overflow: hidden; padding: 88px 0 72px; }
+        .hero::before {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background:
+                    radial-gradient(900px 500px at 78% 20%, var(--bg-glow), transparent 60%),
+                    linear-gradient(var(--border) 1px, transparent 1px) 0 0 / 56px 56px,
+                    linear-gradient(90deg, var(--border) 1px, transparent 1px) 0 0 / 56px 56px;
+            mask-image: radial-gradient(ellipse at 60% 30%, #000 20%, transparent 75%);
+            opacity: .55;
+        }
+        .hero .container { position: relative; display: grid; grid-template-columns: 1.15fr .85fr; gap: 48px; align-items: center; }
+        .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); padding: 6px 12px; border-radius: 999px; background: var(--accent-soft); }
+        .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+        .hero h1 { margin-top: 22px; font-size: clamp(36px, 5.2vw, 64px); line-height: 1.12; letter-spacing: -.035em; font-weight: 800; text-wrap: balance; }
+        .hero h1 em { font-style: normal; background: linear-gradient(90deg, var(--accent), #8FA8FF); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .hero-sub { margin-top: 20px; font-size: 18px; color: var(--text-muted); max-width: 560px; }
+        .hero-cta { margin-top: 32px; display: flex; gap: 12px; flex-wrap: wrap; }
+        .hero-trust { margin-top: 28px; display: flex; gap: 20px; flex-wrap: wrap; font-size: 14px; color: var(--text-muted); }
+        .hero-trust span { display: inline-flex; align-items: center; gap: 6px; }
+        .hero-trust .ic { color: var(--add); }
+
+        .hero-visual { position: relative; display: flex; justify-content: center; min-height: 460px; }
+        .shaft-demo {
+            --fh: 50px;
+            position: relative; width: 250px; padding: 10px 10px 10px 30px;
+            border: 1px solid var(--border-strong); border-radius: 18px;
+            background: linear-gradient(180deg, var(--surface), var(--surface-2));
+            box-shadow: var(--shadow);
+        }
+        .shaft-demo::before { content: ""; position: absolute; left: 14px; top: 10px; bottom: 10px; width: 2px; background: repeating-linear-gradient(var(--border-strong) 0 6px, transparent 6px 10px); }
+        .sd-floor { height: 46px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 10px; background: var(--surface-3); border: 1px solid var(--border); font-size: 14px; }
+        .sd-floor:last-child { margin-bottom: 0; }
+        .sd-floor .mono { color: var(--text-muted); font-size: 12px; width: 30px; }
+        .sd-light { margin-left: auto; width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); }
+        .sd-light.s3 { background: var(--high); box-shadow: 0 0 0 0 var(--high); animation: pulse 1.8s infinite; }
+        .sd-light.s2 { background: var(--med); animation: pulse 2.4s infinite; }
+        .sd-light.s1 { background: var(--low); }
+        .sd-floor.s3 { border-color: color-mix(in srgb, var(--high) 50%, transparent); background: var(--high-bg); }
+        .sd-floor.s2 { border-color: color-mix(in srgb, var(--med) 45%, transparent); background: var(--med-bg); }
+        .sd-car {
+            position: absolute; left: 6px; top: 10px; width: 18px; height: 46px; border-radius: 6px;
+            background: var(--accent); box-shadow: 0 0 18px var(--accent);
+            animation: ride 9s var(--ease-out) infinite;
+        }
+        .sd-car::after { content: ""; position: absolute; inset: 8px 7px; border-left: 2px solid var(--accent-ink); opacity: .45; }
+        @keyframes ride {
+            0%, 8%   { transform: translateY(0); }
+            22%, 34% { transform: translateY(calc(var(--fh) * 7)); }
+            48%, 60% { transform: translateY(calc(var(--fh) * 1)); }
+            74%, 86% { transform: translateY(calc(var(--fh) * 4)); }
+            100%     { transform: translateY(0); }
+        }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 currentColor; } 70% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+        .sd-light.s3 { color: var(--high); } .sd-light.s2 { color: var(--med); }
+
+        .float-card {
+            position: absolute; padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border-strong);
+            box-shadow: var(--shadow); font-size: 13px; min-width: 200px;
+            animation: floaty 6s ease-in-out infinite;
+        }
+        .float-card .fc-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+        .float-card.f1 { top: 36px; right: -8px; }
+        .float-card.f2 { bottom: 54px; left: -12px; animation-delay: -3s; }
+        @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+        .stats-band { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--surface); }
+        .stats-band .container { display: grid; grid-template-columns: repeat(4, 1fr); }
+        .stat { padding: 28px 24px; border-left: 1px solid var(--border); }
+        .stat:first-child { border-left: 0; }
+        .stat-val { font-family: var(--mono); font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+        .stat-val.danger { color: var(--high); }
+        .stat-label { color: var(--text-muted); font-size: 14px; margin-top: 2px; }
+
+        .section { padding: 96px 0; }
+        .section-head { max-width: 680px; margin-bottom: 44px; }
+        .kicker { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: .04em; }
+        .section-head h2 { font-size: clamp(28px, 3.2vw, 40px); letter-spacing: -.03em; line-height: 1.2; margin-top: 10px; text-wrap: balance; }
+        .section-head p { color: var(--text-muted); margin-top: 12px; font-size: 17px; }
+
+        .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; counter-reset: step; }
+        .step-card { position: relative; padding: 28px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); }
+        .step-card .num { font-family: var(--mono); font-size: 13px; color: var(--text-muted); }
+        .step-card .step-ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); margin: 14px 0 18px; }
+        .step-card h3 { font-size: 19px; letter-spacing: -.01em; }
+        .step-card p { color: var(--text-muted); margin-top: 8px; font-size: 15px; }
+        .step-card:not(:last-child)::after { content: ""; position: absolute; right: -12px; top: 50%; width: 8px; height: 8px; border-top: 2px solid var(--border-strong); border-right: 2px solid var(--border-strong); transform: translateY(-50%) rotate(45deg); }
+
+        .bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+        .bento-card { padding: 26px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); overflow: hidden; }
+        .bento-card h3 { font-size: 19px; letter-spacing: -.01em; }
+        .bento-card > p { color: var(--text-muted); font-size: 15px; margin-top: 6px; }
+        .b-diff { grid-column: span 4; }
+        .b-shaft { grid-column: span 2; }
+        .b-rules { grid-column: span 3; }
+        .b-alerts { grid-column: span 3; }
+        .mini-diff { margin-top: 20px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 13px; }
+        .mini-diff .md-row { display: grid; grid-template-columns: 84px 110px 1fr auto; gap: 12px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--border); }
+        .mini-diff .md-row:first-child { border-top: 0; }
+        .mini-diff .md-row.add { background: var(--add-bg); } .mini-diff .md-row.del { background: var(--del-bg); } .mini-diff .md-row.qty { background: var(--qty-bg); }
+        .mini-shafts { margin-top: 20px; display: flex; gap: 10px; }
+        .mini-shaft { flex: 1; display: flex; flex-direction: column; gap: 3px; padding: 4px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border); }
+        .mini-shaft i { height: 14px; border-radius: 3px; background: var(--surface-3); }
+        .mini-shaft i.s1 { background: var(--low-bg); outline: 1px solid color-mix(in srgb, var(--low) 40%, transparent); }
+        .mini-shaft i.s2 { background: var(--med-bg); outline: 1px solid color-mix(in srgb, var(--med) 45%, transparent); }
+        .mini-shaft i.s3 { background: var(--high-bg); outline: 1px solid color-mix(in srgb, var(--high) 55%, transparent); }
+        .rule-list { margin-top: 18px; display: grid; gap: 10px; }
+        .rule-list li { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; }
+        .rule-list li .sev-badge { flex: none; width: 82px; justify-content: center; }
+        .alert-feed { margin-top: 16px; display: grid; gap: 8px; }
+        .alert-feed a { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); font-size: 14px; transition: border-color var(--dur-fast); }
+        .alert-feed a:hover { border-color: var(--accent); }
+        .alert-feed .af-body { flex: 1; min-width: 0; }
+        .alert-feed .af-title { font-weight: 600; overflow-wrap: anywhere; }
+        .alert-feed .af-meta { font-size: 12px; color: var(--text-muted); }
+
+        .cta-band { margin: 0 0 96px; }
+        .cta-inner {
+            position: relative; overflow: hidden; padding: 56px; border-radius: 20px; border: 1px solid var(--border-strong);
+            background: radial-gradient(600px 300px at 85% 0%, var(--bg-glow), transparent 70%), var(--surface);
+            display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+        }
+        .cta-inner h2 { font-size: clamp(24px, 2.8vw, 34px); letter-spacing: -.03em; line-height: 1.25; }
+        .cta-inner p { color: var(--text-muted); margin-top: 8px; }
+        .footer { border-top: 1px solid var(--border); padding: 28px 0; color: var(--text-muted); font-size: 13px; }
+        .footer .container { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+        /* ───────────── Badges / chips ───────────── */
+        .sev-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; letter-spacing: .01em; }
+        .sev-badge.high { color: var(--high); background: var(--high-bg); }
+        .sev-badge.med { color: var(--med); background: var(--med-bg); }
+        .sev-badge.low { color: var(--low); background: var(--low-bg); }
+        .type-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 6px; white-space: nowrap; }
+        .type-chip.add { color: var(--add); background: var(--add-bg); }
+        .type-chip.del { color: var(--del); background: var(--del-bg); }
+        .type-chip.qty { color: var(--qty); background: var(--qty-bg); }
+        .type-chip.note { color: var(--note); background: var(--note-bg); }
+        .type-chip.same { color: var(--text-muted); background: var(--surface-3); }
+
+        /* ───────────── App view ───────────── */
+        .app { display: grid; grid-template-columns: 320px 1fr; gap: 24px; padding-top: 28px; padding-bottom: 64px; align-items: start; }
+        .panel { position: sticky; top: 88px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; display: grid; gap: 18px; max-height: calc(100dvh - 112px); overflow: auto; }
+        .step-tag { font-family: var(--mono); font-size: 12px; color: var(--accent); letter-spacing: .05em; }
+        .panel h2 { font-size: 20px; letter-spacing: -.02em; margin-top: 2px; }
+        .field { display: grid; gap: 8px; }
+        .label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        .seg { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
+        .seg button { flex: 1 1 auto; min-height: 34px; padding: 0 10px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--text-muted); transition: background var(--dur-fast), color var(--dur-fast); }
+        .seg button:hover { color: var(--text); }
+        .seg button[aria-checked="true"], .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.18); outline: 1px solid var(--border-strong); }
+        .search { position: relative; }
+        .search .ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .search input { width: 100%; min-height: 44px; padding: 0 12px 0 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); }
+        .search input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+        .list-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        .hogi-list { display: grid; gap: 6px; }
+        .hogi-item { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 12px; min-height: 52px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; transition: border-color var(--dur-fast), background var(--dur-fast); }
+        .hogi-item:hover { border-color: var(--border-strong); }
+        .hogi-item input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+        .hi-check { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border-strong); display: grid; place-items: center; color: transparent; flex: none; transition: background var(--dur-fast), border-color var(--dur-fast); }
+        .hogi-item input:checked + .hi-check { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+        .hogi-item:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: var(--accent-soft); }
+        .hogi-item:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .hi-main { display: grid; min-width: 0; }
+        .hi-no { font-weight: 600; font-size: 14px; }
+        .hi-meta { font-size: 12px; color: var(--text-muted); }
+        .hi-ver { margin-left: auto; font-size: 12px; color: var(--text-muted); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); }
+        .list-empty { font-size: 14px; color: var(--text-muted); padding: 16px; text-align: center; border: 1px dashed var(--border-strong); border-radius: 10px; }
+
+        .results { min-width: 0; display: grid; gap: 20px; }
+        .empty-state { border: 1px dashed var(--border-strong); border-radius: var(--radius); padding: 64px 32px; text-align: center; background: var(--surface); }
+        .empty-state .es-ic { width: 56px; height: 56px; margin: 0 auto 18px; border-radius: 16px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+        .empty-state h2 { font-size: 22px; letter-spacing: -.02em; }
+        .empty-state p { color: var(--text-muted); margin-top: 8px; }
+        .es-steps { margin: 28px auto 0; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; font-size: 14px; color: var(--text-muted); }
+        .es-steps span { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); }
+
+        .loading { border: 1px solid var(--border); border-radius: var(--radius); padding: 48px 32px; background: var(--surface); display: grid; justify-items: center; gap: 22px; }
+        .scan { width: 100%; max-width: 420px; height: 4px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
+        .scan i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 4px; transition: width 320ms var(--ease-out); }
+        .load-steps { display: grid; gap: 10px; min-width: 280px; }
+        .load-steps li { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--text-muted); transition: color var(--dur); }
+        .load-steps li .ls-dot { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border-strong); display: grid; place-items: center; color: transparent; }
+        .load-steps li.done { color: var(--text); }
+        .load-steps li.done .ls-dot { background: var(--add); border-color: var(--add); color: var(--bg); }
+        .load-steps li.active .ls-dot { border-color: var(--accent); border-top-color: transparent; animation: spin .8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .res-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+        .res-head h2 { font-size: clamp(22px, 2.4vw, 28px); letter-spacing: -.03em; margin-top: 4px; }
+        .res-head h2 .hl { color: var(--high); }
+        .res-head p { font-size: 14px; margin-top: 4px; }
+
+        .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+        .kpi { padding: 18px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); position: relative; overflow: hidden; }
+        .kpi-top { display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); font-size: 13px; font-weight: 600; }
+        .kpi-ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; }
+        .kpi-val { font-family: var(--mono); font-size: 32px; font-weight: 600; margin-top: 8px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+        .kpi-sub { font-size: 12px; color: var(--text-muted); }
+        .kpi.k-hogi .kpi-ic { background: var(--accent-soft); color: var(--accent); }
+        .kpi.k-add .kpi-ic { background: var(--add-bg); color: var(--add); }
+        .kpi.k-del .kpi-ic { background: var(--del-bg); color: var(--del); }
+        .kpi.k-qty .kpi-ic { background: var(--qty-bg); color: var(--qty); }
+        .kpi.k-anom { border-color: color-mix(in srgb, var(--high) 45%, var(--border)); background: linear-gradient(160deg, var(--high-bg), var(--surface) 60%); }
+        .kpi.k-anom .kpi-ic { background: var(--high-bg); color: var(--high); }
+        .kpi.k-anom .kpi-val { color: var(--high); }
+
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; min-width: 0; }
+        .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .card-head h3 { font-size: 17px; letter-spacing: -.01em; }
+        .card-head p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+        .grid2 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+
+        .shafts { display: flex; flex-wrap: wrap; gap: 14px; }
+        .shaft { width: 116px; }
+        .shaft-top { display: grid; margin-bottom: 8px; }
+        .shaft-top .mono { font-size: 13px; font-weight: 600; }
+        .shaft-top span:last-child { font-size: 11px; color: var(--text-muted); }
+        .shaft-body { --fh: 34px; position: relative; padding: 4px 4px 4px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); }
+        .shaft-body::before { content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 1px; background: repeating-linear-gradient(var(--border-strong) 0 4px, transparent 4px 7px); }
+        .shaft-car { position: absolute; left: 3px; top: 4px; width: 7px; height: 30px; border-radius: 3px; background: var(--accent); box-shadow: 0 0 10px var(--accent); transition: transform 1.3s var(--ease-out); }
+        .floor { width: 100%; height: 30px; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; border-radius: 6px; font-family: var(--mono); font-size: 12px; background: var(--surface-3); border: 1px solid transparent; color: var(--text-muted); transition: border-color var(--dur-fast), transform var(--dur-fast); }
+        .floor:last-child { margin-bottom: 0; }
+        .floor:hover { border-color: var(--accent); }
+        .floor .fl-count { font-weight: 600; }
+        .floor.s1 { background: var(--low-bg); color: var(--low); }
+        .floor.s2 { background: var(--med-bg); color: var(--med); }
+        .floor.s3 { background: var(--high-bg); color: var(--high); border-color: color-mix(in srgb, var(--high) 45%, transparent); }
+        .floor.is-active { outline: 2px solid var(--accent); outline-offset: 1px; }
+        .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; font-size: 12px; color: var(--text-muted); }
+        .legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .legend i { width: 12px; height: 12px; border-radius: 3px; background: var(--surface-3); }
+        .legend i.s1 { background: var(--low-bg); outline: 1px solid var(--low); }
+        .legend i.s2 { background: var(--med-bg); outline: 1px solid var(--med); }
+        .legend i.s3 { background: var(--high-bg); outline: 1px solid var(--high); }
+        .shaft-order { font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+
+        .anoms { display: grid; gap: 8px; }
+        .anom { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); transition: border-color var(--dur-fast), background var(--dur-fast); }
+        .anom:hover { border-color: var(--accent); }
+        .anom .sev-badge { width: 84px; justify-content: center; flex: none; }
+        .anom-body { flex: 1; min-width: 0; display: grid; }
+        .anom-title { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+        .anom-meta { font-size: 12px; color: var(--text-muted); }
+        .anom .ic { color: var(--text-muted); }
+        .anom-more { margin-top: 12px; }
+        .no-anom { padding: 28px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-strong); border-radius: 10px; font-size: 14px; }
+        .no-anom .ic { color: var(--add); width: 28px; height: 28px; margin-bottom: 6px; }
+
+        .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+        .tab { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        .tab:hover { color: var(--text); }
+        .tab[aria-selected="true"] { color: var(--text); border-color: var(--accent); background: var(--accent-soft); }
+        .tab .cnt { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--surface-3); color: var(--text-muted); }
+        .tab .cnt.h { background: var(--high-bg); color: var(--high); }
+        .detail-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 16px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); margin-bottom: 14px; }
+        .dm-item { display: grid; }
+        .dm-item .label { font-size: 11px; }
+        .dm-item b { font-size: 15px; }
+        .ver-pick { display: flex; align-items: center; gap: 8px; }
+        .ver-pick select { min-height: 38px; padding: 0 30px 0 10px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); font-family: var(--mono); font-size: 13px; }
+        .ver-pick .ic { color: var(--text-muted); }
+        .filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; }
+        .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        .chip:hover { color: var(--text); border-color: var(--border-strong); }
+        .chip[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: var(--accent-soft); }
+        .chip .n { font-family: var(--mono); font-size: 12px; opacity: .85; }
+        .chip.block-filter { border-style: dashed; color: var(--accent); border-color: var(--accent); }
+
+        .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 860px; }
+        thead th { position: sticky; top: 0; background: var(--surface-2); text-align: left; font-size: 12px; font-weight: 600; color: var(--text-muted); padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        tbody td { padding: 11px 12px; border-top: 1px solid var(--border); vertical-align: top; }
+        tbody tr:first-child td { border-top: 0; }
+        tbody tr.r-add { box-shadow: inset 3px 0 0 var(--add); }
+        tbody tr.r-del { box-shadow: inset 3px 0 0 var(--del); }
+        tbody tr.r-qty { box-shadow: inset 3px 0 0 var(--qty); }
+        tbody tr.r-note { box-shadow: inset 3px 0 0 var(--note); }
+        tbody tr.r-del td.c-mat { text-decoration: line-through; text-decoration-color: var(--del); }
+        tbody tr:hover td { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+        tbody tr.flash td { animation: flash 2s var(--ease-out); }
+        @keyframes flash { 0%, 40% { background: var(--accent-soft); } 100% { background: transparent; } }
+        td.num, th.num { text-align: right; }
+        .qty-cell { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+        .qty-cell .prev { color: var(--text-muted); }
+        .qty-cell .arr { color: var(--text-muted); font-size: 12px; }
+        .qty-cell .cur { font-weight: 600; }
+        .delta { font-family: var(--mono); font-weight: 600; white-space: nowrap; }
+        .delta.up { color: var(--add); } .delta.down { color: var(--del); }
+        .delta small { font-weight: 500; color: var(--text-muted); margin-left: 4px; }
+        .note-cell { max-width: 340px; overflow-wrap: anywhere; }
+        .note-cell del { display: block; color: var(--text-muted); text-decoration-color: var(--del); font-size: 13px; }
+        .note-cell ins { display: block; text-decoration: none; }
+        .note-cell ins::before { content: "→ "; color: var(--note); }
+        .issue-cell { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; min-width: 190px; }
+        .issue-line { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+        .table-empty { padding: 40px; text-align: center; color: var(--text-muted); }
+        .table-foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: var(--text-muted); }
+
+        /* ───────────── Entrance ───────────── */
+        .rise { animation: rise .6s var(--ease-out) both; }
+        .rise.d1 { animation-delay: .06s; } .rise.d2 { animation-delay: .12s; } .rise.d3 { animation-delay: .18s; } .rise.d4 { animation-delay: .24s; }
+        @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+        /* ───────────── Responsive ───────────── */
+        @media (max-width: 1180px) {
+            .kpis { grid-template-columns: repeat(3, 1fr); }
+            .grid2 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 980px) {
+            .hero .container { grid-template-columns: 1fr; }
+            .hero-visual { min-height: 0; padding: 24px 0; }
+            .app { grid-template-columns: 1fr; }
+            .panel { position: static; max-height: none; }
+            .steps { grid-template-columns: 1fr; }
+            .step-card::after { display: none; }
+            .bento { grid-template-columns: 1fr; }
+            .b-diff, .b-shaft, .b-rules, .b-alerts { grid-column: auto; }
+            .stats-band .container { grid-template-columns: repeat(2, 1fr); }
+            .stat:nth-child(3) { border-left: 0; }
+            .stat:nth-child(n+3) { border-top: 1px solid var(--border); }
+        }
+        @media (max-width: 640px) {
+            .hero { padding: 56px 0 48px; }
+            .float-card { display: none; }
+            .kpis { grid-template-columns: repeat(2, 1fr); }
+            .section { padding: 64px 0; }
+            .cta-inner { padding: 32px 24px; }
+            .mini-diff .md-row { grid-template-columns: 72px 1fr auto; }
+            .mini-diff .md-row .md-mat { display: none; }
+            .stat { padding: 20px 16px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+        }
+    </style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로 건너뛰기</a>
+
+<header class="topbar">
+    <div class="container">
+        <a href="#/" class="brand" aria-label="BOM Sentinel 홈">
+            <span class="brand-mark"><span data-icon="activity"></span></span>
+            <span class="brand-text">BOM Sentinel</span>
+        </a>
+        <nav class="nav" aria-label="주 메뉴">
+            <a href="#/" data-nav="home">홈</a>
+            <a href="#/analyze" data-nav="analyze">BOM 분석</a>
+        </nav>
+        <div class="topbar-right">
+            <span class="env-pill">DEMO · PLM 연동 전</span>
+            <button class="icon-btn" id="theme-toggle" aria-label="라이트 모드로 전환"></button>
+        </div>
+    </div>
+</header>
+
+<main id="main" tabindex="-1">
+    <!-- ═══════════════ ⓪ 메인(랜딩) ═══════════════ -->
+    <div id="view-home" class="view">
+        <section class="hero" aria-labelledby="hero-title">
+            <div class="container">
+                <div>
+                    <span class="eyebrow rise"><span class="dot"></span>PLM BOM Integrity Monitor</span>
+                    <h1 id="hero-title" class="rise d1">BOM 변경,<br><em>놓치기 전에</em> 먼저 감지합니다.</h1>
+                    <p class="hero-sub rise d2">PLM에 등록된 엘리베이터 호기별 BOM을 이전 버전과 자동 비교해 부품 추가·삭제·수량 변경을 찾아내고, 위험도에 따라 이상을 분류합니다.</p>
+                    <div class="hero-cta rise d3">
+                        <a href="#/analyze" class="btn primary lg">분석 시작 <span data-icon="arrow"></span></a>
+                        <button class="btn ghost lg" data-scroll="how">작동 방식 보기</button>
+                    </div>
+                    <div class="hero-trust rise d4">
+                        <span><span data-icon="check"></span>버전 간 자동 Diff</span>
+                        <span><span data-icon="check"></span>심각도 3단계 판정</span>
+                        <span><span data-icon="check"></span>CSV 리포트</span>
+                    </div>
+                </div>
+                <div class="hero-visual rise d2" aria-hidden="true">
+                    <div class="shaft-demo">
+                        <ol id="sd-floors"></ol>
+                        <div class="sd-car"></div>
+                    </div>
+                    <div class="float-card f1">
+                        <span class="sev-badge high"><span data-icon="alert" data-size="sm"></span>High</span>
+                        <div class="fc-row"><b>안전장치 BLOCK 부품 삭제</b></div>
+                        <div class="fc-row mono muted" style="font-size:12px">B70 · EL-7002-A0</div>
+                    </div>
+                    <div class="float-card f2">
+                        <span class="type-chip qty"><span data-icon="updown" data-size="sm"></span>수량</span>
+                        <div class="fc-row mono"><span class="muted">4</span><span class="muted">→</span><b>12</b><span class="delta up">+200%</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="stats-band" aria-label="현황 요약">
+            <div class="container" id="stats"></div>
+        </section>
+
+        <section class="section" id="how" aria-labelledby="how-title">
+            <div class="container">
+                <div class="section-head">
+                    <span class="kicker">HOW IT WORKS</span>
+                    <h2 id="how-title">세 단계로 끝나는 BOM 무결성 점검</h2>
+                    <p>호기를 고르면 나머지는 시스템이 처리합니다. 사람이 엑셀을 대조하던 시간을 감지와 판단에 씁니다.</p>
+                </div>
+                <ol class="steps">
+                    <li class="step-card">
+                        <span class="num">01</span>
+                        <div class="step-ic"><span data-icon="layers" data-size="lg"></span></div>
+                        <h3>호기 선택</h3>
+                        <p>브랜드·호기번호로 검색해 점검할 호기를 여러 개 한 번에 선택합니다.</p>
+                    </li>
+                    <li class="step-card">
+                        <span class="num">02</span>
+                        <div class="step-ic"><span data-icon="compare" data-size="lg"></span></div>
+                        <h3>버전 비교</h3>
+                        <p>자재번호 + BLOCK NO 기준으로 이전 버전과 현재 버전을 줄 단위로 대조합니다.</p>
+                    </li>
+                    <li class="step-card">
+                        <span class="num">03</span>
+                        <div class="step-ic"><span data-icon="shield" data-size="lg"></span></div>
+                        <h3>이상 판정</h3>
+                        <p>안전 블록 삭제, 수량 급변, 중복 등록 등 규칙으로 High·Medium·Low를 매깁니다.</p>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <section class="section" style="padding-top:0" aria-labelledby="feat-title">
+            <div class="container">
+                <div class="section-head">
+                    <span class="kicker">FEATURES</span>
+                    <h2 id="feat-title">무엇이, 어디서, 얼마나 바뀌었는지</h2>
+                </div>
+                <div class="bento">
+                    <article class="bento-card b-diff">
+                        <h3>버전 간 Diff를 한눈에</h3>
+                        <p>추가·삭제·수량·주석 변경을 색상과 아이콘으로 구분합니다.</p>
+                        <div class="mini-diff" aria-hidden="true">
+                            <div class="md-row add"><span class="type-chip add"><span data-icon="plus" data-size="sm"></span>추가</span><span class="mono md-mat">EL-2090-A0</span><span>노이즈 필터 EMI</span><span class="mono">0 → 1</span></div>
+                            <div class="md-row del"><span class="type-chip del"><span data-icon="minus" data-size="sm"></span>삭제</span><span class="mono md-mat">EL-7002-A0</span><span>비상정지장치</span><span class="mono">2 → 0</span></div>
+                            <div class="md-row qty"><span class="type-chip qty"><span data-icon="updown" data-size="sm"></span>수량</span><span class="mono md-mat">EL-5001-A0</span><span>메인 로프 Ø10</span><span class="mono">6 → 18</span></div>
+                        </div>
+                    </article>
+                    <article class="bento-card b-shaft">
+                        <h3>호기 샤프트 뷰</h3>
+                        <p>BLOCK을 층으로, 변경이 몰린 층에 불이 켜집니다.</p>
+                        <div class="mini-shafts" aria-hidden="true" id="mini-shafts"></div>
+                    </article>
+                    <article class="bento-card b-rules">
+                        <h3>규칙 기반 이상 판정</h3>
+                        <p>변경을 위험도로 분류해 우선순위를 정합니다.</p>
+                        <ul class="rule-list">
+                            <li><span class="sev-badge high"><span data-icon="alert" data-size="sm"></span>High</span><span>안전장치(B70) 부품 삭제 · 수량 +100% 이상 또는 −50% 이하 (2개 이상 변동)</span></li>
+                            <li><span class="sev-badge med"><span data-icon="alert" data-size="sm"></span>Medium</span><span>수량 ±30% 변동 · 대체품 없는 삭제 · 동일 BLOCK 자재 중복</span></li>
+                            <li><span class="sev-badge low"><span data-icon="info" data-size="sm"></span>Low</span><span>변경 사유(주석) 미갱신 · ECN 근거 없는 신규 부품</span></li>
+                        </ul>
+                    </article>
+                    <article class="bento-card b-alerts">
+                        <h3>최근 감지</h3>
+                        <p>최신 버전 기준 우선 확인이 필요한 항목입니다.</p>
+                        <div class="alert-feed" id="alert-feed"></div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="cta-band" aria-labelledby="cta-title">
+            <div class="container">
+                <div class="cta-inner">
+                    <div>
+                        <h2 id="cta-title">지금 호기를 선택하고 비교해 보세요.</h2>
+                        <p>선택한 호기의 최신 BOM을 직전 버전과 즉시 대조합니다.</p>
+                    </div>
+                    <a href="#/analyze" class="btn primary lg">분석 시작 <span data-icon="arrow"></span></a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- ═══════════════ ①~④ 분석 ═══════════════ -->
+    <div id="view-app" class="view" hidden>
+        <div class="container app">
+            <aside class="panel" aria-labelledby="panel-title">
+                <div>
+                    <span class="step-tag">STEP 1</span>
+                    <h2 id="panel-title">호기 선택</h2>
+                </div>
+                <div class="field">
+                    <span class="label" id="brand-label">브랜드</span>
+                    <div class="seg" role="radiogroup" aria-labelledby="brand-label" id="brand-seg"></div>
+                </div>
+                <div class="field">
+                    <label class="label" for="q">호기번호 검색</label>
+                    <div class="search"><span data-icon="search"></span><input id="q" type="search" placeholder="예: ST-26104" autocomplete="off"></div>
+                </div>
+                <div class="field">
+                    <div class="list-head"><span class="label" id="sel-count">0개 선택</span><button class="link" id="sel-all" type="button">전체 선택</button></div>
+                    <ul class="hogi-list" id="hogi-list" aria-label="호기 목록"></ul>
+                </div>
+                <div class="field">
+                    <span class="label" id="mode-label">비교 기준</span>
+                    <div class="seg" role="radiogroup" aria-labelledby="mode-label" id="mode-seg">
+                        <button type="button" role="radio" data-mode="prev" aria-checked="true">직전 버전 대비</button>
+                        <button type="button" role="radio" data-mode="first" aria-checked="false">최초 버전 대비</button>
+                    </div>
+                </div>
+                <button class="btn primary block" id="run" type="button" disabled>이상 감지 실행</button>
+            </aside>
+
+            <section class="results" id="results" aria-label="분석 결과"></section>
+        </div>
+    </div>
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <span>BOM Sentinel · 엘리베이터 BOM 이상감지 프로토타입</span>
+        <span>표시된 BOM은 데모 데이터입니다 · PLM 연동 시 실데이터로 대체</span>
+    </div>
+</footer>
+
+<p class="sr-only" role="status" aria-live="polite" id="status"></p>
+
+<script>
+    (() => {
+        'use strict';
+
+        /* ───────────── Utils ───────────── */
+        const $ = (s, el = document) => el.querySelector(s);
+        const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const pad = (n, w) => String(n).padStart(w, '0');
+        const fmt = n => Number(n).toLocaleString('ko-KR');
+        const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const sleep = ms => new Promise(r => setTimeout(r, reduceMotion ? Math.min(ms, 60) : ms));
+        const fmtDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1, 2)}-${pad(d.getDate(), 2)}`;
+
+        const ICON = {
+            arrow: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+            plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+            minus: '<path d="M5 12h14"/>',
+            updown: '<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>',
+            pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+            alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+            info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+            search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+            download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+            sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+            moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+            compare: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M11 18H8a2 2 0 0 1-2-2V9"/>',
+            layers: '<path d="m12 2 10 5-10 5L2 7Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>',
+            shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+            check: '<path d="M20 6 9 17l-5-5"/>',
+            activity: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+            x: '<path d="M18 6 6 18M6 6l12 12"/>',
+            chevron: '<path d="m9 18 6-6-6-6"/>',
+        };
+        const icon = (name, size = '') => `<svg class="ic ${size ? 'ic-' + size : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name]}</svg>`;
+        const hydrateIcons = (root = document) => $$('[data-icon]', root).forEach(el => { el.outerHTML = icon(el.dataset.icon, el.dataset.size || ''); });
+
+        /* ───────────── Domain ───────────── */
+        const BLOCKS = [
+            { code: 'B10', name: '권상기' },
+            { code: 'B20', name: '제어반' },
+            { code: 'B30', name: '카(CAR)' },
+            { code: 'B40', name: '도어' },
+            { code: 'B50', name: '로프·시브' },
+            { code: 'B60', name: '가이드레일' },
+            { code: 'B70', name: '안전장치', critical: true },
+            { code: 'B80', name: '승강장' },
+        ];
+        const BLOCK = Object.fromEntries(BLOCKS.map(b => [b.code, b]));
+        // 실제 승강로 배치: 기계실(상부) → 피트(하부)
+        const SHAFT_ORDER = ['B10', 'B20', 'B50', 'B30', 'B40', 'B80', 'B60', 'B70'];
+
+        const SEV = {
+            3: { key: 'high', label: 'High', icon: 'alert' },
+            2: { key: 'med', label: 'Medium', icon: 'alert' },
+            1: { key: 'low', label: 'Low', icon: 'info' },
+        };
+        const TYPE = {
+            ADD: { label: '추가', icon: 'plus', cls: 'add' },
+            DEL: { label: '삭제', icon: 'minus', cls: 'del' },
+            QTY: { label: '수량', icon: 'updown', cls: 'qty' },
+            NOTE: { label: '주석', icon: 'pencil', cls: 'note' },
+            SAME: { label: '동일', icon: 'check', cls: 'same' },
+        };
+        const sevBadge = s => s ? `<span class="sev-badge ${SEV[s].key}">${icon(SEV[s].icon, 'sm')}${SEV[s].label}</span>` : '';
+        const typeChip = t => `<span class="type-chip ${TYPE[t].cls}">${icon(TYPE[t].icon, 'sm')}${TYPE[t].label}</span>`;
+
+        /* ───────────── Demo data (PLM 연동 시 이 영역을 API 응답으로 교체) ─────────────
+           BOM 라인 컬럼: 브랜드, 호기번호, 버전, 자재번호, BLOCK NO, 수량, 주석          */
+        function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+        const rng = mulberry32(20261003);
+        const ri = (a, b) => a + Math.floor(rng() * (b - a + 1));
+        const pick = arr => arr[Math.floor(rng() * arr.length)];
+        const ecn = () => `ECN-26-${pad(ri(101, 899), 3)}`;
+        const descOf = note => (note || '').split(' · ')[0];
+
+        const CATALOG = {
+            B10: [['PM 기어리스 권상기 11kW', 1], ['브레이크 라이닝', 2], ['로터리 엔코더 2048P', 1], ['방진 고무 패드', 4], ['권상기 베드 프레임', 1]],
+            B20: [['인버터 15kW/380V', 1], ['메인 CPU 보드', 1], ['전원 트랜스 3kVA', 1], ['릴레이 모듈', 6], ['회생 브레이크 저항', 2], ['제어 케이블 하네스', 3]],
+            B30: [['카 프레임 1600×1500', 1], ['카 운전반(COP) 터치형', 1], ['LED 천장 조명 패널', 4], ['핸드레일 SUS', 2], ['비상통화장치', 1], ['하중 검출 센서', 1]],
+            B40: [['도어 머신 VVVF', 1], ['카 도어 패널 SUS', 2], ['세이프티 엣지', 2], ['도어 슈', 8], ['행거 롤러', 8]],
+            B50: [['메인 로프 Ø10', 6], ['로프 소켓', 12], ['편향 시브 Ø400', 1], ['보상 체인', 2]],
+            B60: [['카 레일 T89', 14], ['카운터 레일 T70', 14], ['레일 브래킷', 28], ['피시 플레이트', 12]],
+            B70: [['조속기(Governor)', 1], ['비상정지장치', 2], ['유압 완충기', 2], ['상승과속방지장치', 1], ['파이널 리미트 스위치', 4]],
+            B80: [['승강장 호출 버튼', 0, 1], ['홀 랜턴', 0, 1], ['승강장 도어 SUS', 0, 1], ['층 표시기 LCD', 0, 1]],
+        };
+        const BASE = [];
+        Object.entries(CATALOG).forEach(([code, parts]) => parts.forEach(([desc, qty, perFloor], i) => {
+            BASE.push({ matNo: `EL-${code.slice(1)}${pad(i + 1, 2)}-A0`, blockNo: code, qty, perFloor: !!perFloor, desc });
+        }));
+        const SPARES = [['B20', '노이즈 필터 EMI', 1], ['B30', '카 내부 CCTV', 1], ['B40', '광전 세이프티 커튼', 1], ['B10', '권상기 냉각 팬', 2], ['B80', '장애인용 호출 버튼', 2], ['B70', '도어 존 센서', 2], ['B30', '공기청정 유닛', 1], ['B50', '로프 텐션 센서', 1]]
+            .map(([blockNo, desc, qty], i) => ({ matNo: `EL-${blockNo.slice(1)}9${i}-A0`, blockNo, desc, qty }));
+
+        const makeBase = floors => BASE.map(b => ({
+            matNo: b.matNo, blockNo: b.blockNo, note: b.desc,
+            qty: b.perFloor ? floors : b.blockNo === 'B60' ? Math.max(4, Math.round(b.qty * floors / 12)) : b.qty,
+        }));
+
+        const OPS = {
+            qty(L) { const l = pick(L); l.qty = Math.max(1, l.qty + pick([-1, 1, 1, 2])); if (rng() < .6) l.note = `${descOf(l.note)} · ${ecn()} 수량 조정`; },
+            qtyBig(L) { const l = pick(L.filter(x => x.blockNo !== 'B80')); l.qty = (l.qty >= 3 && rng() < .4) ? Math.max(1, Math.round(l.qty / 3)) : l.qty * 3; if (rng() < .5) l.note = `${descOf(l.note)} · ${ecn()}`; },
+            del(L) { const c = L.filter(x => x.blockNo !== 'B70'); L.splice(L.indexOf(pick(c)), 1); },
+            delSafety(L) { const c = L.filter(x => x.blockNo === 'B70'); if (c.length) L.splice(L.indexOf(pick(c)), 1); },
+            add(L) { const c = SPARES.filter(s => !L.some(l => l.matNo === s.matNo)); if (!c.length) return; const s = pick(c); L.push({ matNo: s.matNo, blockNo: s.blockNo, qty: s.qty, note: rng() < .55 ? `${s.desc} · ${ecn()} 신규 적용` : s.desc }); },
+            replace(L) {
+                const l = pick(L.filter(x => x.blockNo !== 'B70' && x.blockNo !== 'B80'));
+                const head = l.matNo.slice(0, -2), rev = l.matNo.slice(-2);
+                L.splice(L.indexOf(l), 1, { matNo: head + String.fromCharCode(rev.charCodeAt(0) + 1) + '0', blockNo: l.blockNo, qty: l.qty, note: `${descOf(l.note)} · 대체품 적용 ${ecn()}` });
+            },
+            dup(L) { const l = pick(L.filter(x => x.blockNo !== 'B80')); L.push({ ...l }); },
+            note(L) { const l = pick(L); l.note = `${descOf(l.note)} · ${ecn()} 사양 주석 갱신`; },
+        };
+        const PROFILES = {
+            heavySafety: ['delSafety', 'qtyBig', 'qty', 'add', 'note'],
+            qtyHeavy: ['qtyBig', 'qtyBig', 'qty', 'qty'],
+            clean: [],
+            light: ['qty', 'note'],
+            dupCase: ['dup', 'qty', 'add'],
+            replaceCase: ['replace', 'replace', 'del', 'qty'],
+        };
+        const opsFor = p => p === 'mixed'
+            ? Array.from({ length: ri(3, 5) }, () => pick(['qty', 'qty', 'del', 'add', 'note', 'replace', 'qtyBig']))
+            : PROFILES[p];
+
+        const BRANDS = [{ name: 'STRATA', pre: 'ST' }, { name: 'NOVA', pre: 'NV' }, { name: 'ORBIT', pre: 'OB' }];
+        const PLAN = ['heavySafety', 'qtyHeavy', 'clean', 'mixed', 'mixed', 'light', 'dupCase', 'mixed', 'light', 'clean', 'replaceCase', 'mixed'];
+
+        const HOGIS = PLAN.map((profile, i) => {
+            const b = BRANDS[i % BRANDS.length];
+            const floors = ri(6, 28);
+            const nVer = 2 + (i * 7 % 3);
+            const start = new Date(2026, 1 + i % 4, 2 + i);
+            const versions = [];
+            let lines = makeBase(floors);
+            for (let v = 0; v < nVer; v++) {
+                if (v > 0) {
+                    lines = lines.map(l => ({ ...l }));
+                    const ops = v === nVer - 1 ? opsFor(profile) : Array.from({ length: ri(1, 3) }, () => pick(['qty', 'note', 'add', 'replace']));
+                    ops.forEach(o => OPS[o](lines));
+                }
+                const d = new Date(start); d.setDate(d.getDate() + v * 38);
+                versions.push({ ver: `Rev.${pad(v + 1, 2)}`, date: fmtDate(d), lines });
+            }
+            return { brand: b.name, hogiNo: `${b.pre}-26${pad(104 + i * 13, 3)}`, floors, versions };
+        });
+        const HOGI = Object.fromEntries(HOGIS.map(h => [h.hogiNo, h]));
+
+        /* ───────────── Diff & 이상 판정 ───────────── */
+        function keyed(lines) {
+            const m = new Map(), seen = {};
+            for (const l of lines) {
+                const k0 = `${l.matNo}|${l.blockNo}`;
+                seen[k0] = (seen[k0] || 0) + 1;
+                m.set(`${k0}#${seen[k0]}`, l);
+            }
+            return m;
+        }
+        function diff(prev, cur) {
+            const A = keyed(prev), B = keyed(cur), rows = [];
+            for (const [key, a] of A) {
+                const b = B.get(key);
+                if (!b) { rows.push({ key, type: 'DEL', matNo: a.matNo, blockNo: a.blockNo, prevQty: a.qty, curQty: null, prevNote: a.note, curNote: null, delta: -a.qty }); continue; }
+                const type = a.qty !== b.qty ? 'QTY' : a.note !== b.note ? 'NOTE' : 'SAME';
+                rows.push({ key, type, matNo: a.matNo, blockNo: a.blockNo, prevQty: a.qty, curQty: b.qty, prevNote: a.note, curNote: b.note, delta: b.qty - a.qty });
+            }
+            for (const [key, b] of B) {
+                if (A.has(key)) continue;
+                rows.push({ key, type: 'ADD', matNo: b.matNo, blockNo: b.blockNo, prevQty: null, curQty: b.qty, prevNote: null, curNote: b.note, delta: b.qty, dup: Number(key.split('#')[1]) > 1 });
+            }
+            rows.sort((x, y) => x.blockNo.localeCompare(y.blockNo) || x.matNo.localeCompare(y.matNo) || x.key.localeCompare(y.key));
+            return rows;
+        }
+        function evaluate(rows) {
+            for (const r of rows) {
+                r.issues = [];
+                const crit = BLOCK[r.blockNo]?.critical;
+                if (r.type === 'DEL') {
+                    const replaced = rows.some(x => x.type === 'ADD' && x.blockNo === r.blockNo && descOf(x.curNote) === descOf(r.prevNote));
+                    if (crit) r.issues.push({ sev: 3, msg: '안전장치 BLOCK 부품 삭제' });
+                    else if (replaced) r.issues.push({ sev: 1, msg: '부품 교체 추정 – 대체품 승인 확인' });
+                    else r.issues.push({ sev: 2, msg: '부품 삭제 – 대체 부품 미확인' });
+                } else if (r.type === 'ADD') {
+                    const replacing = rows.some(x => x.type === 'DEL' && x.blockNo === r.blockNo && descOf(x.prevNote) === descOf(r.curNote));
+                    if (r.dup) r.issues.push({ sev: 2, msg: '동일 BLOCK 내 자재번호 중복 등록' });
+                    else if (crit) r.issues.push({ sev: 2, msg: '안전장치 BLOCK 신규 부품 – 인증 확인' });
+                    else if (!replacing && !/ECN/.test(r.curNote)) r.issues.push({ sev: 1, msg: '신규 부품 – 설계변경(ECN) 근거 미기재' });
+                } else if (r.type === 'QTY') {
+                    const ratio = (r.curQty - r.prevQty) / r.prevQty;
+                    const pct = `${ratio > 0 ? '+' : ''}${Math.round(ratio * 100)}%`;
+                    if ((ratio >= 1 || ratio <= -0.5) && Math.abs(r.delta) >= 2) r.issues.push({ sev: 3, msg: `수량 급변 (${pct})` });
+                    else if (Math.abs(ratio) >= 0.3) r.issues.push({ sev: 2, msg: `수량 ${pct} 변동` });
+                    if (r.curNote === r.prevNote) r.issues.push({ sev: 1, msg: '수량 변경 사유(주석) 미갱신' });
+                }
+                r.issues.sort((a, b) => b.sev - a.sev);
+                r.sev = r.issues.length ? r.issues[0].sev : 0;
+            }
+            return rows;
+        }
+        function analyze(h, bi, ti) {
+            const base = h.versions[bi], target = h.versions[ti];
+            const rows = evaluate(diff(base.lines, target.lines));
+            const changes = rows.filter(r => r.type !== 'SAME');
+            const blockStat = {};
+            for (const c of BLOCKS) blockStat[c.code] = { count: 0, sev: 0 };
+            for (const r of changes) { const s = blockStat[r.blockNo]; s.count++; s.sev = Math.max(s.sev, r.sev); }
+            return { h, bi, ti, base, target, rows, changes, blockStat, anomalies: changes.filter(r => r.sev > 0) };
+        }
+        const latestPair = h => [Math.max(0, h.versions.length - 2), h.versions.length - 1];
+
+        /* ───────────── Landing ───────────── */
+        function countUp(el, to, dur = 1000) {
+            if (reduceMotion) { el.textContent = fmt(to); return; }
+            const t0 = performance.now();
+            const step = t => { const p = Math.min(1, (t - t0) / dur); el.textContent = fmt(Math.round(to * (1 - Math.pow(1 - p, 3)))); if (p < 1) requestAnimationFrame(step); };
+            requestAnimationFrame(step);
+        }
+
+        function renderLanding() {
+            const DEMO = { B70: 3, B20: 2, B40: 1 };
+            $('#sd-floors').innerHTML = SHAFT_ORDER.map(c => `<li class="sd-floor s${DEMO[c] || 0}"><span class="mono">${c}</span><span>${BLOCK[c].name}</span><i class="sd-light s${DEMO[c] || 0}"></i></li>`).join('');
+
+            const all = HOGIS.map(h => analyze(h, ...latestPair(h)));
+            const lines = HOGIS.reduce((s, h) => s + h.versions.at(-1).lines.length, 0);
+            const changes = all.reduce((s, r) => s + r.changes.length, 0);
+            const anoms = all.reduce((s, r) => s + r.anomalies.length, 0);
+            const highs = all.reduce((s, r) => s + r.anomalies.filter(a => a.sev === 3).length, 0);
+            const stats = [
+                [HOGIS.length, '등록 호기', ''],
+                [lines, '관리 중인 BOM 라인', ''],
+                [changes, '최신 버전 변경 감지', ''],
+                [anoms, `이상 판정 (High ${highs}건)`, 'danger'],
+            ];
+            $('#stats').innerHTML = stats.map(([v, l, c]) => `<div class="stat"><div class="stat-val ${c}" data-count="${v}">0</div><div class="stat-label">${l}</div></div>`).join('');
+            const runCount = () => $$('#stats [data-count]').forEach(el => countUp(el, +el.dataset.count));
+            if ('IntersectionObserver' in window) {
+                const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { runCount(); io.disconnect(); } }, { threshold: .4 });
+                io.observe($('#stats'));
+            } else runCount();
+
+            $('#mini-shafts').innerHTML = all.slice(0, 4).map(r =>
+                `<div class="mini-shaft">${SHAFT_ORDER.map(c => `<i class="s${r.blockStat[c].count ? r.blockStat[c].sev || 1 : 0}"></i>`).join('')}</div>`).join('');
+
+            const feed = all.flatMap(r => r.anomalies.map(a => ({ r, a })))
+                .sort((x, y) => y.a.sev - x.a.sev || y.r.target.date.localeCompare(x.r.target.date))
+                .slice(0, 5);
+            $('#alert-feed').innerHTML = feed.map(({ r, a }) => `
+        <a href="#/analyze?h=${encodeURIComponent(r.h.hogiNo)}">
+          ${sevBadge(a.sev)}
+          <span class="af-body"><span class="af-title">${esc(a.issues[0].msg)}</span><br><span class="af-meta mono">${esc(r.h.hogiNo)} · ${r.target.ver} · ${a.blockNo} · ${esc(a.matNo)}</span></span>
+          ${icon('chevron')}
+        </a>`).join('');
+        }
+
+        /* ───────────── App state ───────────── */
+        const state = {
+            brand: 'ALL', query: '', mode: 'prev',
+            selected: new Set(HOGIS.slice(0, 6).map(h => h.hogiNo)),
+            pairs: {}, results: null, ranAt: null,
+            active: null, typeFilter: 'CHANGED', blockFilter: null, sevFilter: 0, showAllAnoms: false,
+            busy: false,
+        };
+        const announce = msg => { $('#status').textContent = msg; };
+
+        function visibleHogis() {
+            const q = state.query.trim().toLowerCase();
+            return HOGIS.filter(h => (state.brand === 'ALL' || h.brand === state.brand) && (!q || h.hogiNo.toLowerCase().includes(q)));
+        }
+
+        function renderPanel() {
+            const brands = ['ALL', ...BRANDS.map(b => b.name)];
+            $('#brand-seg').innerHTML = brands.map(b => `<button type="button" role="radio" data-brand="${b}" aria-checked="${state.brand === b}">${b === 'ALL' ? '전체' : b}</button>`).join('');
+            const list = visibleHogis();
+            $('#hogi-list').innerHTML = list.length ? list.map(h => {
+                const last = h.versions.at(-1);
+                return `<li><label class="hogi-item">
+          <input type="checkbox" value="${h.hogiNo}" ${state.selected.has(h.hogiNo) ? 'checked' : ''}>
+          <span class="hi-check">${icon('check', 'sm')}</span>
+          <span class="hi-main"><span class="hi-no mono">${h.hogiNo}</span><span class="hi-meta">${h.brand} · ${last.ver} · ${last.lines.length}라인</span></span>
+          <span class="hi-ver mono" title="등록 버전 수">${h.versions.length} ver</span>
+        </label></li>`;
+            }).join('') : `<li class="list-empty">조건에 맞는 호기가 없습니다.<br>검색어나 브랜드를 바꿔 보세요.</li>`;
+            updateSelectionUI();
+        }
+        function updateSelectionUI() {
+            const n = state.selected.size;
+            $('#sel-count').textContent = `${n}개 선택 · 전체 ${HOGIS.length}개`;
+            const vis = visibleHogis();
+            const allOn = vis.length > 0 && vis.every(h => state.selected.has(h.hogiNo));
+            $('#sel-all').textContent = allOn ? '표시 항목 해제' : '표시 항목 전체 선택';
+            const run = $('#run');
+            run.disabled = n === 0 || state.busy;
+            run.innerHTML = state.busy ? '분석 중…' : n ? `${icon('activity')}${n}개 호기 이상 감지 실행` : '호기를 선택하세요';
+            $$('#mode-seg button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.mode === state.mode)));
+        }
+
+        function renderEmpty() {
+            $('#results').innerHTML = `
+        <div class="empty-state">
+          <div class="es-ic">${icon('compare', 'lg')}</div>
+          <h2>비교할 호기를 선택하고 실행하세요</h2>
+          <p>선택한 호기의 BOM을 이전 버전과 비교해 부품·수량 변경과 이상을 감지합니다.</p>
+          <div class="es-steps"><span>① 호기 선택</span><span>② 대시보드</span><span>③ 호기별 Diff</span><span>④ 이상 항목</span></div>
+        </div>`;
+        }
+
+        async function run() {
+            if (!state.selected.size || state.busy) return;
+            state.busy = true; updateSelectionUI();
+            const order = HOGIS.filter(h => state.selected.has(h.hogiNo));
+            state.pairs = {};
+            for (const h of order) {
+                const ti = h.versions.length - 1;
+                state.pairs[h.hogiNo] = { bi: state.mode === 'first' ? 0 : Math.max(0, ti - 1), ti };
+            }
+            const steps = ['PLM에서 BOM 조회', '버전 매칭 (자재번호 + BLOCK NO)', '라인 단위 Diff 계산', '이상 판정 규칙 평가'];
+            $('#results').innerHTML = `
+        <div class="loading" aria-busy="true">
+          <div class="scan"><i id="scan-bar"></i></div>
+          <ol class="load-steps">${steps.map(s => `<li><span class="ls-dot">${icon('check', 'sm')}</span>${s}</li>`).join('')}</ol>
+        </div>`;
+            $('#results').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+            const lis = $$('.load-steps li');
+            for (let i = 0; i < lis.length; i++) {
+                lis[i].classList.add('active');
+                $('#scan-bar').style.width = `${((i + 1) / lis.length) * 100}%`;
+                await sleep(320);
+                lis[i].classList.remove('active'); lis[i].classList.add('done');
+            }
+            await sleep(160);
+            state.active = order[0].hogiNo;
+            state.typeFilter = 'CHANGED'; state.blockFilter = null; state.sevFilter = 0; state.showAllAnoms = false;
+            state.ranAt = new Date();
+            compute();
+            state.busy = false; updateSelectionUI();
+            renderResults(true);
+            const t = totals();
+            announce(`분석 완료. ${state.results.length}개 호기, 변경 ${t.changes}건, 이상 ${t.anoms}건.`);
+        }
+
+        function compute() {
+            state.results = Object.entries(state.pairs).map(([no, p]) => analyze(HOGI[no], p.bi, p.ti));
+        }
+        function totals() {
+            const t = { hogi: state.results.length, add: 0, del: 0, qty: 0, note: 0, changes: 0, anoms: 0, high: 0, med: 0, low: 0 };
+            for (const r of state.results) for (const c of r.changes) {
+                t.changes++;
+                if (c.type === 'ADD') t.add++; else if (c.type === 'DEL') t.del++; else if (c.type === 'QTY') t.qty++; else t.note++;
+                if (c.sev) { t.anoms++; t[SEV[c.sev].key]++; }
+            }
+            return t;
+        }
+
+        /* ───────────── Results (②~④) ───────────── */
+        function renderResults(animate) {
+            const t = totals();
+            const modeText = state.mode === 'first' ? '최초 버전 대비' : '직전 버전 대비';
+            const time = state.ranAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+            $('#results').innerHTML = `
+        <div class="res-head ${animate ? 'rise' : ''}">
+          <div>
+            <span class="step-tag">STEP 2 · 분석 결과</span>
+            <h2>${t.hogi}개 호기 · 변경 ${fmt(t.changes)}건 · <span class="hl">이상 ${fmt(t.anoms)}건</span></h2>
+            <p class="muted">${modeText} · 실행 ${time} · 키: 자재번호 + BLOCK NO</p>
+          </div>
+          <button class="btn ghost" id="export" type="button">${icon('download')}CSV 리포트</button>
+        </div>
+
+        <div class="kpis ${animate ? 'rise d1' : ''}">
+          ${kpi('k-hogi', 'layers', '분석 호기', t.hogi, `총 ${fmt(state.results.reduce((s, r) => s + r.target.lines.length, 0))}라인`)}
+          ${kpi('k-add', 'plus', '부품 추가', t.add, '신규 자재 라인')}
+          ${kpi('k-del', 'minus', '부품 삭제', t.del, '이전 버전 대비 제거')}
+          ${kpi('k-qty', 'updown', '수량 변경', t.qty, `주석만 변경 ${t.note}건`)}
+          ${kpi('k-anom', 'alert', '이상 감지', t.anoms, `High ${t.high} · Medium ${t.med} · Low ${t.low}`)}
+        </div>
+
+        <div class="grid2 ${animate ? 'rise d2' : ''}">
+          <article class="card" aria-labelledby="shaft-title">
+            <div class="card-head">
+              <div><h3 id="shaft-title">호기 샤프트 뷰</h3><p>층 = BLOCK · 색 = 최고 이상 등급 · 숫자 = 변경 건수. 층을 누르면 상세로 이동합니다.</p></div>
+            </div>
+            <div class="shafts" id="shafts"></div>
+            <div class="legend">
+              <span><i></i>변경 없음</span><span><i class="s1"></i>변경 / Low</span><span><i class="s2"></i>Medium</span><span><i class="s3"></i>High</span>
+            </div>
+            <p class="shaft-order">위에서부터: ${SHAFT_ORDER.map(c => `${c} ${BLOCK[c].name}`).join(' · ')}</p>
+          </article>
+          <article class="card" aria-labelledby="anom-title">
+            <div class="card-head">
+              <div><span class="step-tag">STEP 4</span><h3 id="anom-title">이상 감지 항목</h3><p>심각도 순 · 누르면 해당 라인으로 이동</p></div>
+            </div>
+            <div class="seg" role="radiogroup" aria-label="심각도 필터" id="sev-seg" style="margin-bottom:12px"></div>
+            <ol class="anoms" id="anoms"></ol>
+            <div id="anom-more"></div>
+          </article>
+        </div>
+
+        <article class="card ${animate ? 'rise d3' : ''}" id="detail" aria-labelledby="detail-title">
+          <div class="card-head"><div><span class="step-tag">STEP 3</span><h3 id="detail-title">호기별 상세 비교</h3><p>이전 버전 → 현재 버전, 라인 단위 Diff</p></div></div>
+          <div class="tabs" role="tablist" aria-label="호기" id="tabs"></div>
+          <div id="detail-body"></div>
+        </article>`;
+
+            $$('.kpi-val[data-count]').forEach(el => animate ? countUp(el, +el.dataset.count, 800) : (el.textContent = fmt(+el.dataset.count)));
+            renderShafts(animate);
+            renderAnoms();
+            renderTabs();
+            renderDetail();
+        }
+        const kpi = (cls, ic, label, val, sub) => `
+      <div class="kpi ${cls}">
+        <div class="kpi-top"><span>${label}</span><span class="kpi-ic">${icon(ic)}</span></div>
+        <div class="kpi-val" data-count="${val}">0</div>
+        <div class="kpi-sub">${sub}</div>
+      </div>`;
+
+        function renderShafts(animate) {
+            $('#shafts').innerHTML = state.results.map(r => {
+                let carIdx = 0, best = -1;
+                SHAFT_ORDER.forEach((c, i) => { const s = r.blockStat[c]; const score = s.sev * 100 + s.count; if (s.count && score > best) { best = score; carIdx = i; } });
+                return `<div class="shaft">
+          <div class="shaft-top"><span class="mono">${r.h.hogiNo}</span><span class="mono">${r.base.ver} → ${r.target.ver}</span></div>
+          <div class="shaft-body">
+            <div class="shaft-car" data-idx="${carIdx}" style="transform:translateY(${animate ? 0 : `calc(var(--fh) * ${carIdx})`})"></div>
+            ${SHAFT_ORDER.map(c => {
+                    const s = r.blockStat[c];
+                    const lv = s.count ? (s.sev || 1) : 0;
+                    const active = state.active === r.h.hogiNo && state.blockFilter === c;
+                    const label = `${r.h.hogiNo} ${c} ${BLOCK[c].name}: 변경 ${s.count}건${s.sev ? `, 최고 ${SEV[s.sev].label}` : ''}`;
+                    return `<button type="button" class="floor s${lv} ${active ? 'is-active' : ''}" data-hogi="${r.h.hogiNo}" data-block="${c}" aria-label="${label}" title="${label}">
+                <span>${c}</span><span class="fl-count">${s.count || '·'}</span></button>`;
+                }).join('')}
+          </div>
+        </div>`;
+            }).join('');
+            if (animate) requestAnimationFrame(() => requestAnimationFrame(() =>
+                $$('.shaft-car').forEach(el => { el.style.transform = `translateY(calc(var(--fh) * ${el.dataset.idx}))`; })));
+        }
+
+        function renderAnoms() {
+            const t = totals();
+            const opts = [[0, `전체 ${t.anoms}`], [3, `High ${t.high}`], [2, `Medium ${t.med}`], [1, `Low ${t.low}`]];
+            $('#sev-seg').innerHTML = opts.map(([v, l]) => `<button type="button" role="radio" data-sev="${v}" aria-checked="${state.sevFilter === v}">${l}</button>`).join('');
+            const items = state.results.flatMap(r => r.anomalies.map(a => ({ r, a })))
+                .filter(({ a }) => !state.sevFilter || a.sev === state.sevFilter)
+                .sort((x, y) => y.a.sev - x.a.sev || x.r.h.hogiNo.localeCompare(y.r.h.hogiNo));
+            const LIMIT = 7;
+            const shown = state.showAllAnoms ? items : items.slice(0, LIMIT);
+            $('#anoms').innerHTML = items.length ? shown.map(({ r, a }) => `
+        <li><button type="button" class="anom" data-jump-hogi="${r.h.hogiNo}" data-jump-key="${esc(a.key)}">
+          ${sevBadge(a.sev)}
+          <span class="anom-body">
+            <span class="anom-title">${esc(a.issues[0].msg)}${a.issues.length > 1 ? ` <span class="muted">외 ${a.issues.length - 1}</span>` : ''}</span>
+            <span class="anom-meta mono">${r.h.hogiNo} · ${a.blockNo} ${esc(BLOCK[a.blockNo].name)} · ${esc(a.matNo)}</span>
+          </span>
+          ${icon('chevron')}
+        </button></li>`).join('')
+                : `<li class="no-anom">${icon('check')}<br>${state.sevFilter ? '해당 등급의 이상 항목이 없습니다.' : '감지된 이상이 없습니다. 모든 변경이 정상 범위입니다.'}</li>`;
+            $('#anom-more').innerHTML = items.length > LIMIT
+                ? `<button type="button" class="btn ghost block anom-more" id="anom-toggle">${state.showAllAnoms ? '접기' : `나머지 ${items.length - LIMIT}건 모두 보기`}</button>` : '';
+        }
+
+        function renderTabs() {
+            $('#tabs').innerHTML = state.results.map(r => {
+                const hasHigh = r.anomalies.some(a => a.sev === 3);
+                const sel = r.h.hogiNo === state.active;
+                return `<button type="button" role="tab" class="tab" data-tab="${r.h.hogiNo}" aria-selected="${sel}" tabindex="${sel ? 0 : -1}" aria-controls="detail-body">
+          ${r.h.hogiNo}<span class="cnt ${hasHigh ? 'h' : ''}" aria-label="변경 ${r.changes.length}건">${r.changes.length}</span></button>`;
+            }).join('');
+        }
+
+        function renderDetail() {
+            const r = state.results.find(x => x.h.hogiNo === state.active);
+            if (!r) return;
+            const counts = { CHANGED: r.changes.length, ADD: 0, DEL: 0, QTY: 0, NOTE: 0, ALL: r.rows.length, ANOM: r.anomalies.length };
+            r.changes.forEach(c => counts[c.type]++);
+            const filters = [['CHANGED', '변경 전체'], ['ANOM', '이상만'], ['ADD', '추가'], ['DEL', '삭제'], ['QTY', '수량'], ['NOTE', '주석'], ['ALL', '전체 BOM']];
+            let rows = r.rows;
+            if (state.typeFilter === 'CHANGED') rows = r.changes;
+            else if (state.typeFilter === 'ANOM') rows = r.anomalies;
+            else if (state.typeFilter !== 'ALL') rows = rows.filter(x => x.type === state.typeFilter);
+            if (state.blockFilter) rows = rows.filter(x => x.blockNo === state.blockFilter);
+
+            const verOpts = sel => r.h.versions.map((v, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${v.ver} (${v.date})</option>`).join('');
+            $('#detail-body').innerHTML = `
+        <div class="detail-meta" role="tabpanel" aria-label="${r.h.hogiNo} 상세">
+          <div class="dm-item"><span class="label">브랜드</span><b>${r.h.brand}</b></div>
+          <div class="dm-item"><span class="label">호기번호</span><b class="mono">${r.h.hogiNo}</b></div>
+          <div class="ver-pick">
+            <label class="dm-item"><span class="label">기준(이전) 버전</span><select data-ver="bi">${verOpts(r.bi)}</select></label>
+            ${icon('arrow')}
+            <label class="dm-item"><span class="label">비교(현재) 버전</span><select data-ver="ti">${verOpts(r.ti)}</select></label>
+          </div>
+          <div class="dm-item"><span class="label">라인 수</span><b class="mono">${r.base.lines.length} → ${r.target.lines.length}</b></div>
+        </div>
+        <div class="filters" aria-label="변경 유형 필터">
+          ${filters.map(([k, l]) => `<button type="button" class="chip" data-filter="${k}" aria-pressed="${state.typeFilter === k}">${l}<span class="n">${counts[k]}</span></button>`).join('')}
+          ${state.blockFilter ? `<button type="button" class="chip block-filter" data-clear-block aria-label="BLOCK 필터 해제">BLOCK ${state.blockFilter} ${esc(BLOCK[state.blockFilter].name)} ${icon('x', 'sm')}</button>` : ''}
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">${r.h.hogiNo} ${r.base.ver} 대비 ${r.target.ver} BOM 비교</caption>
+            <thead><tr>
+              <th scope="col">변경</th><th scope="col">BLOCK NO</th><th scope="col">자재번호</th>
+              <th scope="col" class="num">수량 (이전 → 현재)</th><th scope="col" class="num">증감</th>
+              <th scope="col">주석</th><th scope="col">이상 판정</th>
+            </tr></thead>
+            <tbody>${rows.length ? rows.map(rowHTML).join('') : `<tr><td colspan="7" class="table-empty">${r.bi === r.ti ? '같은 버전을 선택했습니다. 서로 다른 버전을 고르세요.' : '조건에 해당하는 라인이 없습니다.'}</td></tr>`}</tbody>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span>${rows.length}개 라인 표시 · ${r.base.ver} (${r.base.date}) → ${r.target.ver} (${r.target.date})</span>
+          <span>${counts.ANOM ? `이상 ${counts.ANOM}건` : '이상 없음'}</span>
+        </div>`;
+        }
+        function rowHTML(x) {
+            const q = v => v == null ? '<span class="prev">–</span>' : fmt(v);
+            let delta = '<span class="muted">–</span>';
+            if (x.type !== 'SAME' && x.type !== 'NOTE') {
+                const pct = x.prevQty ? ` <small>${x.delta > 0 ? '+' : ''}${Math.round(x.delta / x.prevQty * 100)}%</small>` : '';
+                delta = `<span class="delta ${x.delta > 0 ? 'up' : 'down'}">${x.delta > 0 ? '+' : ''}${fmt(x.delta)}${x.type === 'QTY' ? pct : ''}</span>`;
+            }
+            let note;
+            if (x.type === 'ADD') note = `<ins>${esc(x.curNote)}</ins>`;
+            else if (x.type === 'DEL') note = `<del>${esc(x.prevNote)}</del>`;
+            else if (x.prevNote !== x.curNote) note = `<del>${esc(x.prevNote)}</del><ins>${esc(x.curNote)}</ins>`;
+            else note = esc(x.curNote);
+            const issues = x.issues.length
+                ? `<div class="issue-cell">${x.issues.map(i => `<span class="issue-line">${sevBadge(i.sev)}<span>${esc(i.msg)}</span></span>`).join('')}</div>`
+                : '<span class="muted">정상</span>';
+            return `<tr class="r-${TYPE[x.type].cls}" data-key="${esc(x.key)}">
+        <td>${typeChip(x.type)}</td>
+        <td class="mono">${x.blockNo} <span class="muted">${esc(BLOCK[x.blockNo].name)}</span></td>
+        <td class="mono c-mat">${esc(x.matNo)}${x.dup ? ' <span class="muted">(중복)</span>' : ''}</td>
+        <td class="num"><span class="qty-cell"><span class="prev">${q(x.prevQty)}</span><span class="arr">→</span><span class="cur">${q(x.curQty)}</span></span></td>
+        <td class="num">${delta}</td>
+        <td class="note-cell">${note}</td>
+        <td>${issues}</td>
+      </tr>`;
+        }
+
+        function jumpTo(hogiNo, key) {
+            state.active = hogiNo; state.typeFilter = 'CHANGED'; state.blockFilter = null;
+            renderTabs(); renderDetail(); renderShafts(false);
+            const tr = $(`#detail-body tr[data-key="${CSS.escape(key)}"]`);
+            if (tr) {
+                tr.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+                tr.classList.remove('flash'); void tr.offsetWidth; tr.classList.add('flash');
+            }
+        }
+
+        function exportCSV() {
+            const head = ['브랜드', '호기번호', '기준버전', '비교버전', '자재번호', 'BLOCK NO', '이전수량', '현재수량', '증감', '이전주석', '현재주석', '변경유형', '이상등급', '판정사유'];
+            const out = [head];
+            for (const r of state.results) for (const x of r.changes) {
+                out.push([r.h.brand, r.h.hogiNo, r.base.ver, r.target.ver, x.matNo, x.blockNo, x.prevQty ?? '', x.curQty ?? '', x.type === 'NOTE' ? '' : x.delta, x.prevNote ?? '', x.curNote ?? '', TYPE[x.type].label, x.sev ? SEV[x.sev].label : '', x.issues.map(i => i.msg).join(' / ')]);
+            }
+            const csv = '﻿' + out.map(l => l.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+            a.download = `BOM_이상감지_${fmtDate(new Date())}.csv`;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+            announce('CSV 리포트를 내려받았습니다.');
+        }
+
+        /* ───────────── Events ───────────── */
+        function bindEvents() {
+            $('#brand-seg').addEventListener('click', e => { const b = e.target.closest('[data-brand]'); if (!b) return; state.brand = b.dataset.brand; renderPanel(); });
+            let qTimer;
+            $('#q').addEventListener('input', e => { clearTimeout(qTimer); qTimer = setTimeout(() => { state.query = e.target.value; renderPanel(); }, 120); });
+            $('#hogi-list').addEventListener('change', e => {
+                const cb = e.target.closest('input[type=checkbox]'); if (!cb) return;
+                cb.checked ? state.selected.add(cb.value) : state.selected.delete(cb.value);
+                updateSelectionUI();
+            });
+            $('#sel-all').addEventListener('click', () => {
+                const vis = visibleHogis();
+                const allOn = vis.every(h => state.selected.has(h.hogiNo));
+                vis.forEach(h => allOn ? state.selected.delete(h.hogiNo) : state.selected.add(h.hogiNo));
+                renderPanel();
+            });
+            $('#mode-seg').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; state.mode = b.dataset.mode; updateSelectionUI(); });
+            $('#run').addEventListener('click', run);
+
+            const res = $('#results');
+            res.addEventListener('click', e => {
+                const t = e.target;
+                if (t.closest('#export')) return exportCSV();
+                const floor = t.closest('.floor');
+                if (floor) {
+                    const same = state.active === floor.dataset.hogi && state.blockFilter === floor.dataset.block;
+                    state.active = floor.dataset.hogi; state.blockFilter = same ? null : floor.dataset.block; state.typeFilter = 'ALL';
+                    renderTabs(); renderDetail(); renderShafts(false);
+                    $('#detail').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+                    return;
+                }
+                const anom = t.closest('.anom');
+                if (anom) return jumpTo(anom.dataset.jumpHogi, anom.dataset.jumpKey);
+                const sev = t.closest('[data-sev]');
+                if (sev) { state.sevFilter = +sev.dataset.sev; state.showAllAnoms = false; return renderAnoms(); }
+                if (t.closest('#anom-toggle')) { state.showAllAnoms = !state.showAllAnoms; return renderAnoms(); }
+                const tab = t.closest('[data-tab]');
+                if (tab) { state.active = tab.dataset.tab; state.blockFilter = null; renderTabs(); renderDetail(); renderShafts(false); $(`[data-tab="${CSS.escape(state.active)}"]`).focus(); return; }
+                const chip = t.closest('[data-filter]');
+                if (chip) { state.typeFilter = chip.dataset.filter; return renderDetail(); }
+                if (t.closest('[data-clear-block]')) { state.blockFilter = null; renderDetail(); renderShafts(false); }
+            });
+            res.addEventListener('keydown', e => {
+                const tab = e.target.closest('[data-tab]');
+                if (!tab || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+                const tabs = $$('[data-tab]'); const i = tabs.indexOf(tab);
+                const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+                next.click();
+            });
+            res.addEventListener('change', e => {
+                const s = e.target.closest('select[data-ver]'); if (!s) return;
+                state.pairs[state.active][s.dataset.ver] = +s.value;
+                compute();
+                renderResults(false);
+                announce('비교 버전을 변경해 다시 분석했습니다.');
+            });
+
+            document.addEventListener('click', e => {
+                const s = e.target.closest('[data-scroll]'); if (!s) return;
+                document.getElementById(s.dataset.scroll)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+            });
+        }
+
+        /* ───────────── Theme ───────────── */
+        function applyTheme(t) {
+            document.documentElement.dataset.theme = t;
+            const btn = $('#theme-toggle');
+            btn.innerHTML = icon(t === 'dark' ? 'sun' : 'moon');
+            btn.setAttribute('aria-label', t === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환');
+        }
+        function initTheme() {
+            let saved = null;
+            try { saved = localStorage.getItem('bom-sentinel-theme'); } catch (_) {}
+            applyTheme(saved === 'light' ? 'light' : 'dark');
+            $('#theme-toggle').addEventListener('click', () => {
+                const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+                applyTheme(next);
+                try { localStorage.setItem('bom-sentinel-theme', next); } catch (_) {}
+            });
+        }
+
+        /* ───────────── Router ───────────── */
+        function route() {
+            const hash = location.hash.replace(/^#/, '') || '/';
+            const [path, qs] = hash.split('?');
+            const isApp = path.startsWith('/analyze');
+            $('#view-home').hidden = isApp;
+            $('#view-app').hidden = !isApp;
+            $$('[data-nav]').forEach(a => { if ((a.dataset.nav === 'analyze') === isApp) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+            window.scrollTo(0, 0);
+            document.title = isApp ? 'BOM 분석 · BOM Sentinel' : 'BOM Sentinel';
+            if (isApp) {
+                const h = new URLSearchParams(qs || '').get('h');
+                if (h && HOGI[h]) {
+                    state.selected = new Set([h]); state.brand = 'ALL'; state.query = ''; $('#q').value = '';
+                    renderPanel(); run();
+                } else if (!state.results) renderEmpty();
+            }
+            $('#main').focus({ preventScroll: true });
+        }
+
+        /* ───────────── Init ───────────── */
+        hydrateIcons();
+        initTheme();
+        renderLanding();
+        renderPanel();
+        bindEvents();
+        window.addEventListener('hashchange', route);
+        route();
+    })();
+</script>
+</body>
+</html>

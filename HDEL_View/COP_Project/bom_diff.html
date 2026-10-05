@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>호기 BOM 비교</title>
+    <meta name="description" content="두 엘리베이터 호기의 1레벨 BOM을 PLM API로 불러와 부품·수량·사양 차이를 비교합니다.">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* ───────────── Tokens ───────────── */
+        :root {
+            --bg: #0A0E14; --glow: rgba(61, 214, 245, .09);
+            --surface: #111722; --surface-2: #161D2B; --surface-3: #1C2536;
+            --border: #232C3D; --border-strong: #33405A;
+            --text: #E6EBF2; --text-muted: #9AA6B9;
+            --accent: #3DD6F5; --accent-ink: #04232B; --accent-soft: rgba(61, 214, 245, .12);
+
+            --a: #3DD6F5;    --a-bg: rgba(61, 214, 245, .13);
+            --b: #FF7AA8;    --b-bg: rgba(255, 122, 168, .13);
+            --same: #3FD08A; --same-bg: rgba(63, 208, 138, .13);
+            --qty: #F5B841;  --qty-bg: rgba(245, 184, 65, .15);
+            --spec: #B39DFF; --spec-bg: rgba(179, 157, 255, .15);
+            --danger: #FF6B6B; --danger-bg: rgba(255, 107, 107, .14);
+            --add: #3FD08A;  --add-bg: rgba(63, 208, 138, .13);
+            --del: #FF6B6B;  --del-bg: rgba(255, 107, 107, .14);
+            --none: #5B677B; --none-bg: rgba(154, 166, 185, .12);
+
+            --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 32px rgba(0,0,0,.35);
+            --radius: 14px;
+            --ease-out: cubic-bezier(.22, 1, .36, 1);
+            --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+            --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+            color-scheme: dark;
+        }
+        :root[data-theme="light"] {
+            --bg: #F4F6FA; --glow: rgba(8, 124, 156, .07);
+            --surface: #FFFFFF; --surface-2: #F1F4F9; --surface-3: #E7ECF3;
+            --border: #DCE2EB; --border-strong: #C3CCD9;
+            --text: #0E1726; --text-muted: #4F5D70;
+            --accent: #087C9C; --accent-ink: #FFFFFF; --accent-soft: rgba(8, 124, 156, .10);
+
+            --a: #087C9C;    --a-bg: #E1F3F7;
+            --b: #B8155A;    --b-bg: #FCE6EF;
+            --same: #11774A; --same-bg: #E3F5EC;
+            --qty: #8A5A00;  --qty-bg: #FFF3D6;
+            --spec: #5B3FC4; --spec-bg: #EEEAFD;
+            --danger: #C22F2F; --danger-bg: #FDECEC;
+            --add: #11774A;  --add-bg: #E3F5EC;
+            --del: #C22F2F;  --del-bg: #FDECEC;
+            --none: #A3AEBF; --none-bg: #EDF0F5;
+
+            --shadow: 0 1px 2px rgba(14,23,38,.05), 0 8px 24px rgba(14,23,38,.06);
+            color-scheme: light;
+        }
+
+        /* ───────────── Base ───────────── */
+        *, *::before, *::after { box-sizing: border-box; }
+        * { margin: 0; }
+        body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; min-height: 100dvh; }
+        button, input, select { font: inherit; color: inherit; }
+        button { cursor: pointer; background: none; border: 0; }
+        a { color: inherit; text-decoration: none; }
+        ul, ol { list-style: none; padding: 0; }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+        .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+        .muted { color: var(--text-muted); }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+        .ic { width: 18px; height: 18px; flex: none; }
+        .ic-sm { width: 14px; height: 14px; }
+        .ic-lg { width: 22px; height: 22px; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+        @media (max-width: 640px) { .container { padding: 0 16px; } }
+
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 15px; white-space: nowrap; transition: filter 150ms, border-color 150ms, transform 150ms, opacity 150ms; touch-action: manipulation; }
+        .btn:active { transform: scale(.98); }
+        .btn.primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 6px 24px var(--accent-soft); }
+        .btn.primary:hover { filter: brightness(1.08); }
+        .btn.ghost { border: 1px solid var(--border-strong); background: var(--surface); }
+        .btn.ghost:hover { border-color: var(--accent); }
+        .btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; }
+        .icon-btn { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; border: 1px solid var(--border); background: var(--surface); }
+        .icon-btn:hover { border-color: var(--accent); }
+        [data-icon], .icon-wrap { display: inline-flex; }
+
+        /* ───────────── Top bar ───────────── */
+        .topbar { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 90%, transparent); border-bottom: 1px solid var(--border); }
+        .topbar .container { display: flex; align-items: center; gap: 16px; height: 60px; }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; letter-spacing: -.01em; }
+        .brand-mark { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: #04232B; background: linear-gradient(135deg, #3DD6F5, #FF7AA8); }
+        .crumb { color: var(--text-muted); font-size: 14px; }
+        .topbar-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+        .api-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text-muted); }
+        .api-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+        .api-pill.ok i { background: var(--same); box-shadow: 0 0 0 3px var(--same-bg); }
+        .api-pill.err i { background: var(--danger); box-shadow: 0 0 0 3px var(--danger-bg); }
+        @media (max-width: 720px) { .crumb, .api-pill { display: none; } }
+
+        /* ───────────── Hero / selector ───────────── */
+        .hero { position: relative; padding: 40px 0 28px; }
+        .hero::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(700px 320px at 20% 0%, var(--glow), transparent 70%), radial-gradient(700px 320px at 80% 0%, color-mix(in srgb, var(--b) 8%, transparent), transparent 70%); }
+        .hero .container { position: relative; }
+        .hero h1 { font-size: clamp(26px, 3vw, 36px); letter-spacing: -.03em; line-height: 1.2; margin-top: 6px; }
+        .hero p.lead { color: var(--text-muted); margin-top: 6px; }
+        .versus { margin-top: 24px; display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: stretch; }
+        .unit { position: relative; padding: 20px 20px 18px 24px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden; }
+        .unit::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--side); }
+        .unit[data-side="a"] { --side: var(--a); --side-bg: var(--a-bg); }
+        .unit[data-side="b"] { --side: var(--b); --side-bg: var(--b-bg); }
+        .unit-top { display: flex; align-items: center; gap: 10px; }
+        .side-tag { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--side); background: var(--side-bg); }
+        .unit-top .label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        .unit input { margin-top: 10px; width: 100%; min-height: 52px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface-2); font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+        .unit input:focus { outline: none; border-color: var(--side); box-shadow: 0 0 0 3px var(--side-bg); }
+        .unit-model { margin-top: 10px; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; min-height: 22px; }
+        .unit-meta { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--text-muted); min-height: 22px; }
+        .unit-meta b { color: var(--text); font-weight: 600; }
+        .vs-mid { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+        .vs-badge { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 15px; letter-spacing: .04em; background: var(--surface); border: 1px solid var(--border-strong); }
+        .actions { margin-top: 16px; display: flex; gap: 10px 16px; flex-wrap: wrap; align-items: center; }
+        .actions .hint { font-size: 13px; color: var(--text-muted); }
+        @media (max-width: 860px) {
+            .versus { grid-template-columns: 1fr; }
+            .vs-mid { flex-direction: row; }
+        }
+
+        /* ───────────── Sections ───────────── */
+        main { padding-bottom: 72px; }
+        .stack { display: grid; gap: 20px; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; min-width: 0; }
+        .card-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .card-head h2 { font-size: 17px; letter-spacing: -.01em; }
+        .card-head p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+        .kicker { font-family: var(--mono); font-size: 12px; color: var(--accent); letter-spacing: .05em; }
+
+        /* summary */
+        .summary { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+        .headline { font-size: clamp(20px, 2.2vw, 26px); letter-spacing: -.02em; line-height: 1.4; font-weight: 700; text-wrap: balance; margin-top: 8px; }
+        .headline .a { color: var(--a); } .headline .b { color: var(--b); }
+        .kpi-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .kpi { position: relative; overflow: hidden; display: grid; gap: 2px; padding: 14px 14px 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); text-align: left; transition: border-color 150ms, background 150ms; }
+        .kpi::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--k); }
+        .kpi:hover { border-color: var(--border-strong); }
+        .kpi[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+        .kpi-label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        .kpi-label .ic { color: var(--k); }
+        .kpi-val { font-family: var(--mono); font-size: 34px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; }
+        .kpi-sub { font-size: 12px; color: var(--text-muted); }
+        .compo { margin-top: 18px; display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--surface-3); }
+        .compo i { display: block; height: 100%; transition: width .9s var(--ease-out); }
+        .compo i + i { box-shadow: inset 2px 0 0 var(--surface); }
+        .summary-foot { margin-top: 10px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 13px; color: var(--text-muted); }
+        .summary-foot .link { color: var(--accent); font-weight: 600; min-height: 28px; }
+        .summary-foot .link:hover { text-decoration: underline; }
+        @media (max-width: 640px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+
+        .qtop { display: grid; gap: 2px; }
+        .qtop button { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 150px 92px; gap: 14px; align-items: center; padding: 8px 10px; border-radius: 10px; border: 1px solid transparent; text-align: left; }
+        .qtop button:hover { background: var(--surface-2); border-color: var(--border); }
+        .qt-name .pn { font-size: 12px; }
+        .qt-name .pd { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .qt-bars { display: grid; gap: 3px; }
+        .qt-bar { display: grid; grid-template-columns: 12px 1fr; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+        .qt-bar span { display: flex; align-items: center; gap: 6px; min-width: 0; }
+        .qt-bar i { display: block; height: 6px; border-radius: 3px; min-width: 2px; flex: none; }
+        .qt-bar.a i { background: var(--a); } .qt-bar.b i { background: var(--b); }
+        .qt-d { font-family: var(--mono); font-weight: 600; font-size: 13px; text-align: right; color: var(--qty); white-space: nowrap; }
+        .qt-d small { display: block; font-size: 11px; color: var(--text-muted); font-weight: 500; }
+        .qt-more { margin-top: 10px; }
+        @media (max-width: 640px) { .qtop button { grid-template-columns: minmax(0, 1fr) 80px; } .qt-bars { display: none; } }
+
+        details.card > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; min-height: 28px; }
+        details.card > summary::-webkit-details-marker { display: none; }
+        details.card > summary h2 { font-size: 16px; letter-spacing: -.01em; }
+        details.card > summary .muted { font-size: 13px; }
+        details.card > summary .ic { transition: transform 150ms; color: var(--text-muted); }
+        details.card[open] > summary { margin-bottom: 14px; }
+        details.card[open] > summary .ic { transform: rotate(90deg); }
+
+        .spec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .spec-table th, .spec-table td { padding: 9px 10px; border-top: 1px solid var(--border); vertical-align: top; text-align: left; }
+        .spec-table th { color: var(--text-muted); font-weight: 600; white-space: nowrap; width: 1%; font-size: 12px; }
+        .spec-table td { overflow-wrap: anywhere; width: 49%; }
+        .spec-table thead th { border-top: 0; border-bottom: 1px solid var(--border); }
+        .spec-table thead th.ha { color: var(--a); } .spec-table thead th.hb { color: var(--b); }
+        .spec-table tbody tr:first-child th, .spec-table tbody tr:first-child td { border-top: 0; }
+        .spec-table tr.diff td { background: color-mix(in srgb, var(--qty-bg) 55%, transparent); }
+        .spec-table tr.diff th::after { content: "≠"; margin-left: 6px; color: var(--qty); font-weight: 700; }
+        .spec-empty { color: var(--text-muted); font-size: 14px; padding: 16px 0; }
+
+        /* group map */
+        .groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+        .grp { display: grid; gap: 6px; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); text-align: left; transition: border-color 150ms, transform 150ms; }
+        .grp:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+        .grp[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+        .grp-top { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; }
+        .grp-code { font-family: var(--mono); font-weight: 600; font-size: 14px; }
+        .grp-n { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+        .grp-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--surface-3); }
+        .grp-bar i { display: block; height: 100%; }
+        .grp-diff { font-size: 11px; color: var(--text-muted); }
+        .grp-diff b { color: var(--text); }
+
+        /* table */
+        .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+        .search { position: relative; flex: 1 1 260px; max-width: 360px; }
+        .search > [data-icon], .search > .icon-wrap { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .search input { width: 100%; min-height: 40px; padding: 0 12px 0 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); font-size: 14px; }
+        .search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        .chip:hover { color: var(--text); border-color: var(--border-strong); }
+        .chip[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: var(--accent-soft); }
+        .chip .n { font-family: var(--mono); font-size: 12px; }
+        .chip.grp-filter { border-style: dashed; color: var(--accent); border-color: var(--accent); }
+
+        .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+        table.diff { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 1040px; }
+        table.diff thead th { position: sticky; top: 0; z-index: 1; background: var(--surface-2); text-align: left; font-size: 12px; font-weight: 600; color: var(--text-muted); padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        table.diff thead th.ha { color: var(--a); } table.diff thead th.hb { color: var(--b); }
+        table.diff thead th.r { text-align: right; }
+        table.diff td { padding: 10px 12px; border-top: 1px solid var(--border); vertical-align: top; }
+        table.diff td.num { text-align: right; white-space: nowrap; }
+        table.diff td.mid { text-align: center; color: var(--text-muted); width: 1%; padding-left: 4px; padding-right: 4px; }
+        tr.g-head td { background: var(--surface-2); padding: 8px 12px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-strong); }
+        tr.g-head b { font-family: var(--mono); color: var(--text); font-size: 13px; margin-right: 10px; }
+        tr.row:hover td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+        tr.row.s-same td { color: var(--text-muted); }
+        tr.row.s-part td:first-child { box-shadow: inset 3px 0 0 var(--spec); }
+        tr.row.s-add td:first-child { box-shadow: inset 3px 0 0 var(--add); }
+        tr.row.s-del td:first-child { box-shadow: inset 3px 0 0 var(--del); }
+        tr.row.s-qty td:first-child { box-shadow: inset 3px 0 0 var(--qty); }
+        tr.row.s-del td.cell-a .pn { text-decoration: line-through; text-decoration-color: var(--del); }
+        tr.row.flash td { animation: flash 2s var(--ease-out); }
+        @keyframes flash { 0%, 40% { background: var(--accent-soft); } 100% { background: transparent; } }
+        .status-stack { display: flex; flex-wrap: wrap; gap: 4px; }
+        .qchg { font-family: var(--mono); white-space: nowrap; }
+        .qchg .from { color: var(--text-muted); }
+        .qchg .arr { color: var(--text-muted); margin: 0 6px; font-size: 12px; }
+        .qchg .to { font-weight: 600; }
+        .qchg small { color: var(--text-muted); margin-left: 2px; font-weight: 500; }
+        .delta { font-family: var(--mono); font-weight: 600; white-space: nowrap; color: var(--qty); }
+        .delta small { color: var(--text-muted); font-weight: 500; margin-left: 4px; }
+        .empty-cell { color: var(--text-muted); font-size: 13px; opacity: .75; }
+        .pn { font-family: var(--mono); font-weight: 600; font-size: 13px; }
+        .pd { font-size: 13px; color: var(--text-muted); overflow-wrap: anywhere; max-width: 360px; }
+        .pd b { color: var(--text); font-weight: 600; }
+        mark { background: var(--spec-bg); color: inherit; border-radius: 3px; padding: 0 2px; box-shadow: inset 0 -1px 0 var(--spec); }
+        mark.q { background: var(--qty-bg); box-shadow: inset 0 -1px 0 var(--qty); }
+        .qty { font-family: var(--mono); font-weight: 600; }
+        .qty small { font-weight: 500; color: var(--text-muted); margin-left: 3px; }
+        .qd { display: block; font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--qty); }
+        .blk { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+        .blk .moved { display: block; font-size: 11px; color: var(--spec); }
+        .status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 6px; white-space: nowrap; }
+        .status.same { color: var(--text-muted); background: var(--none-bg); }
+        .status.qty { color: var(--qty); background: var(--qty-bg); }
+        .status.part { color: var(--spec); background: var(--spec-bg); }
+        .status.add { color: var(--add); background: var(--add-bg); }
+        .status.del { color: var(--del); background: var(--del-bg); }
+        .cmt-btn { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 12px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+        .cmt-btn:hover { color: var(--text); border-color: var(--border-strong); }
+        .cmt-btn[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+        .cmt-btn .ic { transition: transform 150ms; }
+        .cmt-btn[aria-expanded="true"] .ic { transform: rotate(90deg); }
+        .cmt-btn .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--qty); }
+        tr.cmt-row td { background: var(--surface-2); padding: 0; }
+        .cmt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); }
+        .cmt-grid > div { background: var(--surface-2); padding: 14px 16px; }
+        .cmt-grid .cmt-h { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+        .cmt-grid .cmt-h.a { color: var(--a); } .cmt-grid .cmt-h.b { color: var(--b); }
+        .cmt-grid pre { font-family: var(--font); font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
+        .cmt-grid .none { color: var(--text-muted); font-size: 13px; }
+        .table-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 12px; font-size: 13px; color: var(--text-muted); }
+        .table-empty { padding: 48px; text-align: center; color: var(--text-muted); }
+
+        /* states */
+        .state-card { padding: 48px 28px; text-align: center; border-radius: var(--radius); border: 1px dashed var(--border-strong); background: var(--surface); }
+        .state-card .st-ic { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; margin: 0 auto 16px; background: var(--danger-bg); color: var(--danger); }
+        .state-card h2 { font-size: 20px; letter-spacing: -.02em; }
+        .state-card p { color: var(--text-muted); margin-top: 6px; font-size: 14px; }
+        .state-card .err-list { margin: 16px auto 0; max-width: 680px; text-align: left; display: grid; gap: 8px; }
+        .state-card .err-list li { padding: 10px 14px; border-radius: 10px; background: var(--danger-bg); font-size: 13px; overflow-wrap: anywhere; }
+        .state-card .err-actions { margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .file-btn { position: relative; overflow: hidden; cursor: pointer; }
+        .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .file-btn:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .skel { border-radius: var(--radius); background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; border: 1px solid var(--border); }
+        @keyframes shimmer { to { background-position: -200% 0; } }
+        .load-note { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 14px; }
+        .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border-strong); border-top-color: var(--accent); animation: spin .8s linear infinite; flex: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .rise { animation: rise .55s var(--ease-out) both; }
+        .rise.d1 { animation-delay: .06s; } .rise.d2 { animation-delay: .12s; }
+        @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+        @media (max-width: 1080px) { .summary { grid-template-columns: 1fr; } }
+        @media (max-width: 640px) { .kpi-val { font-size: 28px; } .cmt-grid { grid-template-columns: 1fr; } .card { padding: 16px; } }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+        }
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="container">
+        <a class="brand" href="index.html"><span class="brand-mark"><span data-icon="compare"></span></span>BOM Sentinel</a>
+        <span class="crumb">/ 호기 BOM 비교</span>
+        <div class="topbar-right">
+            <span class="api-pill" id="api-pill"><i></i><span>PLM API 대기</span></span>
+            <button class="icon-btn" id="theme-toggle" type="button" aria-label="라이트 모드로 전환"></button>
+        </div>
+    </div>
+</header>
+
+<section class="hero" aria-labelledby="title">
+    <div class="container">
+        <span class="kicker">LEVEL-1 BOM COMPARE</span>
+        <h1 id="title">두 호기의 BOM, 무엇이 다른가</h1>
+        <p class="lead">PLM에서 1레벨 부품 리스트를 불러와 부품번호·수량·사양 차이를 줄 단위로 비교합니다.</p>
+
+        <form class="versus" id="form" autocomplete="off">
+            <div class="unit" data-side="a">
+                <div class="unit-top"><span class="side-tag">A</span><label class="label" for="in-a">기준 호기</label></div>
+                <input id="in-a" name="a" required spellcheck="false" placeholder="호기번호">
+                <div class="unit-model" id="model-a"></div>
+                <div class="unit-meta" id="meta-a"></div>
+            </div>
+            <div class="vs-mid">
+                <span class="vs-badge" aria-hidden="true">VS</span>
+                <button class="icon-btn" type="button" id="swap" aria-label="A와 B 호기 맞바꾸기" title="A ↔ B 바꾸기"><span data-icon="swap"></span></button>
+            </div>
+            <div class="unit" data-side="b">
+                <div class="unit-top"><span class="side-tag">B</span><label class="label" for="in-b">비교 호기</label></div>
+                <input id="in-b" name="b" required spellcheck="false" placeholder="호기번호">
+                <div class="unit-model" id="model-b"></div>
+                <div class="unit-meta" id="meta-b"></div>
+            </div>
+        </form>
+        <div class="actions">
+            <button class="btn primary" type="submit" form="form" id="run">BOM 비교 실행</button>
+            <span class="hint">A(기준) → B(비교) 기준으로 자재 변경·추가·삭제와 수량 변경을 찾습니다. 같은 BLOCK의 부품번호 → GL코드 → 품명 순으로 같은 자리를 맞춥니다.</span>
+        </div>
+    </div>
+</section>
+
+<main class="container" id="main">
+    <div class="stack" id="out"></div>
+</main>
+
+<p class="sr-only" role="status" aria-live="polite" id="status"></p>
+
+<script>
+    (() => {
+        'use strict';
+
+        /* ───────────── Config ───────────── */
+        const API = 'https://vault-in.hdel.co.kr:8070/api/findProductInfo';
+        const API_KEY = 'subae';
+        const DEFAULT = { a: 'N29532L02', b: '211704L17' };
+
+        /* ───────────── Utils ───────────── */
+        const $ = (s, el = document) => el.querySelector(s);
+        const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const fmt = n => Number(n).toLocaleString('ko-KR');
+        const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+        const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const announce = m => { $('#status').textContent = m; };
+
+        const ICON = {
+            compare: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M11 18H8a2 2 0 0 1-2-2V9"/>',
+            swap: '<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>',
+            check: '<path d="M20 6 9 17l-5-5"/>',
+            updown: '<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>',
+            diff: '<path d="M12 3v14"/><path d="M5 10h14"/><path d="M5 21h14"/>',
+            minus: '<path d="M5 12h14"/>',
+            plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+            search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+            download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+            chevron: '<path d="m9 18 6-6-6-6"/>',
+            arrow: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+            alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+            refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+            upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+            x: '<path d="M18 6 6 18M6 6l12 12"/>',
+            sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+            moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+        };
+        const icon = (n, size = '') => `<svg class="ic ${size ? 'ic-' + size : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
+        const hydrateIcons = (root = document) => $$('[data-icon]', root).forEach(el => {
+            el.innerHTML = icon(el.dataset.icon, el.dataset.size || '');
+            el.removeAttribute('data-icon'); el.classList.add('icon-wrap');
+        });
+
+        /* ───────────── Status ───────────── */
+        // 변경 유형: 기준 호기(A) → 비교 호기(B)
+        const ST = {
+            PART: { label: '자재 변경', cls: 'part', icon: 'swap',   color: 'var(--spec)', desc: '같은 위치, 부품번호 변경' },
+            ADD:  { label: '자재 추가', cls: 'add',  icon: 'plus',   color: 'var(--add)',  desc: 'B에만 있는 자재' },
+            DEL:  { label: '자재 삭제', cls: 'del',  icon: 'minus',  color: 'var(--del)',  desc: 'A에만 있는 자재' },
+            QTY:  { label: '수량 변경', cls: 'qty',  icon: 'updown', color: 'var(--qty)',  desc: '같은 자재, 수량 차이' },
+            SAME: { label: '변경 없음', cls: 'same', icon: 'check',  color: 'var(--none)', desc: '자재·수량 동일' },
+        };
+        const ORDER = ['PART', 'ADD', 'DEL', 'QTY', 'SAME'];
+        // 필터: '수량 변경'은 자재 변경과 함께 수량이 바뀐 항목도 포함
+        const FILTER = {
+            DIFF: p => p.status !== 'SAME',
+            ALL: () => true,
+            PART: p => p.status === 'PART',
+            ADD: p => p.status === 'ADD',
+            DEL: p => p.status === 'DEL',
+            QTY: p => p.qtyChanged,
+            SAME: p => p.status === 'SAME',
+        };
+        const statusChip = (s, mini) => `<span class="status ${ST[s].cls}">${icon(ST[s].icon, 'sm')}${mini ? '수량' : ST[s].label}</span>`;
+
+        /* ───────────── API ───────────── */
+        async function fetchBom(productNo) {
+            const url = `${API}?key=${encodeURIComponent(API_KEY)}&productNo=${encodeURIComponent(productNo)}`;
+            let res;
+            try { res = await fetch(url, { headers: { Accept: 'application/json' } }); }
+            catch (e) { throw new Error(`${productNo}: PLM API에 연결할 수 없습니다. 사내망 연결 또는 인증서(브라우저에서 API 주소를 한 번 열어 허용)를 확인하세요.`); }
+            if (!res.ok) throw new Error(`${productNo}: API 응답 오류 (HTTP ${res.status})`);
+            let data;
+            try { data = await res.json(); } catch (e) { throw new Error(`${productNo}: JSON 응답을 해석할 수 없습니다.`); }
+            if (!Array.isArray(data)) throw new Error(`${productNo}: 예상과 다른 응답 형식입니다 (배열 아님).`);
+            if (!data.length) throw new Error(`${productNo}: BOM 데이터가 없습니다. 호기번호를 확인하세요.`);
+            return data;
+        }
+        const clean = v => (v ?? '').toString().trim();
+        const normalize = rows => rows.map((r, i) => ({
+            seq: num(r.seq) || (i + 1) * 10,
+            partNo: clean(r.partNo),
+            partName: clean(r.partName),
+            glCode: clean(r.glCode),
+            spec: clean(r.spec),
+            size: clean(r.part_size) === '.' ? '' : clean(r.part_size),
+            blockNo: clean(r.blockNo),
+            uom: clean(r.uom),
+            qty: num(r.qty),
+            cmt: clean(r.cmt),
+        }));
+        const groupOf = r => r.blockNo.slice(0, 4) || '----';
+
+        // MODEL 라인 주석 → { MODEL, OPERATION, TOTAL FLOOR, ... }
+        function parseModel(rows) {
+            const cand = rows.filter(r => r.partName === 'MODEL' && r.cmt);
+            const m = cand.find(r => !r.cmt.startsWith('*')) || cand[0];
+            if (!m) return null;
+            const out = new Map();
+            for (const raw of m.cmt.split(/\r?\n/)) {
+                const line = raw.replace(/^\*\s*/, '').trim();
+                if (!line) continue;
+                const i = line.indexOf(':');
+                if (i > 0) out.set(line.slice(0, i).replace(/\(.*?\)/g, '').trim().toUpperCase(), line.slice(i + 1).trim());
+                else out.set(`비고${out.size}`, line);
+            }
+            return out;
+        }
+
+        /* ───────────── Compare ───────────── */
+        function compare(A, B) {
+            const usedA = new Set(), usedB = new Set(), pairs = [];
+            const sameBlock = (a, b) => a.blockNo === b.blockNo;
+            const sameGroup = (a, b) => groupOf(a) === groupOf(b);
+            const tiers = [
+                (a, b) => sameBlock(a, b) && a.partNo === b.partNo,
+                (a, b) => sameBlock(a, b) && a.glCode && a.glCode === b.glCode,
+                (a, b) => sameBlock(a, b) && a.partName === b.partName,
+                (a, b) => sameGroup(a, b) && a.partNo === b.partNo,
+                (a, b) => sameGroup(a, b) && a.glCode && a.glCode === b.glCode,
+                (a, b) => sameGroup(a, b) && a.partName === b.partName,
+                (a, b) => a.partNo === b.partNo,
+            ];
+            for (const match of tiers) {
+                A.forEach((a, i) => {
+                    if (usedA.has(i)) return;
+                    const j = B.findIndex((b, k) => !usedB.has(k) && match(a, b));
+                    if (j >= 0) { usedA.add(i); usedB.add(j); pairs.push({ a, b: B[j] }); }
+                });
+            }
+            A.forEach((a, i) => { if (!usedA.has(i)) pairs.push({ a, b: null }); });
+            B.forEach((b, j) => { if (!usedB.has(j)) pairs.push({ a: null, b }); });
+
+            pairs.forEach((p, i) => {
+                const { a, b } = p;
+                if (a && b) {
+                    p.qtyChanged = a.qty !== b.qty || a.uom !== b.uom;
+                    p.status = a.partNo !== b.partNo ? 'PART' : p.qtyChanged ? 'QTY' : 'SAME';
+                    p.moved = a.blockNo !== b.blockNo;
+                    p.cmtDiff = a.cmt !== b.cmt;
+                } else { p.status = a ? 'DEL' : 'ADD'; p.qtyChanged = false; }
+                p.delta = Math.round(((b ? b.qty : 0) - (a ? a.qty : 0)) * 1000) / 1000;
+                p.group = groupOf(a || b);
+                p.id = `p${i}`;
+            });
+
+            // 그룹 순서: A의 seq 순서 → B에만 있는 그룹은 B의 seq 순서
+            const gOrder = new Map();
+            for (const list of [A, B]) [...list].sort((x, y) => x.seq - y.seq).forEach(r => { if (!gOrder.has(groupOf(r))) gOrder.set(groupOf(r), gOrder.size); });
+            pairs.sort((x, y) => gOrder.get(x.group) - gOrder.get(y.group)
+                || (x.a ? 0 : 1) - (y.a ? 0 : 1)
+                || (x.a?.seq ?? x.b.seq) - (y.a?.seq ?? y.b.seq));
+
+            const counts = Object.fromEntries(Object.keys(FILTER).map(k => [k, pairs.filter(FILTER[k]).length]));
+            const groups = [...gOrder.keys()].map(code => {
+                const ps = pairs.filter(p => p.group === code);
+                const c = Object.fromEntries(ORDER.map(k => [k, 0]));
+                ps.forEach(p => c[p.status]++);
+                return { code, total: ps.length, counts: c, diff: ps.length - c.SAME, aN: ps.filter(p => p.a).length, bN: ps.filter(p => p.b).length };
+            }).filter(g => g.total);
+            return { pairs, counts, groups };
+        }
+
+        /* ───────────── State ───────────── */
+        const state = { a: null, b: null, result: null, filter: 'DIFF', group: null, q: '', open: new Set(), loading: false };
+        const inputNo = side => $(`#in-${side}`).value.trim().toUpperCase();
+
+        /* ───────────── Run ───────────── */
+        async function run() {
+            const aNo = inputNo('a'), bNo = inputNo('b');
+            if (!aNo || !bNo) { (aNo ? $('#in-b') : $('#in-a')).focus(); return; }
+            if (state.loading) return;
+            state.loading = true; setRunBtn();
+            setPill('', 'PLM 조회 중');
+            renderLoading(aNo, bNo);
+            history.replaceState(null, '', `?a=${encodeURIComponent(aNo)}&b=${encodeURIComponent(bNo)}`);
+
+            const [ra, rb] = await Promise.allSettled([fetchBom(aNo), fetchBom(bNo)]);
+            state.loading = false; setRunBtn();
+            state.a = ra.status === 'fulfilled' ? makeSide(aNo, ra.value) : null;
+            state.b = rb.status === 'fulfilled' ? makeSide(bNo, rb.value) : null;
+            renderUnitMeta('a'); renderUnitMeta('b');
+            if (!state.a || !state.b) {
+                setPill('err', 'API 오류');
+                renderError([ra, rb].filter(r => r.status === 'rejected').map(r => r.reason.message), aNo, bNo);
+                announce('BOM 조회에 실패했습니다.');
+                return;
+            }
+            setPill('ok', 'PLM 연결됨');
+            finish();
+        }
+        const makeSide = (no, raw) => { const rows = normalize(raw); return { no, rows, model: parseModel(rows) }; };
+        function finish() {
+            state.result = compare(state.a.rows, state.b.rows);
+            state.filter = 'DIFF'; state.group = null; state.q = ''; state.open.clear();
+            renderAll();
+            const c = state.result.counts;
+            announce(`비교 완료. 자재 변경 ${c.PART}, 자재 추가 ${c.ADD}, 자재 삭제 ${c.DEL}, 수량 변경 ${c.QTY}건.`);
+        }
+
+        function setRunBtn() {
+            const b = $('#run');
+            b.disabled = state.loading;
+            b.innerHTML = state.loading ? '<span class="spinner" aria-hidden="true"></span>불러오는 중…' : `${icon('compare')}BOM 비교 실행`;
+        }
+        function setPill(kind, text) {
+            const p = $('#api-pill');
+            p.className = `api-pill ${kind}`;
+            p.querySelector('span').textContent = text;
+        }
+        function renderUnitMeta(side) {
+            const s = state[side];
+            if (!s) { $(`#model-${side}`).textContent = ''; $(`#meta-${side}`).innerHTML = ''; return; }
+            $(`#model-${side}`).textContent = s.model?.get('MODEL') || '';
+            const blocks = new Set(s.rows.map(r => r.blockNo)).size;
+            const groups = new Set(s.rows.map(groupOf)).size;
+            $(`#meta-${side}`).innerHTML = `<span>1레벨 부품 <b class="mono">${fmt(s.rows.length)}</b></span><span>BLOCK <b class="mono">${fmt(blocks)}</b></span><span>BLOCK 그룹 <b class="mono">${fmt(groups)}</b></span>`;
+        }
+
+        /* ───────────── Render: states ───────────── */
+        function renderLoading(aNo, bNo) {
+            ['a', 'b'].forEach(s => { $(`#model-${s}`).textContent = ''; $(`#meta-${s}`).innerHTML = ''; });
+            $('#out').innerHTML = `
+        <div class="load-note"><span class="spinner" aria-hidden="true"></span>PLM에서 <b class="mono">${esc(aNo)}</b>, <b class="mono">${esc(bNo)}</b> 1레벨 BOM을 불러오는 중…</div>
+        <div class="summary"><div class="skel" style="height:280px"></div><div class="skel" style="height:280px"></div></div>
+        <div class="skel" style="height:150px"></div>
+        <div class="skel" style="height:420px"></div>`;
+        }
+        function renderError(errors, aNo, bNo) {
+            $('#out').innerHTML = `
+        <div class="state-card" role="alert">
+          <div class="st-ic">${icon('alert', 'lg')}</div>
+          <h2>BOM을 불러오지 못했습니다</h2>
+          <p>다시 시도하거나, 같은 API 응답을 저장한 JSON 파일을 불러와 비교할 수 있습니다.</p>
+          <ul class="err-list">${errors.map(e => `<li>${esc(e)}</li>`).join('')}</ul>
+          <div class="err-actions">
+            <button class="btn primary" type="button" id="retry">${icon('refresh')}다시 시도</button>
+            ${state.a ? '' : fileBtn('a', aNo)}
+            ${state.b ? '' : fileBtn('b', bNo)}
+          </div>
+        </div>`;
+        }
+        const fileBtn = (side, no) => `<label class="btn ghost file-btn">${icon('upload')}${side.toUpperCase()} · ${esc(no)} JSON 불러오기<input type="file" accept=".json,application/json" data-file="${side}" data-no="${esc(no)}"></label>`;
+
+        /* ───────────── Render: result ───────────── */
+        function renderAll() {
+            const { counts, pairs } = state.result;
+            const A = state.a, B = state.b;
+            const statusN = k => pairs.filter(p => p.status === k).length;
+            const qtyWithPart = pairs.filter(p => p.status === 'PART' && p.qtyChanged).length;
+            const kpiSub = {
+                PART: `${ST.PART.desc}${qtyWithPart ? ` · 수량도 변경 ${qtyWithPart}` : ''}`,
+                ADD: `B ${esc(B.no)}에만 있음`,
+                DEL: `A ${esc(A.no)}에만 있음`,
+                QTY: qtyWithPart ? `자재 변경 동반 ${qtyWithPart}건 포함` : ST.QTY.desc,
+            };
+
+            $('#out').innerHTML = `
+        <section class="summary rise" aria-label="변경 요약">
+          <article class="card">
+            <span class="kicker">CHANGE SUMMARY</span>
+            <p class="headline">기준 <span class="a mono">${esc(A.no)}</span> 대비 <span class="b mono">${esc(B.no)}</span>에서 <b>${fmt(counts.DIFF)}개</b> 자재 항목이 변경되었습니다.</p>
+            <div class="kpi-grid" role="group" aria-label="변경 유형별 필터">
+              ${['PART', 'ADD', 'DEL', 'QTY'].map(k => `
+                <button type="button" class="kpi" style="--k:${ST[k].color}" data-filter="${k}" aria-pressed="${state.filter === k}">
+                  <span class="kpi-label">${icon(ST[k].icon, 'sm')}${ST[k].label}</span>
+                  <span class="kpi-val" data-count="${counts[k]}">${reduceMotion ? fmt(counts[k]) : 0}</span>
+                  <span class="kpi-sub">${kpiSub[k]}</span>
+                </button>`).join('')}
+            </div>
+            <div class="compo" aria-hidden="true">${ORDER.filter(k => statusN(k)).map(k => `<i data-w="${statusN(k) / pairs.length * 100}" style="width:0;background:${ST[k].color}"></i>`).join('')}</div>
+            <div class="summary-foot">
+              <span>비교 항목 ${fmt(pairs.length)}개 · 변경 없음 ${fmt(counts.SAME)}개</span>
+              <button type="button" class="link" data-filter="SAME">변경 없는 자재 보기</button>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-head">
+              <div><span class="kicker">QUANTITY</span><h2>수량 변경 상세</h2><p>변동률이 큰 순 · 막대는 항목별 A·B 수량 비교 · 누르면 표에서 해당 줄로 이동</p></div>
+            </div>
+            ${qtyTop()}
+          </article>
+        </section>
+
+        <details class="card rise d1">
+          <summary>${icon('chevron')}<h2>호기 사양 비교</h2><span class="muted">MODEL 라인 주석 기준</span></summary>
+          ${specTable()}
+        </details>
+
+        <section class="card rise d1" aria-labelledby="grp-title">
+          <div class="card-head">
+            <div><span class="kicker">BLOCK MAP</span><h2 id="grp-title">BLOCK 그룹별 변경</h2><p>BLOCK NO 앞 4자리 기준 · 막대 = 변경 유형 구성 · 누르면 아래 표가 해당 그룹으로 좁혀집니다.</p></div>
+          </div>
+          <div class="groups" id="groups"></div>
+        </section>
+
+        <section class="card rise d2" aria-labelledby="tbl-title" id="table-card">
+          <div class="card-head">
+            <div><span class="kicker">CHANGE LIST</span><h2 id="tbl-title">자재·수량 변경 목록</h2><p><span style="color:var(--a)">A ${esc(A.no)}</span> → <span style="color:var(--b)">B ${esc(B.no)}</span> · 바뀐 부품번호·사양·수량은 강조 표시</p></div>
+            <button class="btn ghost" type="button" id="export">${icon('download')}CSV 내보내기</button>
+          </div>
+          <div class="toolbar">
+            <div class="search"><span data-icon="search"></span><label class="sr-only" for="q">부품 검색</label><input id="q" type="search" placeholder="부품번호, 품명, 사양, BLOCK 검색" value="${esc(state.q)}"></div>
+            <div class="chips" id="chips" role="group" aria-label="상태 필터"></div>
+          </div>
+          <div class="table-wrap">
+            <table class="diff">
+              <caption class="sr-only">A ${esc(A.no)}와 B ${esc(B.no)} 1레벨 BOM 비교</caption>
+              <thead><tr>
+                <th scope="col">변경 유형</th>
+                <th scope="col">BLOCK NO</th>
+                <th scope="col" class="ha">기준 자재 (A)</th>
+                <th scope="col"><span class="sr-only">변경 방향</span></th>
+                <th scope="col" class="hb">비교 자재 (B)</th>
+                <th scope="col" class="r">수량 (A → B)</th>
+                <th scope="col" class="r">증감</th>
+                <th scope="col">주석</th>
+              </tr></thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+          <div class="table-foot" id="tfoot"></div>
+        </section>`;
+            hydrateIcons($('#out'));
+
+            if (!reduceMotion) $$('.kpi-val[data-count]').forEach(el => countUp(el, +el.dataset.count));
+            requestAnimationFrame(() => requestAnimationFrame(() => $$('.compo i').forEach(i => { i.style.width = `${i.dataset.w}%`; })));
+            renderGroups(); renderChips(); renderTable();
+        }
+
+        function countUp(el, to, dur = 900) {
+            const t0 = performance.now();
+            const step = t => { const p = Math.min(1, (t - t0) / dur); el.textContent = fmt(Math.round(to * (1 - Math.pow(1 - p, 3)))); if (p < 1) requestAnimationFrame(step); };
+            requestAnimationFrame(step);
+        }
+
+        // 수량 변경 TOP: 같은 자재(또는 자재 변경 동반) 중 변동률이 큰 순
+        function qtyTop(limit = 8) {
+            const list = state.result.pairs.filter(p => p.qtyChanged)
+                .map(p => ({ p, rel: Math.abs(p.b.qty - p.a.qty) / Math.max(p.a.qty, p.b.qty, 1) }))
+                .sort((x, y) => y.rel - x.rel || Math.abs(y.p.delta) - Math.abs(x.p.delta));
+            if (!list.length) return '<p class="spec-empty">같은 자리 자재 중 수량이 다른 항목이 없습니다.</p>';
+            const rows = list.slice(0, limit).map(({ p }) => {
+                const { a, b } = p, max = Math.max(a.qty, b.qty, 1);
+                const pct = a.qty ? `${p.delta > 0 ? '+' : ''}${Math.round(p.delta / a.qty * 100)}%` : '';
+                return `<li><button type="button" data-jump="${p.id}" aria-label="${esc(a.partName)} ${esc(a.partNo)}: ${fmt(a.qty)}${esc(a.uom)}에서 ${fmt(b.qty)}${esc(b.uom)}로 변경">
+          <span class="qt-name"><span class="pn">${esc(b.partNo)}${p.status === 'PART' ? ` <span class="muted">(자재 변경)</span>` : ''}</span><span class="pd" style="display:block">${esc(a.partName)} · ${esc(p.group)}</span></span>
+          <span class="qt-bars" aria-hidden="true">
+            <span class="qt-bar a"><b>A</b><span><i style="width:${a.qty / max * 100}px"></i>${fmt(a.qty)} ${esc(a.uom)}</span></span>
+            <span class="qt-bar b"><b>B</b><span><i style="width:${b.qty / max * 100}px"></i>${fmt(b.qty)} ${esc(b.uom)}</span></span>
+          </span>
+          <span class="qt-d">${a.uom !== b.uom ? '단위 변경' : `${p.delta > 0 ? '▲ +' : '▼ '}${fmt(p.delta)}`}<small>${a.uom === b.uom ? pct : ''}</small></span>
+        </button></li>`;
+            }).join('');
+            return `<ol class="qtop">${rows}</ol>${list.length > limit ? `<button type="button" class="btn ghost qt-more" data-filter="QTY" style="width:100%">수량 변경 ${list.length}건 모두 보기</button>` : ''}`;
+        }
+
+        function specTable() {
+            const ma = state.a.model, mb = state.b.model;
+            if (!ma && !mb) return `<p class="spec-empty">MODEL 라인 주석이 없어 사양 비교를 표시할 수 없습니다.</p>`;
+            const keys = [...new Set([...(ma ? ma.keys() : []), ...(mb ? mb.keys() : [])])];
+            const dash = '<span class="muted">–</span>';
+            return `<table class="spec-table">
+        <thead><tr><th scope="col">항목</th><th scope="col" class="ha">A ${esc(state.a.no)}</th><th scope="col" class="hb">B ${esc(state.b.no)}</th></tr></thead>
+        <tbody>${keys.map(k => {
+                const va = ma?.get(k) ?? '', vb = mb?.get(k) ?? '';
+                return `<tr class="${va !== vb ? 'diff' : ''}"><th scope="row">${esc(k.startsWith('비고') ? '비고' : k)}</th><td>${esc(va) || dash}</td><td>${esc(vb) || dash}</td></tr>`;
+            }).join('')}</tbody></table>`;
+        }
+
+        function renderGroups() {
+            $('#groups').innerHTML = state.result.groups.map(g => `
+        <button type="button" class="grp" data-group="${esc(g.code)}" aria-pressed="${state.group === g.code}" aria-label="BLOCK 그룹 ${esc(g.code)}: ${g.total}개 항목, 변경 ${g.diff}개">
+          <span class="grp-top"><span class="grp-code">${esc(g.code)}</span><span class="grp-n">A${g.aN}·B${g.bN}</span></span>
+          <span class="grp-bar">${ORDER.filter(k => g.counts[k]).map(k => `<i style="width:${g.counts[k] / g.total * 100}%;background:${ST[k].color}"></i>`).join('')}</span>
+          <span class="grp-diff">변경 <b class="mono">${g.diff}</b> / ${g.total}</span>
+        </button>`).join('');
+        }
+
+        function visiblePairs(ignoreStatus = false) {
+            const q = state.q.trim().toLowerCase();
+            return state.result.pairs.filter(p => {
+                if (!ignoreStatus && !FILTER[state.filter](p)) return false;
+                if (state.group && p.group !== state.group) return false;
+                if (q) {
+                    const hay = [p.a, p.b].filter(Boolean).map(r => `${r.partNo} ${r.partName} ${r.spec} ${r.size} ${r.blockNo} ${r.glCode}`).join(' ').toLowerCase();
+                    if (!hay.includes(q)) return false;
+                }
+                return true;
+            });
+        }
+
+        function renderChips() {
+            const base = visiblePairs(true);
+            const items = [['DIFF', '변경 전체'], ...ORDER.map(k => [k, ST[k].label]), ['ALL', '전체 BOM']];
+            $('#chips').innerHTML = items.map(([k, l]) => `<button type="button" class="chip" data-filter="${k}" aria-pressed="${state.filter === k}">${l}<span class="n">${base.filter(FILTER[k]).length}</span></button>`).join('')
+                + (state.group ? `<button type="button" class="chip grp-filter" data-clear-group aria-label="BLOCK 그룹 필터 해제">BLOCK ${esc(state.group)} ${icon('x', 'sm')}</button>` : '');
+            $$('.kpi[data-filter]').forEach(b => b.setAttribute('aria-pressed', String(state.filter === b.dataset.filter)));
+            $$('.grp').forEach(b => b.setAttribute('aria-pressed', String(state.group === b.dataset.group)));
+        }
+
+        function partCell(r, other, status) {
+            if (!r) return `<span class="empty-cell">${status === 'ADD' ? '없음 (신규 자재)' : '없음 (삭제됨)'}</span>`;
+            const m = (v, ov) => (status === 'PART' && other && v && v !== ov) ? `<mark>${esc(v)}</mark>` : esc(v);
+            const desc = [r.partName ? `<b>${esc(r.partName)}</b>` : '', m(r.spec, other?.spec), m(r.size, other?.size)].filter(Boolean).join(' · ');
+            return `<div class="pn">${m(r.partNo, other?.partNo)}</div><div class="pd">${desc}</div>`;
+        }
+        function qtyChange(p) {
+            const { a, b } = p;
+            const v = r => r ? `${fmt(r.qty)}<small>${esc(r.uom)}</small>` : '–';
+            const to = p.qtyChanged || p.status === 'ADD' ? `<mark class="q">${v(b)}</mark>` : v(b);
+            return `<span class="qchg"><span class="from">${v(a)}</span><span class="arr">→</span><span class="to">${to}</span></span>`;
+        }
+        function deltaCell(p) {
+            const { a, b } = p;
+            if (a && b && a.uom !== b.uom) return '<span class="delta">단위 변경</span>';
+            if (!p.delta) return '<span class="muted">–</span>';
+            const pct = a && b && a.qty ? `<small>${p.delta > 0 ? '+' : ''}${Math.round(p.delta / a.qty * 100)}%</small>` : '';
+            return `<span class="delta"><span aria-hidden="true">${p.delta > 0 ? '▲' : '▼'}</span> ${p.delta > 0 ? '+' : ''}${fmt(p.delta)}${pct}</span>`;
+        }
+
+        function renderTable() {
+            const rows = visiblePairs();
+            const G = Object.fromEntries(state.result.groups.map(g => [g.code, g]));
+            let html = '', lastGroup = null;
+            for (const p of rows) {
+                if (p.group !== lastGroup) {
+                    lastGroup = p.group;
+                    const g = G[p.group];
+                    html += `<tr class="g-head"><td colspan="8"><b>${esc(p.group)}</b>A ${g.aN} · B ${g.bN} · 변경 ${g.diff}</td></tr>`;
+                }
+                const { a, b } = p;
+                const hasCmt = !!((a && a.cmt) || (b && b.cmt));
+                const open = state.open.has(p.id);
+                const blk = a && b && p.moved ? `${esc(a.blockNo)}<span class="moved">→ ${esc(b.blockNo)}</span>` : esc((a || b).blockNo);
+                html += `<tr class="row s-${ST[p.status].cls}" data-id="${p.id}">
+          <td><span class="status-stack">${statusChip(p.status)}${p.status === 'PART' && p.qtyChanged ? statusChip('QTY', true) : ''}</span></td>
+          <td class="blk">${blk}</td>
+          <td class="cell-a">${partCell(a, b, p.status)}</td>
+          <td class="mid">${icon('arrow', 'sm')}</td>
+          <td class="cell-b">${partCell(b, a, p.status)}</td>
+          <td class="num">${qtyChange(p)}</td>
+          <td class="num">${deltaCell(p)}</td>
+          <td>${hasCmt ? `<button type="button" class="cmt-btn" data-cmt="${p.id}" aria-expanded="${open}">${icon('chevron', 'sm')}보기${a && b && p.cmtDiff ? '<span class="dot" title="A·B 주석 다름"></span><span class="sr-only">(A·B 주석 다름)</span>' : ''}</button>` : '<span class="muted">–</span>'}</td>
+        </tr>`;
+                if (open) html += `<tr class="cmt-row"><td colspan="8"><div class="cmt-grid">
+          <div><div class="cmt-h a">A ${esc(state.a.no)}</div>${a?.cmt ? `<pre>${esc(a.cmt)}</pre>` : '<span class="none">주석 없음</span>'}</div>
+          <div><div class="cmt-h b">B ${esc(state.b.no)}</div>${b?.cmt ? `<pre>${esc(b.cmt)}</pre>` : '<span class="none">주석 없음</span>'}</div>
+        </div></td></tr>`;
+            }
+            $('#tbody').innerHTML = html || `<tr><td colspan="8" class="table-empty">조건에 맞는 항목이 없습니다. 필터나 검색어를 바꿔 보세요.</td></tr>`;
+            $('#tfoot').innerHTML = `<span>${fmt(rows.length)}개 항목 표시 · 전체 ${fmt(state.result.pairs.length)}개</span><span>A ${fmt(state.a.rows.length)}라인 · B ${fmt(state.b.rows.length)}라인</span>`;
+        }
+
+        function exportCSV() {
+            const head = ['변경 유형', '자재 변경', '수량 변경', 'BLOCK 그룹', '기준 호기(A)', 'A BLOCK NO', 'A 부품번호', 'A 품명', 'A 사양', 'A SIZE', 'A 수량', 'A 단위', '비교 호기(B)', 'B BLOCK NO', 'B 부품번호', 'B 품명', 'B 사양', 'B SIZE', 'B 수량', 'B 단위', '수량 증감(B-A)', 'A 주석', 'B 주석'];
+            const rows = [head];
+            for (const p of visiblePairs()) {
+                const { a, b } = p;
+                const qtyFlag = p.qtyChanged || p.status === 'ADD' || p.status === 'DEL';
+                rows.push([ST[p.status].label, p.status === 'SAME' || p.status === 'QTY' ? 'N' : 'Y', qtyFlag ? 'Y' : 'N', p.group,
+                    state.a.no, a?.blockNo, a?.partNo, a?.partName, a?.spec, a?.size, a?.qty, a?.uom,
+                    state.b.no, b?.blockNo, b?.partNo, b?.partName, b?.spec, b?.size, b?.qty, b?.uom,
+                    p.delta, a?.cmt, b?.cmt]);
+            }
+            const csv = '﻿' + rows.map(l => l.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+            const el = document.createElement('a');
+            el.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+            el.download = `BOM비교_${state.a.no}_vs_${state.b.no}.csv`;
+            document.body.appendChild(el); el.click(); el.remove();
+            setTimeout(() => URL.revokeObjectURL(el.href), 1000);
+            announce('현재 필터 기준으로 CSV 파일을 내려받았습니다.');
+        }
+
+        /* ───────────── Events ───────────── */
+        $('#form').addEventListener('submit', e => { e.preventDefault(); run(); });
+        $('#swap').addEventListener('click', () => {
+            const t = $('#in-a').value; $('#in-a').value = $('#in-b').value; $('#in-b').value = t;
+            if (state.a && state.b && state.result) {
+                [state.a, state.b] = [state.b, state.a];
+                renderUnitMeta('a'); renderUnitMeta('b');
+                history.replaceState(null, '', `?a=${encodeURIComponent(state.a.no)}&b=${encodeURIComponent(state.b.no)}`);
+                finish();
+            }
+        });
+
+        const out = $('#out');
+        out.addEventListener('click', e => {
+            const t = e.target;
+            if (t.closest('#retry')) return run();
+            if (t.closest('#export')) return exportCSV();
+            const j = t.closest('[data-jump]');
+            if (j) {
+                state.filter = 'QTY'; state.group = null; state.q = ''; $('#q').value = '';
+                renderChips(); renderTable();
+                const tr = $(`tr[data-id="${j.dataset.jump}"]`);
+                if (tr) { tr.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' }); tr.classList.remove('flash'); void tr.offsetWidth; tr.classList.add('flash'); }
+                return;
+            }
+            const f = t.closest('[data-filter]');
+            if (f) {
+                state.filter = f.dataset.filter; renderChips(); renderTable();
+                if (!f.closest('#chips')) $('#table-card').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+                return;
+            }
+            const g = t.closest('[data-group]');
+            if (g) { state.group = state.group === g.dataset.group ? null : g.dataset.group; renderChips(); renderTable(); return; }
+            if (t.closest('[data-clear-group]')) { state.group = null; renderChips(); renderTable(); return; }
+            const c = t.closest('[data-cmt]');
+            if (c) {
+                const id = c.dataset.cmt;
+                state.open.has(id) ? state.open.delete(id) : state.open.add(id);
+                renderTable(); $(`[data-cmt="${id}"]`)?.focus();
+            }
+        });
+        let qTimer;
+        out.addEventListener('input', e => {
+            if (e.target.id !== 'q') return;
+            clearTimeout(qTimer);
+            qTimer = setTimeout(() => { state.q = e.target.value; renderChips(); renderTable(); }, 150);
+        });
+        out.addEventListener('change', async e => {
+            const inp = e.target.closest('input[data-file]');
+            if (!inp || !inp.files[0]) return;
+            try {
+                const data = JSON.parse(await inp.files[0].text());
+                if (!Array.isArray(data) || !data.length) throw new Error('비어 있지 않은 배열(JSON List) 형식이어야 합니다.');
+                state[inp.dataset.file] = makeSide(inp.dataset.no, data);
+                renderUnitMeta(inp.dataset.file);
+                if (state.a && state.b) { setPill('ok', '파일 데이터'); finish(); }
+                else { inp.closest('label').remove(); announce(`${inp.dataset.no} 파일을 불러왔습니다.`); }
+            } catch (err) { alert(`JSON 파일을 읽을 수 없습니다: ${err.message}`); }
+        });
+
+        /* ───────────── Theme ───────────── */
+        function applyTheme(t) {
+            document.documentElement.dataset.theme = t;
+            const btn = $('#theme-toggle');
+            btn.innerHTML = icon(t === 'dark' ? 'sun' : 'moon');
+            btn.setAttribute('aria-label', t === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환');
+        }
+        let saved = null;
+        try { saved = localStorage.getItem('bom-sentinel-theme'); } catch (_) {}
+        applyTheme(saved === 'light' ? 'light' : 'dark');
+        $('#theme-toggle').addEventListener('click', () => {
+            const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+            applyTheme(next);
+            try { localStorage.setItem('bom-sentinel-theme', next); } catch (_) {}
+        });
+
+        /* ───────────── Init ───────────── */
+        hydrateIcons();
+        setRunBtn();
+        const params = new URLSearchParams(location.search);
+        $('#in-a').value = (params.get('a') || DEFAULT.a).toUpperCase();
+        $('#in-b').value = (params.get('b') || DEFAULT.b).toUpperCase();
+        run();
+    })();
+</script>
+</body>
+</html>
